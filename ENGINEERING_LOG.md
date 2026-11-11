@@ -68,3 +68,53 @@
 - **Deviations from previous ARCHITECTURE.md (v1):** semantic cache removed (excluded); SQLite cache removed; `fetch_section_context` tool removed; repair loop removed; fixed queue size 16 withdrawn; tiktoken removed; `runs/` replaced by tracked `evidence/` + ignored `scratch/`; server no longer writes `results.csv`; `status` for verifier-blocked answers changed from `error` to proposed `ok` (open decision); phases renumbered.
 - **Owner approval status:** pending owner review
 - **Next action:** Owner reviews `reports/phase-00b-architecture-reconciliation.md`, resolves `ARCHITECTURE.md` §16 items (at minimum 1–3 before P01), marks `ARCHITECTURE.md` approved, then authorises P01.
+
+---
+
+### Execution Entry
+
+- **Date and time:** 2026-11-11 13:59 IST
+- **Phase identifier:** `p01` (Foundation, Contracts, Run Directories and Aggregation)
+- **Task requested:** Implement P01 per `IMPLEMENTATION_PLAN.md` v2: package skeleton, typed config, frozen strict Pydantic contracts, error hierarchy, timing helpers, run-directory/manifest management, deterministic `results.csv` aggregation via `scripts/build_results.py`. Record owner's final decisions. Do not install dependencies; provide install/test/lint/validation commands for the owner to run in Conda env `the-relay` (Python 3.12).
+- **Objective:** Establish the `results.csv` contract and evidence storage that every later phase writes into.
+- **Status:** in progress — implementation written; **verification pending** (owner to run install, pytest, ruff and validation commands; results not yet observed).
+- **Owner decisions recorded (2026-11-11):** (1) verification-failure refusal delivered as `status=ok` + `error_code=citation_verification_failed`; (2) Groq inference probes appear in `results.csv` as `probe_*` scenarios with `retrieval_setting=none` and blank grade, details in evidence files; (3) every factual sentence must carry an appropriate citation; (4) Architecture v2 is the approved baseline, with [PROPOSED]/[OPEN]/[TO MEASURE] items kept open.
+- **Files created:** `.gitignore`, `pyproject.toml`, `.env.example`, `README.md`, `evidence/README.md`, `evidence/canonical_runs.json`, `src/relay/__init__.py`, `src/relay/config.py`, `src/relay/errors.py`, `src/relay/redaction.py`, `src/relay/schemas.py`, `src/relay/telemetry/__init__.py`, `src/relay/telemetry/spans.py`, `src/relay/telemetry/csv_codec.py`, `src/relay/telemetry/run_store.py`, `src/relay/telemetry/aggregation.py`, `scripts/build_results.py`, `tests/__init__.py`, `tests/conftest.py`, `tests/factories.py`, `tests/test_schemas.py`, `tests/test_foundation.py`, `tests/test_run_store_and_aggregation.py`, `reports/phase-01-foundation-contracts.md`.
+- **Files modified:** `ARCHITECTURE.md` (status → approved baseline; §7.3(a), §13.2, §13.4, §16 updated with owner decisions; error codes `provider_auth_error`, `payload_too_large`, `internal_error` added; client/server join note); `ENGINEERING_LOG.md` (this entry).
+- **Decisions made:** see `reports/phase-01-foundation-contracts.md` §5 (strict Literal-typed contracts, explicit CSV codec, invariant set, run_id format and exclusive run dirs, aggregation ordering by `(run_id, request_id)`, overwrite refusal, network-blocking test fixture, `relay/redaction.py` added beyond the plan's file list, tests split into three files).
+- **Security finding at start:** `git status` showed the owner's new `.env` as untracked and `git check-ignore .env` exited 1 (not ignored). `.gitignore` was written first; afterwards `.env` no longer appears in `git status --short`. `.env` contents were not read.
+- **Commands executed (by Claude):** `git status --short`; `git log --oneline -3`; `ls -la`; `git diff --stat HEAD -- ARCHITECTURE.md IMPLEMENTATION_PLAN.md ASSIGNMENT.md` (no output: docs equal HEAD `0442f23`); `git check-ignore -v .env` → exit 1 (before `.gitignore`); `python -m py_compile src/relay/*.py src/relay/telemetry/*.py scripts/build_results.py tests/*.py` using Anaconda **base** Python 3.13.5 (not `the-relay`) → `py_compile OK` (syntax only); `awk` line-length scan → 3 lines >100 chars found (config.py:67, schemas.py:226, test_run_store_and_aggregation.py:254), all fixed; generated `__pycache__` removed; `date` → `2026-11-11 13:59 IST`.
+- **Tests performed:** none executed yet. pytest and ruff have **not** been run in `the-relay`; no pass/fail claim is made.
+- **Errors encountered:** over-long lines (above) — fixed by reformatting; placeholder code left in `load_canonical_runs` during drafting — replaced with real run_id format validation before handoff.
+- **Remaining issues:** test and lint results pending; P01 cannot be marked complete until the owner's output is reviewed.
+- **Deviations from ARCHITECTURE.md:** none to binding decisions. Implementation notes added to ARCH §13.2 (join done by harness, aggregation validates) and §13.4 (three additional error codes).
+- **Owner approval status:** pending owner review
+- **Next action:** Owner runs the commands in `reports/phase-01-foundation-contracts.md` §6 and shares the terminal output; Claude reviews it, fixes any failures, then updates this log and the report with observed results.
+
+---
+
+### Execution Entry
+
+- **Date and time:** 2026-11-11 14:16 IST
+- **Phase identifier:** `p01` (verification and fixes)
+- **Task requested:** Owner reported failing test cases; asked Claude to investigate, fix, and run the checks itself.
+- **Status:** completed (pending owner review)
+- **Environment:** `C:\Users\ASUS\anaconda3\envs\the-relay\python.exe`, Python 3.12.16. The owner had already installed the project (`pip show`: the-relay 0.1.0 editable; pydantic 2.14.3, pydantic-settings 2.16.2, pytest 9.2.0, ruff 0.17.4). Claude installed nothing.
+- **Files modified:** `src/relay/config.py` (snapshot flag renamed), `tests/test_foundation.py`, `tests/test_run_store_and_aggregation.py`, `tests/test_schemas.py`, `reports/phase-01-foundation-contracts.md` (results sections filled in), `ENGINEERING_LOG.md` (this entry).
+- **Commands executed and observed output:**
+  - `python -m pytest -q` → `1 failed, 72 passed in 0.65s` (failed: `test_key_never_appears_in_repr_snapshot_or_errors`, `assert '[REDACTED]' is True`).
+  - After fix 1: `python -m pytest -v` → `73 passed in 0.49s`; `python -m ruff check .` → 2 errors: E501 `tests/test_run_store_and_aggregation.py:254`, SIM300 `tests/test_schemas.py:21`.
+  - `python -m pip check` → `No broken requirements found.`
+  - `git check-ignore -v -n ...` → `.env` ignored (`.gitignore:2`); `.env.example` matched only by negation `!.env.example` (not ignored); `results.csv`, `evidence/canonical_runs.json`, `evidence/experiments/exp-x/rows.csv` → `::` (not ignored); `scratch/x.csv` ignored (`.gitignore:20`).
+  - `python scripts/build_results.py --check` → `{"outcome": "checked", "rows": 0, "runs": 0, "would_change": true}`, exit 0.
+  - After fixes 2–3 (final): `python -m pytest -q` → `73 passed in 0.56s`; `python -m ruff check .` → `All checks passed!`.
+  - Fresh determinism check (old scratch outputs deleted first): two `build_results.py --output scratch/...` runs → both `written`; byte comparison → `IDENTICAL 357 bytes` (header-only, 29 columns).
+- **Errors, root causes, fixes:**
+  1. Snapshot flag `groq_api_key_present` masked by the conservative redactor (any key containing `api_key`). Fix: renamed to `groq_credential_configured`; redaction rules unchanged. Validated: test passes.
+  2. E501 at line 254: my earlier long-line fix had edited a different line in that file, and I did not re-scan. Fix: split the call. Validated: ruff clean.
+  3. SIM300 Yoda comparison. Fix: `expected == MANDATORY_COLUMNS`. Validated: ruff clean.
+- **Tests performed:** full suite, final run: 73 passed, 0 failed, 0 skipped; no warnings (`filterwarnings=error`).
+- **Remaining issues:** the VS Code Pyright "Import relay... could not be resolved" diagnostics come from the editor using a different interpreter, not from code defects. The owner should select the `the-relay` interpreter.
+- **Deviations from ARCHITECTURE.md:** none.
+- **Owner approval status:** pending owner review
+- **Next action:** Owner reviews `reports/phase-01-foundation-contracts.md`; on approval, authorise P02 (offline provider client and probe tooling).

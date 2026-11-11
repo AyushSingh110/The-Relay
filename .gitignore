@@ -1,0 +1,25 @@
+# --- Secrets (never commit) ---
+.env
+.env.*
+!.env.example
+
+# --- Python build / cache artefacts ---
+__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+dist/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.venv/
+venv/
+.cache/
+
+# --- Local, regenerable working data ---
+scratch/
+data/papers/*.pdf
+data/indexes/
+
+# NOTE: `results.csv` and everything under `evidence/` are submission evidence
+# and are intentionally TRACKED. Do not add ignore rules for them.

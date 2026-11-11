@@ -1,7 +1,7 @@
 # ARCHITECTURE.md — The Relay System Architecture
 
 > **Version:** v2 (Phase 00B reconciliation, 2026-11-11)
-> **Status:** `REVISED — OWNER DECISIONS INCORPORATED; FORMAL APPROVAL PENDING`
+> **Status:** `APPROVED BASELINE (owner, 2026-11-11, at P01 start)` — items still tagged **[PROPOSED]**, **[OPEN]** or **[TO MEASURE]** remain explicitly unresolved.
 > **Primary Authority:** `ASSIGNMENT.md`
 > **Deployment Model:** One Relay application process (`uvicorn --workers 1`) + one separate local Stand-In process (`127.0.0.1:8001`) for simulated runs.
 >
@@ -189,7 +189,7 @@ On uncached live answers `first_token_ms ≈ total_ms` by design. The gap betwee
 
 ### 7.3 What the verifier checks (and does not)
 Rejects an answer when any of these hold:
-- (a) A non-refusal answer has no `[Pi]` tag, or a sentence making a factual claim has no tag. [PROPOSED granularity: per sentence]
+- (a) A non-refusal answer has no `[Pi]` tag, or **any sentence making a factual claim lacks an appropriate citation**. **[OWNER-DECIDED: every factual sentence must carry a citation]**
 - (b) A tag references a passage that was not supplied.
 - (c) A paper name, arXiv ID or page mentioned in the sentence contradicts the cited passage's metadata.
 - (d) **Grounding constraint:** a number or technical identifier (e.g. `d_model`, `12.5 Hz`) in a sentence does not appear in any passage cited by that sentence.
@@ -298,7 +298,8 @@ scratch/                         gitignored: smoke runs, temporary output
 ### 13.2 Single owner of `results.csv`
 - Only the experiment harness's aggregation step (`scripts/build_results.py`) writes `results.csv`. The Relay server never writes it; it writes server spans to the run directory's `traces.jsonl`.
 - Aggregation reads only the runs listed in `evidence/canonical_runs.json`, joins client rows with server spans by `request_id`, validates every row, and **fails loudly on duplicate `request_id`s** (request IDs are prefixed by run_id, so re-running creates new IDs rather than duplicates; selecting the same run twice is rejected).
-- Probe calls are not pipeline requests. [OPEN — §16] Proposal: include them as rows with `scenario=probe_*` and `retrieval_setting=none`, so Table 1 request-level facts are computable from `results.csv`; header-level facts come from `probes.jsonl`.
+- **[OWNER-DECIDED] Probe rows:** actual Groq inference probes are recorded in `results.csv` with `scenario=probe_*`, `source=real`, `retrieval_setting=none` and a blank `answer_grade`. Detailed probe data (raw headers, bodies) stays in the probe run's `traces.jsonl`. Calls that are not inference (e.g. `GET /models`) produce no rows. Enforced by `ResultRow` validation.
+- **Client/server join (P01 implementation note):** `rows.csv` in a run directory holds complete rows. The harness merges client timing with server spans when it writes each row (P10). Aggregation validates and combines complete rows; it does not perform the join itself.
 
 ### 13.3 Schema
 **Columns 1–12 (exact names and order from `ASSIGNMENT.md`):** `request_id, scenario, source, start_time, first_token_ms, total_ms, status, retries, tokens_in, tokens_out, retrieval_setting, answer_grade`.
@@ -315,7 +316,7 @@ scratch/                         gitignored: smoke runs, temporary output
 | Verified answer delivered | ok | — | graded or blank |
 | Exact cache hit / coalesced follower | ok | — | graded or blank |
 | Deterministic early refusal | ok | — | graded or blank |
-| Verification failed → safe refusal delivered | **ok** [OPEN — §16] | `citation_verification_failed` | graded (answerable → `refused_wrongly`) |
+| Verification failed → safe refusal delivered | **ok** [OWNER-DECIDED] | `citation_verification_failed` | graded (answerable → `refused_wrongly`) |
 | Queue full / predicted wait exceeds deadline | rate_limited | `queue_full` / `predicted_wait_exceeds_deadline` | blank |
 | Upstream minute-limit 429 after retries | rate_limited | `upstream_rate_limited` | blank |
 | Daily budget exhausted (guard) | rate_limited | `daily_budget_exhausted` | blank |
@@ -323,6 +324,15 @@ scratch/                         gitignored: smoke runs, temporary output
 | **Client gave up (abandonment)** | **timeout** | **`client_gave_up`** | blank |
 | Provider stream stalled / read timeout | timeout | `provider_stalled` | blank |
 | Upstream 5xx after retries / circuit open | error | `upstream_error` / `circuit_open` | blank |
+| Provider rejected credentials (401/403) | error | `provider_auth_error` | blank |
+| Request too large (413) | error | `payload_too_large` | blank |
+| Unexpected internal failure | error | `internal_error` | blank |
+
+Additional rules enforced by `ResultRow` (P01):
+- `status=ok` ⇔ something was delivered, so `first_token_ms` is set. Non-`ok` rows have blank `first_token_ms` and `answer_grade`, and require an `error_code` valid for their status.
+- `ok` rows carry no `error_code`, except `citation_verification_failed`, which must appear together with verdict `BLOCKED`.
+- When the provider was not called: 0 tokens, 0 retries, `usage_source=none`, blank `provider_first_token_ms`. Exact-cache hits, coalesced followers and `EARLY_REFUSAL` rows imply the provider was not called.
+- Adding an error code requires updating this table and `relay.schemas.ERROR_CODES_BY_STATUS` together.
 
 `cost_usd` uses a pricing table snapshotted (with source URL and date) into the run manifest; if no documented price exists for a model, cost is reported as "not measured".
 
@@ -353,13 +363,17 @@ The derivation and the resulting numbers are recorded per run in the manifest an
 
 ## 16. Open Decisions Requiring Owner Approval
 
-1. **Formal approval** of this v2 document (status → `APPROVED`).
-2. **Verifier safe refusal status:** `ok` + `error_code=citation_verification_failed` (proposed, keeps it gradable) vs `error`.
-3. **Probe rows in `results.csv`:** include as `scenario=probe_*` (proposed) vs keep probes only in `evidence/groq_probes/`.
+**Resolved by the owner on 2026-11-11 (P01 start):**
+- ~~1. Formal approval~~ → v2 is the approved baseline; [PROPOSED]/[OPEN]/[TO MEASURE] items stay open.
+- ~~2. Verifier safe refusal status~~ → `status=ok` + `error_code=citation_verification_failed`.
+- ~~3. Probe rows in `results.csv`~~ → yes: `probe_*` scenarios, `retrieval_setting=none`, blank grade; detail in evidence files.
+- ~~9. Verifier claim granularity~~ → every factual sentence must carry an appropriate citation.
+
+**Still open:**
+
 4. **Client-patience distribution** for the harness (proposal to be made in Phase 10 from what the brief implies; e.g. log-normal, median ~20 s — owner chooses).
 5. **Daily safety fraction** default (proposed 0.75) and per-day real-call caps (`IMPLEMENTATION_PLAN.md` budget table).
 6. **Minute-limit probe:** whether to deliberately trigger one real RPM/TPM `429` (requires separate explicit approval; never the daily limit).
 7. **Final model** after the comparison in §10.
 8. **Retrieval preset values** after Phase 04 text inspection.
-9. **Verifier claim granularity:** per-sentence tagging requirement (proposed) vs per-answer.
 10. **`deadline_ms` vs client patience:** real clients do not announce their patience. Proposal: the harness sends a fixed service-level `deadline_ms` (owner-chosen) and abandons privately at its sampled patience, so server-side shedding (`deadline_expired`, `predicted_wait_exceeds_deadline`) and client abandonment (`client_gave_up`) are measured separately.
