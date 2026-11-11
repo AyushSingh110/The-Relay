@@ -41,3 +41,30 @@
 - **Deviations:** Corrected earlier proposal defects identified during Part 1 review (streaming-before-verify, `x-ratelimit-*-requests` misinterpretation, `answer_grade="na"`, `.gitignore` path conflict, uncalibrated semantic thresholds).
 - **Owner approval status:** pending owner review
 - **Next action:** Owner reviews `ARCHITECTURE.md`, `reports/phase-00-architecture-review.md`, and approves unresolved decisions before authorizing Phase 1 in Claude Code.
+
+---
+
+### Execution Entry
+
+- **Date and time:** 2026-11-11 13:14 IST
+- **Phase identifier:** `phase-00b` (Architecture Reconciliation — documentation only)
+- **Task requested:** Incorporate the owner's Phase 00B decisions (exact cache + SingleFlight only; buffered verification with safe refusal and no repair call; harness-owned `results.csv` with per-run storage and duplicate-safe aggregation; client abandonment as `timeout`; Day-1 provider integration and budget-capped probing with approval gates; `openai/gpt-oss-20b` as candidate only; owner-written eval questions; tracked evidence directories) and corrections (derived queue capacity; header semantics to be verified; usage-based token reconciliation; one worker with documented SingleFlight limits; retrieval-quality runs isolated from cache/load runs; no unnecessary tools/repair loops/infrastructure; 3-day plan with final-day buffer) into `ARCHITECTURE.md`, `IMPLEMENTATION_PLAN.md` and `CLAUDE.md`; preserve `ASSIGNMENT.md`; write `reports/phase-00b-architecture-reconciliation.md`.
+- **Objective:** Produce a contradiction-free v2 documentation set ready for owner approval before P01.
+- **Status:** completed (documentation only; awaiting owner review)
+- **Files created:** `reports/phase-00b-architecture-reconciliation.md`
+- **Files modified:**
+  - `ARCHITECTURE.md` — rewritten as v2 (status `REVISED — OWNER DECISIONS INCORPORATED; FORMAL APPROVAL PENDING`; decision tags [OWNER-DECIDED]/[PROPOSED]/[OPEN]/[TO MEASURE]).
+  - `IMPLEMENTATION_PLAN.md` — rewritten as v2 (re-ordered 3-day schedule P01–P11 + P02-LIVE + P04B + submission buffer; real-call budget; cut line).
+  - `CLAUDE.md` — §2 item 2 (decision-tag semantics), §5 item 6 (updated examples), §5 new items 12–16 (rate-limit/daily-quota rule, single `results.csv` writer, evidence protection, owner-authored questions, no unverified header/tokenizer/model assumptions).
+  - `ENGINEERING_LOG.md` — this entry appended; earlier entry untouched.
+  - `ASSIGNMENT.md` — **not modified**.
+- **Decisions recorded:** see `reports/phase-00b-architecture-reconciliation.md` §5 (owner decisions) and §6 (engineering decisions made within them, e.g. SQLite → in-memory cache, tiktoken removed, word-based chunk sizes, `server_total_ms` column, `evidence/` + `scratch/` layout).
+- **Commands executed:** `date "+%Y-%m-%d %H:%M %Z"` → `2026-11-11 13:14 IST`; `git status --short` → clean (before edits). Earlier in this session (Phase 00 review, read-only): `python --version` → `Python 3.13.5`; `uv --version` → `uv 0.12.5`; `pip --version` → `pip 25.1 (python 3.13)`. Final consistency checks listed in the report §6.
+- **Tests performed:** None (no source code exists; documentation-only phase).
+- **Test results:** N/A
+- **Errors encountered:** None blocking. IDE markdown-lint warnings (MD022/MD031/MD032/MD040: blank lines around headings/lists/fences, fence language) on the rewritten docs — cosmetic, not fixed.
+- **Root cause / fix / validation:** N/A
+- **Outstanding issues:** Open decisions listed in `ARCHITECTURE.md` §16. Groq header semantics, limits, latency, and pricing remain unverified (no live calls made). No network access used in this phase.
+- **Deviations from previous ARCHITECTURE.md (v1):** semantic cache removed (excluded); SQLite cache removed; `fetch_section_context` tool removed; repair loop removed; fixed queue size 16 withdrawn; tiktoken removed; `runs/` replaced by tracked `evidence/` + ignored `scratch/`; server no longer writes `results.csv`; `status` for verifier-blocked answers changed from `error` to proposed `ok` (open decision); phases renumbered.
+- **Owner approval status:** pending owner review
+- **Next action:** Owner reviews `reports/phase-00b-architecture-reconciliation.md`, resolves `ARCHITECTURE.md` §16 items (at minimum 1–3 before P01), marks `ARCHITECTURE.md` approved, then authorises P01.

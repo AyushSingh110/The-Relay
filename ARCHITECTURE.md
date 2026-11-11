@@ -1,310 +1,365 @@
 # ARCHITECTURE.md — The Relay System Architecture
 
-> **Status:** `PROPOSED — AWAITING OWNER APPROVAL`  
-> **Primary Authority:** `ASSIGNMENT.md`  
-> **Deployment Model:** Single-Process Async Service (`uvicorn --workers 1`) + Separate Local Stand-In Process (`127.0.0.1:8001`)  
-> **Note:** Nothing in this document is final until explicitly approved by the project owner.
+> **Version:** v2 (Phase 00B reconciliation, 2026-11-11)
+> **Status:** `REVISED — OWNER DECISIONS INCORPORATED; FORMAL APPROVAL PENDING`
+> **Primary Authority:** `ASSIGNMENT.md`
+> **Deployment Model:** One Relay application process (`uvicorn --workers 1`) + one separate local Stand-In process (`127.0.0.1:8001`) for simulated runs.
+>
+> **How to read decision status in this document:**
+> - **[OWNER-DECIDED]** — decided by the project owner in the Phase 00B instructions. Binding unless the owner changes it.
+> - **[PROPOSED]** — engineering proposal; not final until the owner approves it. Open items are collected in §16.
+> - **[TO MEASURE]** — a value that must come from a real measurement, never from assumption.
+>
+> No number in this document is a measurement. Groq limits, latencies and throughput are unknown until the Phase 02-LIVE probes run.
 
 ---
 
-## 1. System Objectives & Conflict Framing
+## 1. Objectives and Priority Ordering
 
-**The Relay** answers engineering questions strictly from three exact-version arXiv papers (`1706.03762v7`, `2410.00037v1`, `2507.07955v2`). Production traffic arrives in correlated post-incident bursts against strict, shifting Groq free-tier limits (`RPM`, `TPM`, `RPD`, `TPD`), occasional slow tools/calls, and impatient users who abandon waiting requests.
+The Relay answers engineering questions only from three exact-version arXiv papers (`1706.03762v7`, `2410.00037v1`, `2507.07955v2`) under real Groq free-tier limits, bursty traffic, slow or failing calls, and impatient users.
 
-Because no single architecture can simultaneously maximize speed, accuracy, zero cost, and zero rejections under finite quotas, this architecture enforces the explicit priority ordering required by `ASSIGNMENT.md`:
+The brief says the four goals (fast, good, cheap, nobody turned away) cannot all be met. Our explicit ordering:
 
-1. **Correctness & Citation Integrity (Non-Negotiable):** Never emit an uncited, hallucinated, or unverified answer just to preserve speed.
-2. **Quota & Overload Survival (Graceful Degradation + Fast Shedding):** Absorb duplicate bursts via coalescing/caching, adapt retrieval size when TPM is tight, and fast-reject excess load cleanly rather than burning scarce RPD/TPM on doomed or abandoned requests.
-3. **Observability & Recomputability:** Every latency span, token count, queue depth, retry, and verification verdict is traceable from `results.csv` and `runs/traces.jsonl`.
-
----
-
-## 2. Deployment & Concurrency Assumptions (Explicit Scope)
-
-**Chosen Runtime Topology:** **One Python 3.11+ `uvicorn` process (`workers=1`)** for The Relay API/pipeline, communicating over localhost HTTP/SSE with **one standalone local Stand-In `uvicorn` process** (`workers=1`, port `8001`) during simulation runs (or directly with `https://api.groq.com/openai/v1` during real Groq runs).
-
-**Engineering Consequences of Single-Process Deployment:**
-- **In-Memory SingleFlight:** Request coalescing (`asyncio.Future` map) works instantaneously in RAM across concurrent client connections with zero distributed lock overhead.
-- **Single-Owner `ProviderGuard`:** In-memory sliding windows (`RPM`, `TPM`), daily counters (`RPD`, `TPD`), `asyncio.Semaphore`, and `CircuitBreaker` share exact consistent state across all coroutines without Redis.
-- **In-Memory Hybrid Vector + BM25 Index:** All ~400–700 paper chunks fit in `< 2 MB` RAM with `< 0.1 ms` exact cosine search.
-- **Scaling Limitation (Accepted):** Running `--workers > 1` or scaling across multiple hosts would fragment SingleFlight coalescing, duplicate RPM/TPM windows (causing unexpected 429s), and desynchronize in-memory L2 cache vectors unless external shared state (e.g., Redis) were introduced. Multi-worker scaling is deliberately deferred for this 3-day single-node assignment.
+1. **Never deliver an unverified answer.** Citation integrity and grounding beat speed. *(Cost: user-visible first token arrives only after the full answer is generated and verified — §7.)*
+2. **Spend scarce quota only where it changes the answer.** Exactly one LLM call per uncached request; everything else is deterministic and local. Identical concurrent questions share one call. *(Cost: no LLM-based query rewriting or self-repair.)*
+3. **Fail fast and honestly rather than queue hopelessly.** Requests that cannot be served within the client's patience are shed immediately with zero tokens spent. *(Cost: some users are turned away under load.)*
+4. **Everything is recomputable.** Every table figure is computable from the canonical `results.csv` and the raw evidence directories.
 
 ---
 
-## 3. Technology Stack Selection & Alternatives
+## 2. Deployment and Concurrency Scope **[OWNER-DECIDED]**
 
-| Layer | Selected Technology | Alternatives Considered | Why Alternatives Rejected | Engineering Benefits & Limitations | Status |
-| :--- | :--- | :--- | :--- | :--- | :--- |
-| **Language** | Python 3.11+ | Go, C++ | Lack turnkey local ONNX embeddings/reranking + multi-column PDF layout tools in 3 days | Rapid development, rich scientific/HTTP ecosystem; CPU work offloaded via `asyncio.to_thread` to avoid stalling event loop | **Mandatory** |
-| **Web / HTTP** | FastAPI + Uvicorn + `httpx.AsyncClient` | Sync Flask, gRPC, Celery | Sync Flask leaks threads on slow streams; Celery adds broker bloat; gRPC breaks simple SSE | Native `asyncio` cancellation, clean SSE parsing, shared HTTP transport for Groq & Stand-In | **Mandatory** |
-| **PDF Parsing** | `pymupdf` (`fitz`) + `tiktoken` (`cl100k_base`) | `pypdf`, `pdfplumber`, `docling` | `pypdf` garbles 2-col `1706.03762v7`; `docling` drags GBs of PyTorch/OCR | Sub-second extraction, font-size heading detection, bounding-box column sorting | **Mandatory** |
-| **Embeddings & Rerank** | `fastembed` (`BAAI/bge-small-en-v1.5` + `Xenova/ms-marco-MiniLM-L-6-v2`) | `sentence-transformers` (PyTorch), OpenAI/Groq embeddings | PyTorch adds ~2 GB overhead; remote embeddings burn quota/network | Lightweight ONNX Runtime (~130 MB), zero API token cost, releases GIL during C++ execution | **Mandatory** |
-| **Search Index** | Exact L2-normalized NumPy cosine + `rank-bm25` (RRF) | FAISS, ChromaDB, Qdrant | External DBs or C++ ANN indices add Windows install friction & unnecessary complexity for <1k vectors | 100% exact recall, `< 0.5 ms` lookup, zero ANN approximation error; linear scan limits scale past ~100k chunks | **Mandatory** |
-| **LLM (Groq)** | Active fast model verified in Phase 5 (candidate: `openai/gpt-oss-20b` or active non-reasoning model via `GROQ_MODEL`) | Multi-model router+drafter+critic chain | Multi-call chains multiply RPM/TPM consumption 3–4× against tight ~8k TPM free caps | 1 LLM call nominal path; reasoning control (`reasoning_format`/`reasoning_effort`) configurable so thinking doesn't starve TTFT | **Mandatory** |
-| **Storage** | SQLite (`sqlite3`) + local `.npz`/`.json` + `results.csv` + `runs/*.jsonl` | Redis, PostgreSQL, DuckDB | External daemons violate anti-bloat rule and complicate reproducible setup | ACID persistence (`cache.db`), zero external setup; single-writer serialization | **Mandatory** |
-| **Frameworks** | Pure typed Python (`Pydantic v2`) | LangChain, LangGraph, LlamaIndex | Obscures HTTP headers, retry timings, token accounting, and live interview modifications | Full transparency over every millisecond, byte, and retry | **Mandatory Choice** |
+- **One application worker** (`uvicorn --workers 1`). All admission, quota, cache and SingleFlight state lives in one process's memory.
+- **One separate Stand-In process** on `127.0.0.1:8001`, reached over real HTTP/SSE through the same provider client used for Groq.
+
+**Documented limitations of in-memory state (accepted, not mitigated):**
+- **SingleFlight** only coalesces requests that reach the *same* process. With `workers > 1` or multiple hosts, identical concurrent questions would each trigger a provider call, multiplying quota use exactly during bursts — the case it exists for.
+- **Quota tracking** (`ProviderGuard`) would be duplicated per worker; each would believe it owns the full RPM/TPM budget, producing unexpected 429s.
+- **The exact cache** is per-process and lost on restart. A restart during a burst means a cold cache.
+- **No crash recovery:** in-flight requests are lost if the process dies.
+
+Fixing these would need shared external state (e.g. Redis), which is out of scope (§14).
 
 ---
 
-## 4. High-Level Architecture Diagram
+## 3. Technology Stack
 
-*(Consistent with Section 5 Sequence Diagram and Section 7 Verified-Answer Delivery Strategy.)*
+| Layer | Choice | Why | Status |
+| :--- | :--- | :--- | :--- |
+| Language | Python 3.11+ (developed on a uv-managed 3.12 venv) | Mature PDF/embedding/HTTP ecosystem; fast to build | [PROPOSED] venv version |
+| Web / HTTP | FastAPI + Uvicorn + `httpx.AsyncClient` | Native asyncio cancellation, SSE, one transport for Groq and Stand-In | [PROPOSED] |
+| PDF parsing | `pymupdf` | Block bounding boxes allow 2-column ordering; no PyTorch | [PROPOSED] |
+| Embeddings / rerank | `fastembed` (ONNX): `BAAI/bge-small-en-v1.5`, `Xenova/ms-marco-MiniLM-L-6-v2` | No PyTorch, zero API tokens. Models download from Hugging Face once (Phase 04 needs network once); unit tests inject fakes | [PROPOSED] |
+| Search | Exact NumPy cosine + `rank-bm25`, fused with RRF | Corpus is ~1k chunks; exact search is sub-millisecond, no ANN error | [PROPOSED] |
+| Validation | Pydantic v2 (+ `pydantic-settings`) | Strict contracts at module boundaries | [PROPOSED] |
+| Token accounting | **Provider-reported `usage`** (authoritative) + a conservative character-based estimate for pre-call reservation | See §9.3. No tokenizer is assumed to match the provider's | [OWNER-DECIDED] principle |
+| Cache | **In-memory exact cache** per process, cleared per experiment run | Smallest thing that meets the need; no SQLite/DB | [PROPOSED] (replaces SQLite) |
+| LLM | Groq free tier; `openai/gpt-oss-20b` is an **initial candidate only** | Final model chosen from the comparison in §10 | [OWNER-DECIDED] |
+| Frameworks | None (no LangChain/LlamaIndex/LangGraph) | Full visibility of headers, retries, tokens | [PROPOSED] |
+
+`tiktoken` is removed from the stack: its encodings are not verified to match Groq models' tokenizers and it downloads encoding files at first use, which conflicts with offline tests. Chunk sizes are defined in whitespace-delimited words (§6); token cost is reported from provider usage.
+
+---
+
+## 4. High-Level Architecture
 
 ```mermaid
 flowchart TB
-    Client["Client / Load Harness"] --> Ingress["IngressGate (FastAPI POST /ask)"]
+    Client["Client / Experiment Harness\n(patience model, client-side timing)"] --> Ingress["POST /ask (FastAPI)"]
 
-    subgraph AppControl["Application Control & Coalescing (Single Process)"]
-        Ingress --> CacheLookup["Cache Gate\nL1 Exact (Baseline) / L2 Semantic (Opt-In)"]
-        CacheLookup -- "Verified Hit" --> DeliverClient["Deliver Verified Stream to Client\n(Record User TTFT, 0 Upstream Calls)"]
-        CacheLookup -- "Miss" --> SF["SingleFlight Coalescer\n(Canonical Key In-Flight Future)"]
-        SF --> Q["Bounded FIFO Queue\n(Max Depth, Deadline & Client-Disconnect Guard)"]
-        Q -- "Queue Full / Wait > Deadline" --> FastShed["Fast Backpressure Reject\n(rate_limited / timeout, 0 Tokens)"]
-        Q -- "Admitted" --> S1
+    subgraph App["Relay process (workers=1)"]
+        Ingress --> Cache{"Exact cache\n(verified answers only)"}
+        Cache -- "hit" --> Deliver["Deliver answer"]
+        Cache -- "miss" --> SF["SingleFlight\n(join in-flight leader)"]
+        SF --> Adm{"Admission queue\ncapacity derived from\nthroughput x patience"}
+        Adm -- "full / predicted wait > deadline" --> Shed["Fast shed\nstatus=rate_limited, 0 tokens"]
+        Adm -- "admitted" --> S1["Step 1: deterministic scope analysis"]
+        S1 --> S2["Step 2: tool retrieve_passages"]
+        S2 --> S3{"Step 3: evidence gate"}
+        S3 -- "missing paper scope, loop_count==0" --> S2
+        S3 -- "clearly out of corpus" --> ERef["Deterministic grounded refusal\n0 LLM tokens"]
+        S3 -- "sufficient" --> PG{"ProviderGuard"}
+        PG -- "daily budget gone / circuit open" --> Unavail["Honest unavailability notice\n+ passage pointers, 0 LLM calls"]
+        PG -- "TPM headroom tight" --> Degrade["Shrink top-k (degraded, not cached)"]
+        Degrade --> Gen
+        PG -- "permitted" --> Gen["Step 4: one streaming LLM call\n(buffered, provider TTFT recorded)"]
+        Gen --> Ver{"Step 5: verifier\ncitation integrity + grounding"}
+        Ver -- "pass" --> Admit["Cache admission\n(verified, non-degraded)"] --> Deliver
+        Ver -- "fail" --> SafeRef["Safe refusal\n(no second LLM call)"]
     end
 
-    subgraph Pipeline["Multi-Step RAG Pipeline (Max 1 Nominal LLM Call)"]
-        S1["Step 1: Deterministic Query & Scope Analyzer"] --> S2["Step 2: ToolGateway\nretrieve_passages / fetch_section_context"]
-        S2 --> S3{"Step 3: Deterministic\nEvidence Sufficiency Gate"}
-        S3 -- "Missing Scope (loop_count == 0)" --> S2
-        S3 -- "Out-of-Corpus (0 LLM Tokens)" --> GroundedRefusal["Step 3b: Deterministic Grounded Refusal"]
-        S3 -- "Sufficient" --> Guard
-    end
+    Gen -. "base_url" .-> Groq["Groq free tier"]
+    Gen -. "base_url" .-> StandIn["Stand-In HTTP/SSE :8001"]
 
-    subgraph ProviderLayer["Single-Owner Upstream Provider Guard & Transport"]
-        Guard["ProviderGuard\nDaily RPD/TPD Gate + RPM/TPM Bucket +\nConcurrency Semaphore + CircuitBreaker + RetryBudget"]
-        Guard -- "Daily Exhausted / Circuit Open" --> HonestFail["Instant Honest Unavailability Notice\n(+ Passage Pointers, 0 LLM Calls)"]
-        Guard -- "TPM Tight Signal" --> S2
-        Guard -- "Permitted" --> Http["HttpOpenAIProvider (stream=True, max_retries=0)"]
-        Http -. "base_url=api.groq.com" .-> Groq["Real Groq Free Tier"]
-        Http -. "base_url=127.0.0.1:8001" .-> StandIn["Calibrated Stand-In HTTP/SSE Server"]
-    end
-
-    subgraph VerifyGate["Verify-Before-Delivery Gate"]
-        Http --> Buffer["Stream Receiver & Buffer\n(Records provider_first_token_ms)"]
-        Buffer --> Ver["Step 5: Deterministic CitationVerifier\n(Passage IDs, Paper/Page Match, Refusal Integrity)"]
-        Ver -- "VERIFIED / REFUSAL_VERIFIED" --> CacheAdmit["Cache Admission Gate\n(Verified & Non-Degraded Only)"]
-        CacheAdmit --> DeliverClient
-        Ver -- "UNVERIFIED" --> BlockOut["Block Unverified Answer\n(Optional 1 Bounded Repair or Safe Error)"]
-    end
-
-    DeliverClient --> Telemetry["Telemetry Recorder -> root results.csv + runs/traces.jsonl"]
-    FastShed --> Telemetry
-    GroundedRefusal --> Telemetry
-    HonestFail --> Telemetry
-    BlockOut --> Telemetry
+    Deliver --> Trace["Server spans -> run-dir traces.jsonl"]
+    Shed --> Trace
+    ERef --> Trace
+    Unavail --> Trace
+    SafeRef --> Trace
+    Trace --> Harness["Harness joins client timing + server spans\n-> run rows.csv -> aggregated results.csv"]
 ```
 
 ---
 
-## 5. Detailed Request Sequence Diagram
-
-*(Every lifeline, branch, and latency boundary matches the High-Level Architecture Diagram above.)*
+## 5. Request Sequence
 
 ```mermaid
 sequenceDiagram
     autonumber
-    actor User
-    participant In as IngressGate + Cache/SF
-    participant Q as BoundedQueue
-    participant Rag as Scope + ToolGateway + EvidenceGate
-    participant PG as ProviderGuard (Quota/Retry/CB)
-    participant LLM as Upstream (Groq / Stand-In)
-    participant Ver as Verify-Before-Delivery Gate
-    participant Tel as Telemetry (results.csv)
+    actor H as Harness (client)
+    participant In as Ingress + Cache + SingleFlight
+    participant Q as Admission Queue
+    participant P as Pipeline (scope, tool, gate)
+    participant G as ProviderGuard
+    participant L as Groq / Stand-In
+    participant V as Verifier
 
-    User->>In: POST /ask {question, retrieval_setting, deadline_ms}
-    In->>In: Check L1 Exact / L2 Guarded Semantic Cache
-    alt Cache Hit (Previously Verified)
-        In-->>User: Stream verified cached answer immediately (user first_token_ms)
-        In->>Tel: Log status=ok, cache_status=exact_hit/semantic_hit, tokens=0
-    else Cache Miss
-        In->>In: Join or lead SingleFlight(canonical_key)
-        In->>Q: Enqueue (capture queue_depth_at_entry)
-        alt Queue Full OR Predicted Wait > Remaining Deadline
-            Q-->>User: Fast Shed HTTP 429/504
-            Q->>Tel: Log status=rate_limited/timeout, tokens=0
-        else Admitted & Dequeued
-            Q->>Q: Abort immediately if deadline expired or client disconnected
-            Q->>Rag: Step 1 Analyze Scope -> Step 2 ToolGateway.retrieve_passages()
-            Rag-->>Rag: Step 3 EvidenceGate check
-            opt Missing Paper Scope and loop_count == 0
-                Rag->>Rag: Step 2b Scoped re-query (hard cap: max 1 loop)
-            end
-            alt Evidence Insufficient (Out-of-Corpus)
-                Rag-->>User: Immediate Grounded Refusal (0 upstream tokens)
-                Rag->>Tel: Log status=ok, answer_grade=refused_correctly (if eval)
-            else Evidence Sufficient
-                Rag->>PG: Request upstream permission (check Daily RPD/TPD & CircuitBreaker)
-                alt Daily Budget Exhausted OR Circuit Open
-                    PG-->>User: Instant Honest Unavailability + top passage pointers (0 retries)
-                    PG->>Tel: Log status=rate_limited/error, tokens=0
-                else Permitted (Wait/Degrade if TPM Tight)
-                    opt TPM Headroom Tight
-                        PG->>Rag: Shrink top_k (e.g. 4 -> 2)
+    H->>In: POST /ask {request_id, question, retrieval_setting, deadline_ms}
+    Note over H: client starts its clock; samples patience
+    alt exact cache hit
+        In-->>H: verified answer (cache_status=exact_hit, 0 tokens)
+    else identical request already in flight
+        In-->>H: follower receives leader's result (cache_status=coalesced, 0 tokens)
+    else miss, leader
+        In->>Q: enqueue (record queue_depth_at_entry)
+        alt queue full or predicted wait > remaining deadline
+            Q-->>H: shed (rate_limited)
+        else admitted
+            Q->>Q: drop if deadline expired or client disconnected
+            Q->>P: scope -> retrieve_passages -> evidence gate (max 1 re-query)
+            alt clearly out of corpus
+                P-->>H: deterministic refusal (0 LLM tokens)
+            else sufficient
+                P->>G: request permission (daily, TPM reservation, semaphore, circuit)
+                alt daily budget gone or circuit open
+                    G-->>H: honest unavailability + passage pointers
+                else permitted
+                    loop retryable failure, within retry budget and deadline
+                        G->>L: chat/completions stream=true, include_usage
+                        L-->>G: SSE deltas (provider_first_token_ms) + usage + headers
                     end
-                    loop Retryable 429/5xx within RetryBudget & Remaining Deadline
-                        PG->>LLM: POST /chat/completions (stream=True, include_usage=True, max_retries=0)
-                        LLM-->>Ver: Upstream SSE chunks (record provider_first_token_ms) + headers + usage
-                    end
-                    PG->>PG: Sync RPD/TPM buckets from x-ratelimit-* headers & settle tokens
-                    Ver->>Ver: Step 5 CitationVerifier check on complete buffered reply
-                    alt Verification Passed
-                        Ver->>In: Admit to Cache (only if verified & non-degraded)
-                        Ver-->>User: Deliver verified answer (record user-visible first_token_ms)
-                        Ver->>Tel: Log status=ok, full wait/work/retry breakdown
-                    else Verification Failed
-                        Ver-->>User: Block hallucinated output (safe error / bounded fallback)
-                        Ver->>Tel: Log status=error, error_code=citation_verification_failed
+                    G->>G: settle reservation with actual usage; sync headers
+                    G->>V: complete buffered answer
+                    alt verified
+                        V-->>H: deliver answer (user first byte = first_token_ms)
+                    else failed
+                        V-->>H: safe refusal (error_code=citation_verification_failed)
                     end
                 end
             end
         end
     end
+    Note over H: client gives up at patience -> disconnect -> status=timeout, error_code=client_gave_up
 ```
 
 ---
 
-## 6. AI Pipeline & Deterministic vs. LLM Division
+## 6. Pipeline Steps (deterministic vs LLM)
 
-| Pipeline Step | Mechanism | Execution Mode | Satisfies Assignment Constraint |
+| Step | Mechanism | Mode | Assignment requirement satisfied |
 | :--- | :--- | :--- | :--- |
-| **Step 0 — Ingress, Cache & SingleFlight** | Exact canonical hash + optional L2 semantic check + `asyncio` SingleFlight | **Deterministic** (`fastembed` local ONNX only if L2 enabled) | Burst protection; zero LLM tokens |
-| **Step 1 — Query & Scope Understanding** | Regex/lexicon extractor identifies paper cues (`1706`/`Attention`, `Moshi`/`Mimi`/`Helium`, `H-Net`/`Dynamic Chunking`), multi-paper comparisons, and technical symbols | **Deterministic** | Step 1 of $\ge 4$ steps |
-| **Step 2 — Tool Execution (`ToolGateway`)** | Validates Pydantic tool args, enforces `tool_timeout_s`, executes `retrieve_passages` (Hybrid Dense + BM25 RRF + optional ONNX rerank) or `fetch_section_context` | **Deterministic Tool Call** | Step 2 + mandatory Tool Call |
-| **Step 3 — Evidence Sufficiency & Loop** | Evaluates retrieval scores, Reference-only traps, and multi-paper coverage. Branches: `SUFFICIENT` -> Step 4; `LOOP_EXPAND` (max **1** re-query loop!) -> Step 2; `EARLY_REFUSAL` -> deterministic refusal | **Deterministic Branch & Bounded Loop** | Step 3 + mandatory Branch/Loop + Early Grounded Refusal |
-| **Step 4 — Grounded Synthesis** | Single streaming LLM call (Groq or Stand-In) strictly instructed to cite `[P1]..[Pk]` or output `INSUFFICIENT_EVIDENCE` | **1 Hosted LLM Call** (nominal happy path) | Step 4 + Cited Synthesis |
-| **Step 5 — Citation Integrity Verification** | Parses `[Pi]` tags, checks ID existence, paper/page match, key entity/numeric consistency, and pure-refusal integrity | **Deterministic** (0 LLM tokens) | Step 5 + Never-Wrong Safety Gate |
-| **Step 6 — Persistence & Cache Admission** | Emits `results.csv` + `runs/traces.jsonl`; admits answer to SQLite cache **only if** `VERIFIED` and non-degraded | **Deterministic** | Observability + Cache Integrity |
+| 0 — Cache + SingleFlight | Normalised exact key; in-flight future map | Deterministic | Burst absorption |
+| 1 — Scope analysis | Lexicon/regex: paper cues (`Attention`/`Transformer`, `Moshi`/`Mimi`/`Helium`, `H-Net`/`dynamic chunking`), comparison intent, technical identifiers | Deterministic | Step 1 |
+| 2 — `retrieve_passages` tool | Pydantic-validated args, timeout, timing; dense + BM25 + RRF, optional rerank, optional paper filter | Deterministic **tool call** | Step 2, tool call, retrieval |
+| 3 — Evidence gate | `SUFFICIENT` / `LOOP_EXPAND` (paper-scoped re-query, **max 1**) / `EARLY_REFUSAL` (only clearly out-of-corpus) | Deterministic **branch + bounded loop** | Step 3, branch/loop |
+| 4 — Grounded synthesis | One streaming LLM call; prompt lists passages `[P1]..[Pk]` with paper/page/section; instructs cite-or-refuse (`INSUFFICIENT_EVIDENCE`) | **The only LLM call** | Step 4 |
+| 5 — Verification | Citation integrity + grounding constraints (§7.3) | Deterministic | Step 5 |
+
+**Tools [OWNER-DECIDED: avoid unnecessary second tools]:** only `retrieve_passages` is implemented. The earlier `fetch_section_context` tool is removed. The bounded re-query loop reuses `retrieve_passages` with a paper filter.
+
+**Retrieval presets [PROPOSED, sizes in words]:** `small_fast` (~180-word pieces, top-4, no rerank), `balanced_rerank` (~330-word pieces, fetch 12 → rerank → top-4), `large_wide` (~600-word pieces, top-6, no rerank). Final values are set in Phase 04 after inspecting extracted text. Reference/bibliography chunks are down-weighted unless the question asks about references.
+
+**Known limitation:** the evidence gate can only catch clearly off-topic questions. Near-topic unanswerable questions (the brief promises these) must be refused by the LLM's cite-or-refuse instruction and are then checked by the verifier.
 
 ---
 
-## 7. Critical Decision: Verify-Before-Delivery Strategy (Streaming vs. Correctness)
+## 7. Answer Verification and Delivery **[OWNER-DECIDED]**
 
-### The Safety Tension
-Streaming raw tokens directly from Groq to the user maximizes initial responsiveness (`TTFT`), **but** if the model emits an invalid citation (`[P9]`), confuses `Moshi` with `Attention`, or mixes facts into a refusal mid-stream, an uncorrected error has already been sent to the user—violating *"never wants to send a wrong or embarrassing answer just to stay fast."*
+### 7.1 Policy
+1. The upstream call streams (`stream=True`, `stream_options.include_usage=True`) so the Relay can measure provider TTFT, detect stalled streams, and cancel on disconnect.
+2. The Relay **buffers the complete answer**, runs the verifier, and **only then** delivers it to the client.
+3. If verification fails, the client receives a **safe refusal** (an honest "I could not produce a verifiable answer from the papers" message). **No repair loop and no second LLM call.**
+4. Verified cache hits and deterministic refusals are delivered immediately.
 
-### Approved Strategy: Upstream Streaming + Verify-Before-Delivery Gate
-1. **Upstream stays streaming (`stream=True`):** `HttpOpenAIProvider` streams SSE chunks from Groq/Stand-In to measure true upstream `provider_first_token_ms`, detect stalled streams via per-chunk read timeouts, cancel immediately on client disconnect, and receive `stream_options={"include_usage": True}`.
-2. **Client delivery waits for deterministic verification (`Verify-Before-Delivery`):** For uncached live LLM generations, The Relay buffers the streamed tokens until `CitationVerifier` validates the complete output (`~1 ms` CPU), and **only then delivers the verified answer to the client**. Verified cache hits and deterministic early refusals stream to the user immediately (`~5–15 ms`).
-3. **Two Explicit Latency Metrics Measured & Reported:**
-   - **`provider_first_token_ms`** (appended `results.csv` column): Elapsed ms from request arrival until The Relay receives the first visible content delta from Groq/Stand-In.
-   - **`first_token_ms`** (mandatory `results.csv` column — **User-Visible TTFT**): Elapsed ms from request arrival until the user receives the first verified content byte. *(On cache hits: ~5–15 ms; on live calls: equals `total_stream_completion + ~1 ms verification`. We explicitly justify this deliberate TTFT trade-off for zero unverified output in Report Headings 1 & 3.)*
-4. **Honest Scope of Verification (Citation Integrity vs. Semantic Entailment):**
-   `CitationVerifier` deterministically proves **structural citation integrity & source-metadata consistency** (every non-refusal answer cites retrieved `[Pi]` IDs, all `[Pi]` tags exist, arXiv/page mentions match `Pi` metadata, numeric parameters match cited passage text, refusals contain no contradictory factual claims). It does **not** claim formal NLI semantic entailment without an additional model check—factual entailment is explicitly audited across the 18-question eval suite.
+### 7.2 Two TTFT metrics (recorded separately)
+- `provider_first_token_ms` — from server request arrival to the first visible **content** delta received from the provider (reasoning deltas excluded; first reasoning delta recorded in traces).
+- `first_token_ms` — **user-visible**: measured by the harness (client side) from sending the request to receiving the first byte of the delivered answer. Blank when nothing was delivered.
 
----
+On uncached live answers `first_token_ms ≈ total_ms` by design. The gap between the two metrics is the measured cost of verification-before-delivery and will be reported.
 
-## 8. Cache & SingleFlight Architecture
+### 7.3 What the verifier checks (and does not)
+Rejects an answer when any of these hold:
+- (a) A non-refusal answer has no `[Pi]` tag, or a sentence making a factual claim has no tag. [PROPOSED granularity: per sentence]
+- (b) A tag references a passage that was not supplied.
+- (c) A paper name, arXiv ID or page mentioned in the sentence contradicts the cited passage's metadata.
+- (d) **Grounding constraint:** a number or technical identifier (e.g. `d_model`, `12.5 Hz`) in a sentence does not appear in any passage cited by that sentence.
+- (e) A refusal (`INSUFFICIENT_EVIDENCE`) also contains factual claims.
 
-- **Baseline (`CACHE_MODE=exact`, Always Reliable):**
-  - **SingleFlight Coalescer:** Maps `(canonical_query, retrieval_setting, degraded_flag)` to an active `asyncio.Future`. Identical concurrent requests share **one** execution; followers log `cache_status="coalesced"`, `tokens_in=0`, `tokens_out=0` so provider token sums stay exact. Disconnecting one follower transfers leadership rather than killing active waiters.
-  - **L1 Exact Cache (`SQLite` `cache.db`):** Canonical normalized query hash (`lowercase`, whitespace/punctuation normalized, SHA-256) scoped by `(corpus_sha256, retrieval_setting, prompt_version, model_id)`. **0.0% false-hit risk**, `< 2 ms` lookup, survives 3 PM daily budget exhaustion!
-- **Optional Optimization (`CACHE_MODE=semantic`, Independently Toggleable & Measured):**
-  - **L2 Guarded Semantic Cache:** Combines:
-    1. Deterministic **Scope & Technical-Identifier Lock** (`QueryPlan.papers` + extracted symbols like `d_model`, `d_ff`, `12.5 hz`, `ratio loss`, `RoPE` must match strictly).
-    2. **Cosine Similarity Candidate Filter** (`BAAI/bge-small-en-v1.5`) + **ONNX Cross-Encoder Equivalence Check** (`Xenova/ms-marco-MiniLM-L-6-v2`) + **HABIT-style Runner-Up Margin** (if top-2 cached entries with distinct answers score within $\Delta$, fail closed to live RAG).
-    3. **Empirical Threshold Calibration Rule:** Thresholds $\tau_{\text{sim}}, \tau_{\text{ce}}, \Delta$ are **NOT hardcoded as proven values**—they are tuned and verified experimentally in Phase 7/9 on labeled paraphrase pairs vs. hard-negative parameter-swap pairs targeting **0.0% false-hit rate**.
-- **Trusted Admission Gate:** Only responses with `status == "ok"`, `verification.verdict in ("VERIFIED", "REFUSAL_VERIFIED")`, and `not degraded_mode` enter SQLite cache.
-- **Experiment Isolation:** `CACHE_MODE="off"` during all Table 3 retrieval experiments and baseline load tests so cache hits never mask weak retrieval.
+It does **not** prove semantic entailment. A wrong claim attached to a valid citation can pass; this is measured by owner grading (§11) and stated in the write-up.
 
 ---
 
-## 9. Groq Integration & Rate-Limit Header Accuracy
+## 8. Cache and SingleFlight **[OWNER-DECIDED]**
 
-### Verified Groq API Mechanics (Official Docs `console.groq.com/docs/rate-limits`, `console.groq.com/docs/models`, Nov 2026)
+- **SingleFlight:** keyed by `(normalised_question, retrieval_setting)`. The leader's work runs as a detached task; followers await it. A follower that disconnects simply stops waiting; the leader task is cancelled only when **no** waiters remain. Followers record `cache_status=coalesced`, `provider_called=false`, `tokens_in=tokens_out=0` so token sums stay exact.
+- **Exact cache:** in-memory, keyed by normalised question hash scoped by `(corpus_sha256, retrieval_setting, prompt_version, model_id)`. Admits only answers that are verified (or verified refusals) **and** not degraded. Cleared at the start of every experiment run so runs cannot contaminate each other.
+- **Semantic cache: deliberately excluded** (§14). Reason: a near-duplicate match for a different question (e.g. `d_model` vs `d_ff`, Moshi vs Transformer) would deliver a confidently wrong cited answer — the failure the brief forbids — and calibrating it safely costs more time than it saves.
+- **Experiment isolation:** cache is `off` in all retrieval-quality runs. Load scenarios declare their cache mode in the run manifest; cache-on vs cache-off comparisons are separate, labelled runs.
 
-| Item | Verified Meaning / Status | Classification |
+---
+
+## 9. Groq Integration and Quota Control
+
+### 9.1 Header semantics — must be verified, not assumed **[OWNER-DECIDED]**
+The Phase 00 web check reported the following documented meanings. **They are treated as hypotheses until verified empirically in Phase 02-LIVE.**
+
+| Header | Documented meaning (to verify) | Empirical verification method |
 | :--- | :--- | :--- |
-| `x-ratelimit-limit-requests` | **RPD** (Maximum Requests Per **Day** — **NOT RPM!**) | **Officially Documented** |
-| `x-ratelimit-remaining-requests` | Remaining Requests Per **Day** (RPD) | **Officially Documented** |
-| `x-ratelimit-reset-requests` | Time remaining until daily RPD window resets | **Officially Documented** |
-| `x-ratelimit-limit-tokens` | **TPM** (Maximum Tokens Per **Minute**) | **Officially Documented** |
-| `x-ratelimit-remaining-tokens` | Remaining Tokens Per **Minute** (TPM) | **Officially Documented** |
-| `x-ratelimit-reset-tokens` | Time remaining until minute TPM bucket resets | **Officially Documented** |
-| `retry-after` | Seconds to wait before retrying (present **only** on HTTP `429`) | **Officially Documented** |
-| `stream_options={"include_usage": True}` | Appends final SSE chunk (`choices: []`) carrying exact `prompt_tokens` & `completion_tokens` | **Officially Documented** |
-| `reasoning_format` / `reasoning_effort` | Controls reasoning output (`parsed` vs `raw`) on reasoning models (`openai/gpt-oss-20b`, `qwen/qwen3.8-27b`) | **Officially Documented** |
-| **RPM** and **TPD** ceilings | **NOT exposed in standard HTTP headers**; vary by account/model and must be checked in Groq Console + verified via `429` error messages | **Account-Specific / To Be Measured in Phase 5** |
-| **Max safe concurrency / true tail latency** | **Unknown until probed** via `scripts/probe_groq.py` | **To Be Measured in Phase 5** |
+| `x-ratelimit-limit-requests` | Requests per **day** (RPD) — **not RPM** | Value matches console RPD for the model |
+| `x-ratelimit-remaining-requests` | Remaining RPD | Decrements by 1 per call across consecutive calls |
+| `x-ratelimit-reset-requests` | Time until RPD window replenishes | Hours/minutes-scale duration, not seconds-scale |
+| `x-ratelimit-limit-tokens` | Tokens per **minute** (TPM) | Value matches console TPM |
+| `x-ratelimit-remaining-tokens` | Remaining TPM | Drops by roughly the call's `usage.total_tokens` |
+| `x-ratelimit-reset-tokens` | Time until TPM replenishes | Seconds-scale duration |
+| `retry-after` | Seconds to wait; on `429` only | Observed only if an owner-approved limit probe runs |
 
-### Strict Separation of Responsibilities (`IngressGate` vs. `ProviderGuard`)
-- **`IngressGate` + `BoundedQueue` (Application Layer):** Owns cache/SingleFlight, bounded FIFO queue (`maxsize=16`), request arrival deadlines, FastAPI client-disconnect detection, and predictive wait shedding (`estimated_wait > 0.85 * remaining_deadline`). Has **zero** provider header logic.
-- **`ProviderGuard` (Single Upstream Quota & Resilience Owner):** Holds the single `max_in_flight` semaphore, proactive local sliding-window RPM + TPD counters, RPD/TPM state synced from `x-ratelimit-*` headers (with duration parsing like `"1m30s"` / `"2h5m"`), `CircuitBreaker`, `RetryBudget`, and full-jitter exponential backoff (`max_retries=0` on `httpx` client so zero hidden retries happen!). **No duplicate rate limiters exist anywhere else.**
+RPM and TPD are not expected in headers; they come from the Groq console/docs and, if the owner approves a minute-limit probe, from the `429` body. Every raw header seen is stored in the probe evidence so any misreading can be re-checked. If a header behaves differently from the table, the parser and this table are corrected (via the §7 protocol in `CLAUDE.md`).
 
----
+### 9.2 Responsibilities
+- **Admission queue (application layer):** queue depth, deadlines, disconnect checks, predictive shedding. No provider-header logic.
+- **ProviderGuard (sole quota owner):** concurrency semaphore; local sliding-window RPM and TPM; RPD/TPM state synced from headers; local TPD counter; daily safety stop; retry policy + retry budget; minimal circuit breaker. No other module keeps rate-limit state.
+- **Provider client:** plain `httpx.AsyncClient` with **no hidden retries** (no retry wrapper; transport `retries=0`). All retries are visible and counted by ProviderGuard.
 
-## 10. Stand-In Service Architecture & Scope Distinction
+### 9.3 Token reservation and reconciliation **[OWNER-DECIDED principle]**
+- Before a call, ProviderGuard reserves `estimate = ceil(prompt_chars / chars_per_token) + max_tokens`, where `chars_per_token` starts conservative (low, so the estimate is high) and is **updated from observed `usage.prompt_tokens / prompt_chars`** ratios.
+- After the call, the reservation is **settled to the provider-reported `usage`** (prompt + completion, including reasoning tokens).
+- If a stream ends without a usage chunk (cancel, stall, error), the reservation stays charged and the row records `usage_source=estimated`.
+- Header-reported remaining TPM, when present, overrides the local estimate.
 
-- **Implementation:** Standalone FastAPI ASGI server (`127.0.0.1:8001`) exposing OpenAI/Groq-compatible `/openai/v1/chat/completions`, `/openai/v1/models`, and `/admin/config` + `/admin/reset`.
-- **Simulated Behaviors (Seeded `random.Random(seed)`):** Shifted log-normal TTFT & inter-token streaming delays calibrated from Phase 5 Groq probe logs (`runs/groq_probes.jsonl`), load-dependent latency slowdown above concurrency knee, probabilistic `500`/`503` failures, slow-success stragglers, and exact sliding-window RPM/TPM + daily RPD/TPD exhaustion with Groq-formatted `429` + `Retry-After` + `x-ratelimit-*` headers and recovery.
-- **Performance vs. Answer-Quality Boundary:** The Stand-In generates deterministic extractive citations from supplied `[P1]..[Pk]` chunks (testing pipeline orchestration, latency, streaming, timeouts, and citation plumbing under heavy load), **NOT real LLM semantic reasoning**. All Table 3 answer-quality evaluations MUST run against the real Groq model (paced, with `cache_mode="off"`).
+### 9.4 Daily quota protection **[OWNER-DECIDED]**
+- The daily quota is never deliberately exhausted for testing.
+- ProviderGuard and every real-run script stop at a configurable **daily safety fraction** of known RPD/TPD (proposed default 0.75 [PROPOSED]) and every script has a hard `--max-real-calls` cap.
+- The "daily budget exhausted" scenario runs against the Stand-In (and the guard's simulated exhausted state), never by draining the real account.
 
----
-
-## 11. Observability, `results.csv` & Metric Traceability
-
-### Exact `results.csv` Schema (Root `c:\Users\ASUS\Desktop\The-Relay\results.csv` — NEVER `.gitignore`d!)
-- **Columns 1–12 (Mandatory Exact Order & Names from `ASSIGNMENT.md`):**
-  1. `request_id`
-  2. `scenario`
-  3. `source` (`real` | `stand-in`)
-  4. `start_time` (ISO-8601 UTC ms)
-  5. `first_token_ms` (user-visible TTFT ms, or `""` blank if no answer byte delivered)
-  6. `total_ms` (end-to-end monotonic ms)
-  7. `status` (`ok` | `rate_limited` | `timeout` | `error`)
-  8. `retries` (`int >= 0`)
-  9. `tokens_in` (`int >= 0`)
-  10. `tokens_out` (`int >= 0`)
-  11. `retrieval_setting` (`small_fast` | `balanced_rerank` | `large_wide` | `none`)
-  12. `answer_grade` (strictly `correct` | `wrong` | `refused_correctly` | `refused_wrongly`, OR **`""` blank** when no answer was generated or run is an ungraded stress-load request — never an invented `"na"` string!)
-- **Columns 13–24 (Appended Non-Breaking Telemetry for Exact Table Recomputation):**
-  13. `provider_first_token_ms` (upstream TTFT before verification buffer, or `""`)
-  14. `queue_depth_at_entry` (`int` -> `max()` yields Table 2b `Peak queue length`)
-  15. `waiting_ms` (queue + rate-limit pacing wait)
-  16. `working_ms` (active retrieval + active provider/verification work)
-  17. `retrying_ms` (retry sleep + failed attempt overhead; `waiting_ms + working_ms + retrying_ms == total_ms` within 1 ms!)
-  18. `retrieval_ms`
-  19. `cache_status` (`off` | `miss` | `exact_hit` | `semantic_hit` | `coalesced`)
-  20. `provider_called` (`true` | `false` — explicitly tracks provider calls avoided!)
-  21. `model_id`
-  22. `cost_usd` (counterfactual developer-tier USD computed from `tokens_in`/`tokens_out` -> Table 2b `Cost per 1,000 answers`)
-  23. `verification_verdict` (`VERIFIED` | `REFUSAL_VERIFIED` | `UNVERIFIED` | `SKIPPED`)
-  24. `error_code` (sanitized short code; zero secrets!)
-
-- **Table 1 Raw Evidence:** Saved in `runs/groq_probes.jsonl` (every probe request, status, headers, 429 JSON, recovery ticks) so Table 1 values are 100% reproducible alongside `results.csv`.
+### 9.5 Retries
+Full-jitter exponential backoff honouring `retry-after`; no retry when the wait exceeds the remaining deadline share, on daily exhaustion, or on non-retryable errors (400/401/403/413). A rolling **retry budget** caps retries relative to first attempts and can be disabled for the retry-amplification experiment (heading 6). Because answers are buffered, a retry after a partial stream discards the partial buffer — nothing unverified was delivered.
 
 ---
 
-## 12. Mandatory vs. Optional vs. Deferred Classification
+## 10. Model Selection **[OWNER-DECIDED: candidate, not final]**
 
-- **Mandatory (Core Critical Path):** Phase 1 Config/Schemas/Telemetry; Phase 2 Exact PDF Ingestion (`1706.03762v7`, `2410.00037v1`, `2507.07955v2`); Phase 3 Hybrid Index + 18-Q Eval Set; Phase 4 Pipeline + `ToolGateway` + `CitationVerifier` (Verify-Before-Delivery); Phase 5 `HttpOpenAIProvider` + Groq Probes; Phase 6 `IngressGate` + `ProviderGuard`; Phase 7 L1 Exact Cache + SingleFlight + FastAPI API; Phase 8 Calibrated Stand-In HTTP Server; Phase 9 Load & Retrieval Runs; Phase 10 Table Recomputation & Report.
-- **Optional (Toggleable, Isolated):** L2 Guarded Semantic Cache (`CACHE_MODE=semantic`) + Cache Ablation Suite.
-- **Deliberately Deferred / Excluded:** Web UI/Dashboard, Redis/Postgres/Kafka/Docker, LangChain/LangGraph, Multi-Worker scaling, LLM-as-a-Judge grading.
-
----
-
-## 13. Requirements & Architecture Traceability Matrix
-
-| Req ID | Official Assignment Requirement | Responsible Component | Phase | Validation Method | Expected Deliverable | Current Status |
-| :--- | :--- | :--- | :--- | :--- | :--- | :--- |
-| **REQ-01** | Working pipeline ($\ge 4$ steps, $\ge 1$ tool call, $\ge 1$ branch/loop, retrieval) | `orchestrator/pipeline.py`, `tools.py`, `evidence_gate.py` | Phase 4 | Offline `pytest` with `ScriptedProvider` | Working tested pipeline | Proposed |
-| **REQ-02** | Exact arXiv PDFs (`1706.03762v7`, `2410.00037v1`, `2507.07955v2`) | `ingestion/arxiv_fetcher.py`, `pdf_parser.py` | Phase 2 | SHA-256 manifest + 2-col layout tests | `data/papers/manifest.json` + chunks | Proposed |
-| **REQ-03** | Cited answers + grounded refusal (no memory guessing) | `verifier.py`, `evidence_gate.py` | Phase 4 | Unit tests + 18-Q audit | Verified outputs & refusal test pass | Proposed |
-| **REQ-04** | Real Groq free-tier integration & empirical limits (Table 1) | `http_provider.py`, `scripts/probe_groq.py` | Phase 5 | Controlled live probes + `MockTransport` unit tests | `runs/groq_probes.jsonl` + Table 1 | Proposed |
-| **REQ-05** | Calibrated Stand-In (slow, fail, 429, load slowdown, streaming) | `standin/server.py`, `calibrator.py` | Phase 8 | Integration tests + quantile check vs probes | Running HTTP/SSE Stand-In + profile | Proposed |
-| **REQ-06** | $\ge 5$ Load shapes (steady, burst, overload, halved limit, daily exhausted) | `experiments/load_runner.py`, `workloads.py` | Phase 9 | Automated scenario suite | Rows in `results.csv` + Tables 2a/2b | Proposed |
-| **REQ-07** | $\ge 3$ Retrieval settings + $\ge 15$ Qs + 3 retriever traps | `retrieval/hybrid_index.py`, `eval/questions.json` | Phase 3, 9 | Paced Groq eval (`cache=off`) + rubric audit | Rows in `results.csv` + Table 3 | Proposed |
-| **REQ-08** | Exact `results.csv` schema + recomputable Tables 1–3 + slow-req split | `csv_writer.py`, `tracker.py`, `compute_tables.py` | Phase 1, 10 | Formula invariant assertions | Root `results.csv` + `computed_tables.md` | Proposed |
-| **REQ-09** | Security (zero keys committed) + $\le 2$-page report + unedited history + Vaani feedback | `config.py`, `.gitignore`, Owner write-up | Phase 1, 10 | Key grep + `git status` + page count check | Final submission package | Proposed |
+1. **Discover** the models enabled on the owner's account with `GET /openai/v1/models` (Phase 02-LIVE).
+2. **Shortlist** at most 3 candidates (e.g. `openai/gpt-oss-20b` plus one non-reasoning model and one larger model, subject to what is listed) using console-listed free-tier limits.
+3. **Latency baseline (Day 1):** a few short calls per candidate within the Day 1 cap.
+4. **Quality mini-comparison (Day 2):** ~6 owner-written questions × candidates on `balanced_rerank`, cache off. Compare correct-and-cited rate, refusal behaviour, tokens per answer (including reasoning tokens), provider TTFT, and how many answers per day the TPD would allow.
+5. **The owner selects** the model; the choice and its evidence are recorded in the log and report. Reasoning settings (`reasoning_effort`/`reasoning_format`) are configurable and recorded per run.
 
 ---
 
-## 14. Critical Assumptions Requiring Owner Approval
+## 11. Evaluation Questions and Grading **[OWNER-DECIDED: owner authors questions]**
 
-1. **Verify-Before-Delivery Gate:** Buffer upstream LLM stream locally until `CitationVerifier` passes before emitting to the client (adds total-stream wait to user-visible `first_token_ms`, guaranteeing zero unverified answers reach users).
-2. **`results.csv` Extensions & Blank `answer_grade`:** Keep columns 1–12 identical to the brief, append telemetry columns 13–24 (`provider_first_token_ms`, `queue_depth_at_entry`, `waiting_ms`, `working_ms`, `retrying_ms`, `cost_usd`, etc.) so Tables 2a/2b/3 & Heading 4 are 100% recomputable from `results.csv`, and leave `answer_grade=""` (blank) when no answer is generated.
-3. **Single-Process Uvicorn (`workers=1`) & Separate Local HTTP Stand-In (`127.0.0.1:8001`).**
-4. **Baseline Cache Scope:** Build L1 Exact Cache + SingleFlight as mandatory baseline (`CACHE_MODE=exact`), keeping L2 Guarded Semantic Cache (`CACHE_MODE=semantic`) as an empirically calibrated optional module (thresholds derived from test data, never hardcoded upfront).
-5. **Groq Model & Reasoning Control:** Discover exact enabled free-tier model via `GET /openai/v1/models` in Phase 5 (starting candidate `openai/gpt-oss-20b` or fastest active non-reasoning model) with ~150-call total 3-day budget cap.
-6. **FIFO Bounded Queue (`maxsize=16`):** Simple predictable FIFO queue with deadline/disconnect checks and predictive shedding (no complex multi-tier priority queues).
+- **Authorship:** the owner writes ≥15 (target 18) questions. Claude prepares the schema, template, validator and grading tooling, and later **verifies** each question's expected answer and paper/page references against the extracted PDFs, reporting discrepancies without silently editing the owner's content.
+- **Question schema (`eval/questions.json`):** `id`, `author`, `category`, `question`, `answerable`, `expected_answer`, `required_facts[]`, `gold_citations[] {paper_id, page, section, quote}`, `forbidden_claims[]`, `trap_type` (nullable), `notes`.
+- **Coverage target [PROPOSED]:** direct factual; multi-hop/cross-section; numeric/technical detail; cross-paper/ambiguous; **≥3 unanswerable**; **≥3 retriever traps** that cover the three naive-retriever failure modes for the write-up. Candidate failure modes: bibliography chunks matching keywords; shared vocabulary across papers ("Transformer", "attention", "chunk"); numbers in tables or equations split or garbled by extraction; answers leaking from other versions of a paper.
+- **Grade labels:** exactly `correct`, `wrong`, `refused_correctly`, `refused_wrongly`, or blank when no answer was delivered or the row is ungraded (load/stand-in rows). No other values.
+- **Rules:**
+  - answerable + answer: `correct` only if all `required_facts` are present, ≥1 citation resolves to a gold page, and no `forbidden_claims`; otherwise `wrong` (a correct fact with a wrong or missing citation is `wrong`).
+  - answerable + refusal (including a verifier safe refusal): `refused_wrongly`.
+  - unanswerable + refusal: `refused_correctly`; unanswerable + answer: `wrong`.
+- **Process:** a deterministic first-pass rubric proposes a grade with reasons; **the owner reviews every graded row** and may override; overrides are stored with the run evidence and the final grade goes into the run rows. No LLM-as-judge.
+
+---
+
+## 12. Stand-In Service
+
+- Separate FastAPI process exposing OpenAI-compatible `/openai/v1/chat/completions` and `/openai/v1/models`, plus `/admin/config`, `/admin/reset`, `/admin/stats`.
+- Seeded behaviour: latency (TTFT and inter-token delay) fitted from Phase 02-LIVE probe evidence; slowdown above a concurrency knee; probabilistic 5xx; slow-success stragglers; stalled streams; RPM/TPM/RPD/TPD enforcement emitting `429`, `retry-after` and the same header names/meanings verified on Groq.
+- Answers are extractive and cite supplied passages: they test orchestration, timing and citation plumbing, **not** answer quality. All answer-quality figures come from real Groq runs.
+- If calibration evidence is missing, the profile is labelled `uncalibrated_defaults` and never presented as Groq-measured. Each calibration is stored as its own run directory (§13).
+
+---
+
+## 13. Raw Evidence, Run Directories and `results.csv` **[OWNER-DECIDED]**
+
+### 13.1 Directory layout (tracked in Git — never gitignored)
+```
+evidence/
+  groq_probes/<run_id>/          manifest.json, probes.jsonl (sanitised), summary.json
+  standin_calibration/<run_id>/  manifest.json, profile.json, fit_report.json
+  experiments/<run_id>/          manifest.json, rows.csv, traces.jsonl, grades.json (if graded), answers_audit.json
+  canonical_runs.json            the owner-selected runs that make up results.csv
+results.csv                      canonical, aggregated (repository root)
+scratch/                         gitignored: smoke runs, temporary output
+```
+- `run_id` format [PROPOSED]: `<kind>-<YYYYMMDDTHHMMSSZ>-<shortsha>` (e.g. `exp-20261112T101500Z-6ffab47`).
+- Every `manifest.json` records: run_id, kind, scenario(s), source (real/stand-in), model_id, reasoning settings, retrieval setting(s), cache mode, seed, config snapshot (no secrets), git commit, start/end time, real-call count, and status (`complete`/`aborted`).
+- **Sanitisation:** no API keys, no `Authorization` headers; organisation/account identifiers inside Groq error bodies are redacted.
+
+### 13.2 Single owner of `results.csv`
+- Only the experiment harness's aggregation step (`scripts/build_results.py`) writes `results.csv`. The Relay server never writes it; it writes server spans to the run directory's `traces.jsonl`.
+- Aggregation reads only the runs listed in `evidence/canonical_runs.json`, joins client rows with server spans by `request_id`, validates every row, and **fails loudly on duplicate `request_id`s** (request IDs are prefixed by run_id, so re-running creates new IDs rather than duplicates; selecting the same run twice is rejected).
+- Probe calls are not pipeline requests. [OPEN — §16] Proposal: include them as rows with `scenario=probe_*` and `retrieval_setting=none`, so Table 1 request-level facts are computable from `results.csv`; header-level facts come from `probes.jsonl`.
+
+### 13.3 Schema
+**Columns 1–12 (exact names and order from `ASSIGNMENT.md`):** `request_id, scenario, source, start_time, first_token_ms, total_ms, status, retries, tokens_in, tokens_out, retrieval_setting, answer_grade`.
+
+- `source`: `real` | `stand-in`. `start_time`: ISO-8601 UTC with ms. `first_token_ms`, `total_ms`: client-measured ms (`first_token_ms` blank if nothing delivered). `status`: `ok` | `rate_limited` | `timeout` | `error`. `tokens_in/out`: provider-reported sums across all attempts (estimate if no usage; see `usage_source`). `answer_grade`: §11 values or blank.
+
+**Appended columns 13+ [PROPOSED list]:** `run_id`, `question_id`, `provider_first_token_ms`, `server_total_ms`, `queue_depth_at_entry`, `waiting_ms`, `working_ms`, `retrying_ms`, `retrieval_ms`, `cache_status` (`off`|`miss`|`exact_hit`|`coalesced`), `provider_called`, `degraded`, `model_id`, `usage_source` (`provider`|`estimated`|`none`), `cost_usd`, `verification_verdict` (`VERIFIED`|`REFUSAL_VERIFIED`|`BLOCKED`|`EARLY_REFUSAL`|`NOT_RUN`), `error_code`.
+
+**Invariant:** `waiting_ms + working_ms + retrying_ms == server_total_ms` (±1 ms). `total_ms − server_total_ms` is client/transport overhead. Spans may be blank only if the server never received the request.
+
+### 13.4 Outcome classification
+| Situation | status | error_code | answer_grade |
+| :--- | :--- | :--- | :--- |
+| Verified answer delivered | ok | — | graded or blank |
+| Exact cache hit / coalesced follower | ok | — | graded or blank |
+| Deterministic early refusal | ok | — | graded or blank |
+| Verification failed → safe refusal delivered | **ok** [OPEN — §16] | `citation_verification_failed` | graded (answerable → `refused_wrongly`) |
+| Queue full / predicted wait exceeds deadline | rate_limited | `queue_full` / `predicted_wait_exceeds_deadline` | blank |
+| Upstream minute-limit 429 after retries | rate_limited | `upstream_rate_limited` | blank |
+| Daily budget exhausted (guard) | rate_limited | `daily_budget_exhausted` | blank |
+| Deadline expired before/while working | timeout | `deadline_expired` | blank |
+| **Client gave up (abandonment)** | **timeout** | **`client_gave_up`** | blank |
+| Provider stream stalled / read timeout | timeout | `provider_stalled` | blank |
+| Upstream 5xx after retries / circuit open | error | `upstream_error` / `circuit_open` | blank |
+
+`cost_usd` uses a pricing table snapshotted (with source URL and date) into the run manifest; if no documented price exists for a model, cost is reported as "not measured".
+
+---
+
+## 14. Scope: Mandatory, Deferred, Excluded
+
+- **Mandatory:** everything needed for the brief's tables and headings — pipeline (≥4 steps, tool, branch/loop, retrieval), verification, real probes, stand-in, ≥5 load scenarios (steady, burst, sustained overload, per-minute limit halved, daily budget exhausted), ≥3 retrieval settings, owner-graded eval, recomputable tables.
+- **Deliberately excluded (to be named in write-up heading 8):**
+  - **Semantic cache** — false-match risk (wrong cited answers) and calibration cost.
+  - **Multi-worker / multi-host scaling** — would need shared state for SingleFlight, quota and cache (§2).
+- **Also not built:** LLM repair loop; second retrieval tool; LLM query rewriting; LLM-as-judge; SQLite/Redis/Postgres/Docker; web UI.
+
+---
+
+## 15. Admission Queue Sizing **[OWNER-DECIDED principle]**
+
+Queue capacity is **derived, not assumed** (the earlier fixed `maxsize=16` is withdrawn):
+
+- `service_rate` = sustainable completed answers per second, from measurement: on the real service, bounded by `min(RPM/60, TPM / (60 × tokens_per_answer))` using measured tokens per answer; on the Stand-In, from its configured limits and measured service times.
+- `patience` = a client-patience distribution chosen by the owner [OPEN — §16] and used by the harness to abandon requests.
+- `capacity = max(1, floor(service_rate × patience_quantile))`, using a patience quantile (proposed: median) so a queued request has a realistic chance of being served before its client gives up (Little's law).
+- Predictive shedding additionally rejects a request when `queue_position / service_rate` exceeds its remaining deadline.
+
+The derivation and the resulting numbers are recorded per run in the manifest and explained in the write-up.
+
+---
+
+## 16. Open Decisions Requiring Owner Approval
+
+1. **Formal approval** of this v2 document (status → `APPROVED`).
+2. **Verifier safe refusal status:** `ok` + `error_code=citation_verification_failed` (proposed, keeps it gradable) vs `error`.
+3. **Probe rows in `results.csv`:** include as `scenario=probe_*` (proposed) vs keep probes only in `evidence/groq_probes/`.
+4. **Client-patience distribution** for the harness (proposal to be made in Phase 10 from what the brief implies; e.g. log-normal, median ~20 s — owner chooses).
+5. **Daily safety fraction** default (proposed 0.75) and per-day real-call caps (`IMPLEMENTATION_PLAN.md` budget table).
+6. **Minute-limit probe:** whether to deliberately trigger one real RPM/TPM `429` (requires separate explicit approval; never the daily limit).
+7. **Final model** after the comparison in §10.
+8. **Retrieval preset values** after Phase 04 text inspection.
+9. **Verifier claim granularity:** per-sentence tagging requirement (proposed) vs per-answer.
+10. **`deadline_ms` vs client patience:** real clients do not announce their patience. Proposal: the harness sends a fixed service-level `deadline_ms` (owner-chosen) and abandons privately at its sampled patience, so server-side shedding (`deadline_expired`, `predicted_wait_exceeds_deadline`) and client abandonment (`client_gave_up`) are measured separately.

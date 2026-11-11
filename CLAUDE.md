@@ -19,7 +19,7 @@ Deliverables must satisfy every requirement in `ASSIGNMENT.md` cleanly, safely, 
 Resolve any ambiguity strictly in this descending priority order:
 
 1. **Official Assignment Brief:** `ASSIGNMENT.md` (primary and non-negotiable truth).
-2. **Owner-Approved System Architecture:** `ARCHITECTURE.md` (once marked approved by the project owner; while labeled `PROPOSED — AWAITING OWNER APPROVAL`, do not treat unapproved items as final).
+2. **Owner-Approved System Architecture:** `ARCHITECTURE.md` (once marked approved by the project owner). Until its status is `APPROVED`, items tagged **[OWNER-DECIDED]** are binding owner decisions, while items tagged **[PROPOSED]** or **[OPEN]** must not be treated as final.
 3. **Approved Phase Roadmap & Task Specs:** `IMPLEMENTATION_PLAN.md`.
 4. **Project Execution History:** `ENGINEERING_LOG.md`.
 5. **The Specific Phase Prompt:** Provided explicitly by the project owner for the current phase.
@@ -68,12 +68,17 @@ Claude Code MUST **NEVER**:
 3. **Invent Groq limits, response headers, pricing, or latency numbers** as observed measurements when they were not actually measured against a live run.
 4. **Pretend an implementation is complete** when features, edge cases, or tests remain missing or mocked.
 5. **Claim tests or linters passed** without actually executing them after the final edit and observing every test pass.
-6. **Silently alter approved architectural decisions** (e.g., verify-before-delivery policy, `max_retries=0` on SDK, `results.csv` mandatory schema, single-process design).
+6. **Silently alter approved architectural decisions** (e.g., buffered verify-before-delivery with safe refusal on failure, no hidden transport/SDK retries, `results.csv` mandatory schema, single-worker design, exact-cache-only scope).
 7. **Rewrite or refactor unrelated working modules** from earlier completed phases unless fixing a verified bug (and document that fix explicitly).
 8. **Ignore failing tests, warnings, or invariant violations.**
 9. **Commit or hardcode API keys, `.env` secrets, or credentials** anywhere in code, logs, fixtures, or reports.
 10. **Spend real Groq API quota unexpectedly** during automated tests or without explicit phase/user instruction and `--max-real-calls` guards.
 11. **Silently omit mandatory requirements** from `ASSIGNMENT.md`.
+12. **Deliberately trigger a real Groq rate limit** without a separate, explicit owner approval for that specific probe, or **exhaust the real daily quota** for testing under any circumstances.
+13. **Write the canonical `results.csv` by any path other than the experiment harness aggregation step** (`scripts/build_results.py`), or let aggregation accept duplicate `request_id`s.
+14. **Gitignore, delete, or overwrite submission evidence** under `evidence/` (raw Groq probes, stand-in calibration, experiment runs) or `results.csv`. New runs go into new run directories.
+15. **Author the evaluation questions on the owner's behalf, or silently edit them.** Claude prepares structure and tooling and verifies owner questions against the PDFs, reporting proposed corrections for the owner to accept.
+16. **Treat a Groq header's meaning, a tokenizer's token counts, or a model choice as verified** without real evidence; provider-reported `usage` is the authoritative token count.
 
 When blocked by missing credentials, missing files, environment errors, or specification ambiguity, STOP, document the exact blocker and root cause honestly, and report it to the owner.
 
