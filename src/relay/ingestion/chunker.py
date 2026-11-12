@@ -9,7 +9,7 @@ Rules:
 - ``chunk_id = {paper_id}_p{page_start}_c{idx}``: ``idx`` counts this preset's chunks of
   the paper that start on ``page_start``, in reading order. Same PDF + same parser +
   same preset => same IDs and text.
-- Preset sizes are [PROPOSED] until P04 finalises them from the inspected text.
+- Preset sizes were finalised in P04 from measured token counts (see CHUNK_PRESETS).
 """
 
 from __future__ import annotations
@@ -42,11 +42,15 @@ class ChunkPreset(BaseModel):
         return self
 
 
-# [PROPOSED] sizes from ARCHITECTURE.md section 6; overlap ~15% [PROPOSED, P03].
+# Finalised in P04 from measured token counts (reports/phase-04-...md section 5):
+# BGE / MiniLM see at most 512 tokens and the corpus averages ~1.56 tokens/word (p90 2.2),
+# so the reranked preset must fit one model window (220 words ~ 484 tokens at p90); dense
+# retrieval embeds larger chunks in windows, so large_wide is sized by LLM prompt budget.
+# Overlap ~15% (>= one sentence) so facts on a boundary appear whole in some chunk.
 CHUNK_PRESETS: Final[tuple[ChunkPreset, ...]] = (
-    ChunkPreset(name="small_fast", size_words=180, overlap_words=30),
-    ChunkPreset(name="balanced_rerank", size_words=330, overlap_words=50),
-    ChunkPreset(name="large_wide", size_words=600, overlap_words=90),
+    ChunkPreset(name="small_fast", size_words=160, overlap_words=25),
+    ChunkPreset(name="balanced_rerank", size_words=220, overlap_words=35),
+    ChunkPreset(name="large_wide", size_words=400, overlap_words=60),
 )
 
 

@@ -48,6 +48,20 @@ python scripts/ingest_papers.py --check    # offline; exit 1 if data/papers/mani
 PDFs (`data/papers/*.pdf`) and generated text/chunks (`data/processed/`) are gitignored and
 regenerable; `data/papers/manifest.json` (checksums, page counts, extraction summary) is tracked.
 
+## Retrieval indexes and evaluation tooling
+
+```powershell
+python scripts/build_indexes.py --download-models  # one time only: fetch models into data/models
+python scripts/build_indexes.py                    # offline build of data/indexes/<preset>
+python scripts/build_indexes.py --check            # rebuild in memory; exit 1 on drift
+python scripts/validate_questions.py               # validate the owner's eval/questions.json
+python scripts/grade_answers.py --help             # propose / show / review / summary
+```
+
+Models (`data/models/`) and indexes (`data/indexes/`) are gitignored. Provenance (model
+revisions, ONNX SHA-256, digests) is in the tracked `data/retrieval_manifest.json`.
+How to write questions: [eval/README.md](eval/README.md).
+
 ## Evidence and results
 
 - `evidence/groq_probes/<run_id>/`, `evidence/standin_calibration/<run_id>/`,

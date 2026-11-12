@@ -21,6 +21,7 @@ scratch/
 data/papers/*.pdf
 data/processed/
 data/indexes/
+data/models/
 
 # NOTE: `results.csv` and everything under `evidence/` are submission evidence
 # and are intentionally TRACKED. Do not add ignore rules for them.

@@ -1,0 +1,133 @@
+{
+  "bm25_tokenizer_version": "bm25-tok-1",
+  "chunk_presets": [
+    {
+      "name": "small_fast",
+      "overlap_words": 25,
+      "size_words": 160
+    },
+    {
+      "name": "balanced_rerank",
+      "overlap_words": 35,
+      "size_words": 220
+    },
+    {
+      "name": "large_wide",
+      "overlap_words": 60,
+      "size_words": 400
+    }
+  ],
+  "dense_window": {
+    "step": 180,
+    "words": 220
+  },
+  "embedding_model": {
+    "dim": 384,
+    "hf_repo": "Qdrant/bge-small-en-v1.5-onnx-Q",
+    "max_tokens": 512,
+    "model_id": "BAAI/bge-small-en-v1.5",
+    "onnx_bytes": 66465124,
+    "onnx_file": "model_optimized.onnx",
+    "onnx_sha256": "51f1bd0addd6e859e42c2c8021a5e5461385bb676a649f4b269aa445449f2431",
+    "query_prefix": "Represent this sentence for searching relevant passages: ",
+    "revision": "aa8f8b060edb00e03bfdd08813a2949946c8ba55",
+    "threads": 4
+  },
+  "indexes": {
+    "balanced_rerank": {
+      "bm25_vocabulary": 8918,
+      "chunk_set_sha256": "a28e046b225186d5f8c5cfbc2e31315b34c008d41ef5c90337d040499a9c70a3",
+      "chunks": 341,
+      "chunks_over_model_limit": 16,
+      "chunks_sha256": "a28e046b225186d5f8c5cfbc2e31315b34c008d41ef5c90337d040499a9c70a3",
+      "dense_windows": 341,
+      "dense_windows_over_model_limit": 16,
+      "owners_sha256": "3ca0b75688f615cbf55ff78d63db5081e14d80fa036721ab14df7d087dccd7c2",
+      "reference_chunks": 47,
+      "vectors_sha256": "384da3d547b7899b15ee6be92ffc7778beac5d668f48e8e46250530215fc5ae2"
+    },
+    "large_wide": {
+      "bm25_vocabulary": 8918,
+      "chunk_set_sha256": "4a963959b2d3f18a40587b1c9a6a0cd8ba9b36427b71de7ae432377579c09dd7",
+      "chunks": 204,
+      "chunks_over_model_limit": 110,
+      "chunks_sha256": "4a963959b2d3f18a40587b1c9a6a0cd8ba9b36427b71de7ae432377579c09dd7",
+      "dense_windows": 355,
+      "dense_windows_over_model_limit": 17,
+      "owners_sha256": "0b5ef4edf4db1e42c5dd6ac54c0a57d85a464dea3f043dc87976b32b50943400",
+      "reference_chunks": 25,
+      "vectors_sha256": "3e5f482c420b92cecfbd61aa3b2f2a05c95087a312822f64c9cb09fc3cebdb82"
+    },
+    "small_fast": {
+      "bm25_vocabulary": 8918,
+      "chunk_set_sha256": "0026cbceac5affc221b421b4f98535c256d9d87d73a8e48c54aa2f9cb0e99929",
+      "chunks": 442,
+      "chunks_over_model_limit": 0,
+      "chunks_sha256": "0026cbceac5affc221b421b4f98535c256d9d87d73a8e48c54aa2f9cb0e99929",
+      "dense_windows": 442,
+      "dense_windows_over_model_limit": 0,
+      "owners_sha256": "cca2bcf1d63b1db6967ce767b4b512b73bd3c9b4cef8021d2738a646d952f3a9",
+      "reference_chunks": 64,
+      "vectors_sha256": "fd4040479d6d846179b29fb3a059d430a0d427a0bf281a0ad79cc346bbf8adb7"
+    }
+  },
+  "libraries": {
+    "fastembed": "0.9.1",
+    "numpy": "2.5.4",
+    "onnxruntime": "1.31.1",
+    "rank-bm25": "0.2.2",
+    "tokenizers": "0.23.3"
+  },
+  "rerank_model": {
+    "hf_repo": "Xenova/ms-marco-MiniLM-L-6-v2",
+    "max_tokens": 512,
+    "model_id": "Xenova/ms-marco-MiniLM-L-6-v2",
+    "onnx_bytes": 90992115,
+    "onnx_file": "onnx/model.onnx",
+    "onnx_sha256": "c623d0bcb99f4622beb413eaef00cfbe5db20df9f1dd982da4b4f26022881870",
+    "revision": "a09144355adeed5f58c8ed011d209bf8ee5a1fec",
+    "threads": 4
+  },
+  "retrieval_settings": {
+    "balanced_rerank": {
+      "candidate_depth": 50,
+      "chunk_preset": "balanced_rerank",
+      "name": "balanced_rerank",
+      "reference_rerank_penalty": 2.0,
+      "reference_weight": 0.5,
+      "rerank": true,
+      "rerank_candidates": 12,
+      "rrf_k": 60,
+      "top_k": 4,
+      "use_bm25": true,
+      "use_dense": true
+    },
+    "large_wide": {
+      "candidate_depth": 50,
+      "chunk_preset": "large_wide",
+      "name": "large_wide",
+      "reference_rerank_penalty": 2.0,
+      "reference_weight": 0.5,
+      "rerank": false,
+      "rerank_candidates": 12,
+      "rrf_k": 60,
+      "top_k": 5,
+      "use_bm25": true,
+      "use_dense": true
+    },
+    "small_fast": {
+      "candidate_depth": 50,
+      "chunk_preset": "small_fast",
+      "name": "small_fast",
+      "reference_rerank_penalty": 2.0,
+      "reference_weight": 0.5,
+      "rerank": false,
+      "rerank_candidates": 12,
+      "rrf_k": 60,
+      "top_k": 4,
+      "use_bm25": true,
+      "use_dense": true
+    }
+  },
+  "schema_version": 1
+}

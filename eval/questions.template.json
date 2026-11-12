@@ -1,0 +1,45 @@
+{
+  "schema_version": 1,
+  "questions": [
+    {
+      "id": "q01",
+      "author": "<your name>",
+      "category": "direct_factual",
+      "question": "<the question exactly as a user would ask it>",
+      "answerable": true,
+      "expected_answer": "<the reference answer in your words>",
+      "required_facts": [
+        "<a fact the answer must contain>",
+        "<another required fact|or an accepted alternative wording>"
+      ],
+      "gold_citations": [
+        {
+          "paper_id": "1706.03762v7",
+          "page": 1,
+          "section": "<section number and title, or null>",
+          "quote": "<a short verbatim quote from that page supporting the answer>"
+        }
+      ],
+      "forbidden_claims": [
+        "<a plausible but wrong claim that must not appear>"
+      ],
+      "trap_type": null,
+      "notes": "<optional: why this question is here>"
+    },
+    {
+      "id": "q02",
+      "author": "<your name>",
+      "category": "unanswerable",
+      "question": "<a near-topic question the three papers do not answer>",
+      "answerable": false,
+      "expected_answer": null,
+      "required_facts": [],
+      "gold_citations": [],
+      "forbidden_claims": [
+        "<an answer a model might invent>"
+      ],
+      "trap_type": "version_leak",
+      "notes": "<optional>"
+    }
+  ]
+}

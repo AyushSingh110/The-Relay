@@ -343,3 +343,80 @@
 - **Deviations from ARCHITECTURE.md:** none. Chunk presets remain [PROPOSED].
 - **Owner approval status:** pending owner review
 - **Next action:** Owner reviews `reports/phase-03-pdf-ingestion.md`. P04 starts only on explicit approval.
+
+---
+
+### Execution Entry
+
+- **Date and time:** 2026-11-12 (start of P04)
+- **Phase identifier:** `p03` approval recorded
+- **Owner approval:** P03 reviewed and accepted. `reports/phase-03-pdf-ingestion.md` is marked `Owner Approved (2026-11-12)`. The owner committed P03 as `ccc933d`.
+- **Next action:** P04 (retrieval indexes, scope analyzer, eval schema and grading tooling) per the owner's instruction.
+
+---
+
+### Execution Entry
+
+- **Date and time:** 2026-11-12 10:13 IST
+- **Phase identifier:** `p04` (Retrieval Indexes, Scope Analyzer, Evaluation Schema and Grading Tooling)
+- **Task requested:**
+  - BM25 + dense (FastEmbed ONNX, NumPy exact cosine) indexes over the P03 chunks; RRF hybrid retrieval with citations; at least 3 configurable settings;
+  - finalise the chunk presets with a rationale;
+  - reference handling; scope analyzer; eval schema, validator and manual grading tooling;
+  - offline tests.
+
+  Not to do: author questions, generate answers, call Groq, start P04B.
+- **Status:** completed, pending owner review
+- **Network:** one Hugging Face download session for the two planned models into gitignored `data/models/` (152 MB):
+  - `Qdrant/bge-small-en-v1.5-onnx-Q` @ `aa8f8b060edb00e03bfdd08813a2949946c8ba55`, `model_optimized.onnx` SHA-256 `51f1bd0a…49f2431`;
+  - `Xenova/ms-marco-MiniLM-L-6-v2` @ `a09144355adeed5f58c8ed011d209bf8ee5a1fec`, `onnx/model.onnx` SHA-256 `c623d0bc…2881870`.
+
+  Every later load uses `local_files_only=True`. **Groq calls: 0.**
+- **Files created:**
+  - `src/relay/retrieval/{__init__,embedder,hybrid_index,scope}.py`, `src/relay/eval/{__init__,questions,grader}.py`;
+  - `scripts/{build_indexes,validate_questions,grade_answers}.py`;
+  - `eval/questions.template.json` (placeholders only), `eval/README.md`;
+  - `tests/test_retrieval.py` (21), `tests/test_scope.py` (16), `tests/test_grader.py` (28);
+  - `data/retrieval_manifest.json` (tracked);
+  - `reports/phase-04-retrieval-and-evaluation-tooling.md`.
+
+  **`eval/questions.json` was NOT created**; the owner authors it.
+- **Files modified:**
+  - `src/relay/ingestion/chunker.py`: `CHUNK_PRESETS` finalised; no logic change.
+  - `data/papers/manifest.json`: regenerated; chunk sets only; paper checksums unchanged.
+  - `ARCHITECTURE.md` §6: final presets and rationale, pending owner approval.
+  - `.gitignore`: +`data/models/`.
+  - `README.md`, `reports/phase-03-pdf-ingestion.md` (Owner Approved), `ENGINEERING_LOG.md`.
+- **Final presets** (measured: 1.56 BGE tokens/word, p90 2.2; both models have a 512-token limit; the P03 proposals of 330/600 words exceeded 512 tokens for 34 % / 51 % of chunks):
+
+  | preset | words / overlap | chunks |
+  | :--- | :--- | -: |
+  | `small_fast` | 160 / 25 | 442 |
+  | `balanced_rerank` | 220 / 35 | 341 (16 over 512 tokens) |
+  | `large_wide` | 400 / 60 | 204 (dense covered by 355 windows, 17 over 512) |
+
+  - Dense windows: ≤ 220 words, step 180, best window scores the chunk.
+  - Settings: top-k 4 / 4 (rerank 12) / 5.
+  - RRF k = 60; references × 0.5 (fused) and −2.0 (rerank) unless reference intent is detected.
+- **Determinism:**
+  - `build_indexes.py --check` → `manifest_unchanged: true` with the real ONNX models (byte-identical vectors), including after the final edit;
+  - `ingest_papers.py --check` → unchanged.
+- **Commands and outputs:**
+  - The first build was too slow (1 thread, batch 32) and was stopped.
+  - Profiling on 64 chunks: 45.0 s (1 thread / batch 32) vs 2.8 s (default threads / batch 4). The fix is 4 fixed threads with batch size 4, and a full build takes 1 min 38 s.
+  - New tests, run 1: `2 failed, 63 passed` (an empty-build guard ran too late; scope coverage was diluted by question words). After the fixes: 65 passed.
+  - Ruff: 4 findings, all fixed.
+  - **Final:** `pytest -q` → **274 passed**, 0 failed, 0 skipped; `ruff check .` → All checks passed!
+  - Validator: the template is rejected (placeholders, exit 1); a missing `eval/questions.json` gives exit 1.
+- **Smoke checks** (offline, not evaluation, not graded):
+  - correct papers and sections for Mimi, routing-module and BLEU queries;
+  - reference intent surfaces a References chunk;
+  - **shared-vocabulary failure observed:** `large_wide` ranked H-Net first for a `d_model` query;
+  - an off-topic query lands on Moshi App. F.1 (general-knowledge dialogue examples) with rerank scores ≈ −10;
+  - latency ≈ 7–19 ms per query without rerank, ≈ 0.6–0.8 s with rerank.
+- **P03 limitations preserved:** source text unchanged; listed as `garbled_extraction` trap candidates in `eval/README.md`.
+- **Deviations from ARCHITECTURE.md:** none to binding decisions. The §6 preset values were finalised as the plan required, marked pending owner approval.
+- **Owner approval status:** pending owner review
+- **Next action:**
+  - Owner reviews the report and approves the presets and setting parameters.
+  - Owner writes `eval/questions.json`; P04B (question verification) starts only on instruction.

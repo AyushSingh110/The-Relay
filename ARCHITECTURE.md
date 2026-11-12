@@ -167,7 +167,7 @@ sequenceDiagram
 
 **Tools [OWNER-DECIDED: avoid unnecessary second tools]:** only `retrieve_passages` is implemented. The earlier `fetch_section_context` tool is removed. The bounded re-query loop reuses `retrieve_passages` with a paper filter.
 
-**Retrieval presets [PROPOSED, sizes in words]:** `small_fast` (~180-word pieces, top-4, no rerank), `balanced_rerank` (~330-word pieces, fetch 12 → rerank → top-4), `large_wide` (~600-word pieces, top-6, no rerank). Final values are set in Phase 04 after inspecting extracted text. Reference/bibliography chunks are down-weighted unless the question asks about references.
+**Retrieval presets [FINALISED in P04 from measured token counts; pending owner approval; sizes in words]:** `small_fast` (160-word pieces, 25 overlap, top-4, no rerank), `balanced_rerank` (220-word pieces, 35 overlap, BM25+dense RRF → rerank top 12 → top-4), `large_wide` (400-word pieces, 60 overlap, top-5, no rerank). Rationale: the embedder and cross-encoder see at most 512 tokens and the corpus averages 1.56 tokens/word (p90 2.2), so the reranked preset fits one model window; dense retrieval embeds every chunk in ≤ 220-word windows scored by the best window (no truncation); `large_wide` is capped by the LLM prompt budget under the measured 8,000 TPM. Hybrid fusion is RRF (k = 60) over BM25 and exact NumPy cosine. Reference/bibliography chunks are down-weighted (fused score × 0.5; rerank score − 2.0) unless the scope analyzer detects a question about references.
 
 **Known limitation:** the evidence gate can only catch clearly off-topic questions. Near-topic unanswerable questions (the brief promises these) must be refused by the LLM's cite-or-refuse instruction and are then checked by the verifier.
 

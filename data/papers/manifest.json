@@ -3,32 +3,32 @@
     "chunk_presets": [
       {
         "name": "small_fast",
-        "overlap_words": 30,
-        "size_words": 180
+        "overlap_words": 25,
+        "size_words": 160
       },
       {
         "name": "balanced_rerank",
-        "overlap_words": 50,
-        "size_words": 330
+        "overlap_words": 35,
+        "size_words": 220
       },
       {
         "name": "large_wide",
-        "overlap_words": 90,
-        "size_words": 600
+        "overlap_words": 60,
+        "size_words": 400
       }
     ],
     "chunk_sets": {
       "balanced_rerank": {
-        "count": 235,
-        "sha256": "7187584e4fabaa9be13595144b0b7db8d728c3af82c1d8bdb77a086f07a0cf18"
+        "count": 341,
+        "sha256": "a28e046b225186d5f8c5cfbc2e31315b34c008d41ef5c90337d040499a9c70a3"
       },
       "large_wide": {
-        "count": 164,
-        "sha256": "c6d36338ebaa8243dc19f12a231a1b1fe02a1fbfdb62c2c597688199394d8d1e"
+        "count": 204,
+        "sha256": "4a963959b2d3f18a40587b1c9a6a0cd8ba9b36427b71de7ae432377579c09dd7"
       },
       "small_fast": {
-        "count": 402,
-        "sha256": "0a7f20df070cfe259eb1babb029d3c261799be69c9ddf0ec9a20094ab6aaaaff"
+        "count": 442,
+        "sha256": "0026cbceac5affc221b421b4f98535c256d9d87d73a8e48c54aa2f9cb0e99929"
       }
     },
     "papers": {
@@ -37,15 +37,15 @@
         "blocks_sha256": "beaeae59ec75fac02b0e13f7e23857c75f3be6c8a4ef315b6183cbca4e351e89",
         "chunks": {
           "balanced_rerank": {
-            "count": 32,
-            "reference_chunks": 4
+            "count": 42,
+            "reference_chunks": 5
           },
           "large_wide": {
-            "count": 27,
-            "reference_chunks": 2
+            "count": 29,
+            "reference_chunks": 3
           },
           "small_fast": {
-            "count": 49,
+            "count": 50,
             "reference_chunks": 7
           }
         },
@@ -292,16 +292,16 @@
         "blocks_sha256": "c2d15444dc71c7f3585490ec3adb399a2cb6825dfc7dec2e12296c02476b4eea",
         "chunks": {
           "balanced_rerank": {
-            "count": 119,
-            "reference_chunks": 15
+            "count": 173,
+            "reference_chunks": 23
           },
           "large_wide": {
-            "count": 77,
-            "reference_chunks": 8
+            "count": 100,
+            "reference_chunks": 12
           },
           "small_fast": {
-            "count": 207,
-            "reference_chunks": 28
+            "count": 229,
+            "reference_chunks": 31
           }
         },
         "dropped_blocks": {
@@ -740,16 +740,16 @@
         "blocks_sha256": "707767b37e39d4dafbec4fc0606af144333a412c864ddffb4591d03e3863b8ca",
         "chunks": {
           "balanced_rerank": {
-            "count": 84,
-            "reference_chunks": 12
+            "count": 126,
+            "reference_chunks": 19
           },
           "large_wide": {
-            "count": 60,
-            "reference_chunks": 7
+            "count": 75,
+            "reference_chunks": 10
           },
           "small_fast": {
-            "count": 146,
-            "reference_chunks": 23
+            "count": 163,
+            "reference_chunks": 26
           }
         },
         "dropped_blocks": {
