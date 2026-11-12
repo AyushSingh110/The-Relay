@@ -14,7 +14,7 @@
 | :--- | :--- | :--- | :--- |
 | **Day 1** | AM | **P01** Foundation, contracts, run directories, aggregation | none |
 | | Midday | **P02** Provider client + probe tooling | none (offline tests) |
-| | PM | **P02-LIVE** Model discovery + baseline probes *(owner-approved)* | ≤ 40 |
+| | PM | **P02-LIVE** Model discovery + baseline probes *(owner-approved)* | ≤ 40 (owner-decided ceiling) |
 | | PM / Eve | **P03** PDF ingestion | none |
 | **Day 2** | AM | **P04** Retrieval indexes + eval question schema & grading tooling *(owner writes questions in parallel)* | none |
 | | AM | **P04B** Verify owner's questions against PDFs *(after owner delivers them)* | none |
@@ -27,7 +27,7 @@
 | | Late AM | **P11** Table recomputation, slow-request forensics, submission audit | none |
 | | **PM** | **Submission buffer** — owner write-up, Vaani visit, conversation export, final checks | none |
 
-**Real-call budget (proposed, subject to measured limits):** Day 1 ≤ 40 (+ optional owner-approved minute-limit probe ≤ RPM + 5 tiny calls); Day 2 ≤ 80; Day 3 ≤ 30 plus reserve for one re-run. Every script also stops at the daily safety fraction (default 0.75) of known RPD/TPD. If measured TPD cannot fit the Day 2 eval, Table 3 is split across Days 2 and 3 and the plan is updated.
+**Real-call budget:** Day 1 ≤ 40 **[OWNER-DECIDED 2026-11-12: ceiling]** (+ optional owner-approved minute-limit probe ≤ RPM + 5 tiny calls); Day 2 ≤ 80 and Day 3 ≤ 30 plus reserve for one re-run (proposed, subject to measured limits). Every script also stops at the daily safety fraction (**0.75, owner-decided 2026-11-12**) of known RPD/TPD. If measured TPD cannot fit the Day 2 eval, Table 3 is split across Days 2 and 3 and the plan is updated.
 
 ### Dependency graph
 ```
@@ -92,10 +92,10 @@ Each phase lists objective, files, acceptance criteria, and verification. Report
 ### P02-LIVE — Model Discovery and Baseline Probes (Day 1 PM, owner-approved operational run)
 
 - **Objective:** First real evidence: enabled models, header behaviour, latency spread, token usage per prompt size.
-- **Preconditions:** owner has put `GROQ_API_KEY` in `.env` and explicitly approves the run and the cap (proposed ≤ 40 calls).
+- **Preconditions:** owner has put `GROQ_API_KEY` in `.env` and explicitly approves the run and the cap (Day-1 ceiling 40 calls, owner-decided).
 - **Steps:** `discover` → owner confirms shortlist (≤ 3) → `baseline`. The optional minute-limit probe runs **only** after a second explicit approval.
-- **Outputs:** `evidence/groq_probes/<run_id>/{manifest.json, probes.jsonl, summary.json}`; draft Table 1 with every unmeasured cell marked "not measured"; header-meaning verification table (documented meaning vs observed behaviour); observed `usage.prompt_tokens / prompt_chars` ratios.
-- **Verification:** owner reviews raw `probes.jsonl`; log entry and `reports/phase-02-live-groq-probes.md` record exact call count, and no secrets appear (`grep` for key prefix and `Authorization`).
+- **Outputs:** `evidence/groq_probes/<run_id>/{manifest.json, rows.csv, traces.jsonl, summary.json}`; draft Table 1 with every unmeasured cell marked "not measured"; header-meaning verification table (documented meaning vs observed behaviour); observed `usage.prompt_tokens / prompt_chars` ratios.
+- **Verification:** owner reviews raw `traces.jsonl`; log entry and `reports/phase-02-live-groq-probes.md` record exact call count, and no secrets appear (`grep` for key prefix and `Authorization`).
 
 ---
 

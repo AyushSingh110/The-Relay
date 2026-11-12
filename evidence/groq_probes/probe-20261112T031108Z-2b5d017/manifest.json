@@ -1,0 +1,53 @@
+{
+  "cache_mode": null,
+  "config_snapshot": {
+    "max_real_calls": 1,
+    "planned_calls": 1,
+    "probe_options": {
+      "calls_per_model": 3,
+      "max_completion_tokens": 256,
+      "minute_limit_calls": null,
+      "minute_limit_max_completion_tokens": 8,
+      "mode": "discover",
+      "models": [],
+      "prompt_words": [
+        400,
+        1600
+      ],
+      "reasoning_effort": null
+    },
+    "settings": {
+      "cache_mode": "exact",
+      "daily_safety_fraction": 0.75,
+      "evidence_dir": "evidence",
+      "groq_base_url": "https://api.groq.com/openai/v1",
+      "groq_credential_configured": true,
+      "groq_model": "openai/gpt-oss-20b",
+      "max_real_calls": 40,
+      "provider_mode": "scripted",
+      "results_path": "results.csv",
+      "scratch_dir": "scratch",
+      "standin_url": "http://127.0.0.1:8001/openai/v1"
+    }
+  },
+  "ended_at": "2026-11-12T03:11:09.066062Z",
+  "git_commit": "2b5d017",
+  "git_dirty": true,
+  "kind": "groq_probe",
+  "model_id": null,
+  "notes": "probe mode=discover; stopped: no",
+  "real_call_count": 1,
+  "reasoning_settings": null,
+  "retrieval_settings": [
+    "none"
+  ],
+  "run_id": "probe-20261112T031108Z-2b5d017",
+  "scenarios": [
+    "probe_discover"
+  ],
+  "schema_version": 1,
+  "seed": null,
+  "source": "real",
+  "started_at": "2026-11-12T03:11:08.353329Z",
+  "status": "complete"
+}

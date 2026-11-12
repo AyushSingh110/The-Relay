@@ -238,7 +238,7 @@ RPM and TPD are not expected in headers; they come from the Groq console/docs an
 
 ### 9.4 Daily quota protection **[OWNER-DECIDED]**
 - The daily quota is never deliberately exhausted for testing.
-- ProviderGuard and every real-run script stop at a configurable **daily safety fraction** of known RPD/TPD (proposed default 0.75 [PROPOSED]) and every script has a hard `--max-real-calls` cap.
+- ProviderGuard and every real-run script stop at a configurable **daily safety fraction** of known RPD/TPD (**0.75 [OWNER-DECIDED 2026-11-12]**) and every script has a hard `--max-real-calls` cap.
 - The "daily budget exhausted" scenario runs against the Stand-In (and the guard's simulated exhausted state), never by draining the real account.
 
 ### 9.5 Retries
@@ -284,7 +284,7 @@ Full-jitter exponential backoff honouring `retry-after`; no retry when the wait 
 ### 13.1 Directory layout (tracked in Git — never gitignored)
 ```
 evidence/
-  groq_probes/<run_id>/          manifest.json, probes.jsonl (sanitised), summary.json
+  groq_probes/<run_id>/          manifest.json, rows.csv, traces.jsonl (sanitised), summary.json
   standin_calibration/<run_id>/  manifest.json, profile.json, fit_report.json
   experiments/<run_id>/          manifest.json, rows.csv, traces.jsonl, grades.json (if graded), answers_audit.json
   canonical_runs.json            the owner-selected runs that make up results.csv
@@ -320,6 +320,7 @@ scratch/                         gitignored: smoke runs, temporary output
 | Queue full / predicted wait exceeds deadline | rate_limited | `queue_full` / `predicted_wait_exceeds_deadline` | blank |
 | Upstream minute-limit 429 after retries | rate_limited | `upstream_rate_limited` | blank |
 | Daily budget exhausted (guard) | rate_limited | `daily_budget_exhausted` | blank |
+| Upstream daily-scope 429 (RPD/TPD) [OWNER-DECIDED 2026-11-12] | rate_limited | `daily_budget_exhausted` (provider error `retryable=false`; never retried) | blank |
 | Deadline expired before/while working | timeout | `deadline_expired` | blank |
 | **Client gave up (abandonment)** | **timeout** | **`client_gave_up`** | blank |
 | Provider stream stalled / read timeout | timeout | `provider_stalled` | blank |
@@ -372,7 +373,8 @@ The derivation and the resulting numbers are recorded per run in the manifest an
 **Still open:**
 
 4. **Client-patience distribution** for the harness (proposal to be made in Phase 10 from what the brief implies; e.g. log-normal, median ~20 s — owner chooses).
-5. **Daily safety fraction** default (proposed 0.75) and per-day real-call caps (`IMPLEMENTATION_PLAN.md` budget table).
+- ~~5. Daily safety fraction~~ → `0.75` (owner, 2026-11-12). Day-1 real-call ceiling: 40 calls. Day 2/3 caps remain proposals in `IMPLEMENTATION_PLAN.md`.
+- **P02 defaults approved (owner, 2026-11-12):** provider timeouts (connect 5 s, read 30 s, write 10 s, pool 5 s, stall 30 s, total 120 s); fallback estimate 3.0 characters/token when no usage is reported; baseline plan (3 short calls + 400- and 1600-word prompts per model, `max_completion_tokens=256`, ≤ 3 models; minute-limit `max_completion_tokens=8`).
 6. **Minute-limit probe:** whether to deliberately trigger one real RPM/TPM `429` (requires separate explicit approval; never the daily limit).
 7. **Final model** after the comparison in §10.
 8. **Retrieval preset values** after Phase 04 text inspection.

@@ -166,3 +166,114 @@
   - No deviation from binding architecture decisions.
 - **Owner approval status:** pending owner review
 - **Next action:** Owner reviews `reports/phase-02-provider-client.md` and decides §11 items 1–2. P02-LIVE starts only after explicit approval of the key, the `MAX_REAL_CALLS` cap and the `discover` run.
+
+---
+
+### Execution Entry
+
+- **Date and time:** 2026-11-12 (before the P02-LIVE discovery run)
+- **Phase identifier:** `p02-live` (owner approvals and decisions recorded)
+- **Task requested:** Record P01/P02 approval and the owner's decisions in the docs; then run P02-LIVE Step 1 (discovery) only.
+- **Status:** completed (documentation step)
+- **Owner approvals:** P01 and P02 are approved. Both reports are marked `Owner Approved (2026-11-12)`. The owner committed P02 as `2b5d017`; Claude did not commit.
+- **Owner decisions applied:**
+  1. `traces.jsonl` is the per-call evidence file for probe runs. `probes.jsonl` was removed from ARCH §13.1 and from IMPLEMENTATION_PLAN P02-LIVE outputs and verification.
+  2. Upstream daily-scope HTTP 429 → `daily_budget_exhausted`, `retryable=false`. Added as a row in ARCH §13.4.
+  3. P02 defaults approved and recorded in ARCH §16:
+     - timeouts: connect 5 s, read 30 s, write 10 s, pool 5 s, stall 30 s, total 120 s;
+     - 3.0 characters/token fallback estimate;
+     - baseline plan (3 short calls + 400/1600-word prompts, `max_completion_tokens=256`, ≤ 3 models; minute-limit `max_completion_tokens=8`).
+  4. `daily_safety_fraction = 0.75`: ARCH §9.4 and §16 item 5 resolved; IMPLEMENTATION_PLAN budget text; comments in `.env.example` and `src/relay/config.py` (the default value was already 0.75, so there is no code change).
+  5. Day-1 real-call ceiling = 40 calls (IMPLEMENTATION_PLAN schedule and budget, P02-LIVE preconditions). Day 2/3 caps remain proposals.
+- **Files modified:** `reports/phase-01-foundation-contracts.md`, `reports/phase-02-provider-client.md`, `ARCHITECTURE.md`, `IMPLEMENTATION_PLAN.md`, `.env.example` (comment only), `src/relay/config.py` (comment only), `ENGINEERING_LOG.md`.
+- **Pre-run checks:**
+  - `pytest` → `163 passed`; `ruff check .` → `All checks passed!`.
+  - `git check-ignore -v .env` → `.gitignore:2:.env` (ignored); `.env` is not tracked.
+  - Settings loaded from `.env`, with only non-secret values and booleans printed:
+    - `provider_mode=scripted`, `groq_base_url=https://api.groq.com/openai/v1`, `groq_model=openai/gpt-oss-20b`;
+    - `max_real_calls=40`, `daily_safety_fraction=0.75`;
+    - key configured = True, `gsk_` prefix = True, whitespace/quotes = False.
+  - The key value was not printed.
+- **Owner approval status:** approvals recorded; the discovery run follows.
+
+---
+
+### Execution Entry
+
+- **Date and time:** 2026-11-12 08:41 IST (run started 2026-11-12T03:11:08Z, ended 03:11:09.066Z)
+- **Phase identifier:** `p02-live` Step 1 (model discovery only)
+- **Task requested:** Execute `python scripts/probe_groq.py discover --live --max-real-calls 1` exactly once; inspect and security-scan the evidence; report. No baseline, no minute-limit, no inference, no model selection, no re-run.
+- **Status:** completed
+- **Command executed:** `C:\Users\ASUS\anaconda3\envs\the-relay\python.exe scripts/probe_groq.py discover --live --max-real-calls 1`, run **once** from the project root. Exit 0. Output: `outcome=completed`, `planned_calls=1`, `attempted_calls=1`, `real_calls_sent=1`, `rows_written=0`, `stopped_reason=null`.
+- **Real requests sent:** **1** (`GET /openai/v1/models`). The day's real-call total is 1 of the 40-call Day-1 ceiling.
+- **Evidence run:** `probe-20261112T031108Z-2b5d017` → `evidence/groq_probes/probe-20261112T031108Z-2b5d017/`. It contains:
+  - `manifest.json`: status complete, `real_call_count=1`, `git_dirty=true` because of the uncommitted doc edits;
+  - `rows.csv`: header only, since discovery is not inference;
+  - `traces.jsonl`: 1 record;
+  - `summary.json`.
+- **Result:** HTTP 200, discovery succeeded, 0 metadata issues, client total 559.269 ms (a single observation).
+  - **11 models, all `active=true`:** `allam-2-7b`, `canopylabs/orpheus-arabic-saudi`, `canopylabs/orpheus-v1-english`, `meta-llama/llama-prompt-guard-2-22m`, `meta-llama/llama-prompt-guard-2-86m`, `openai/gpt-oss-120b`, `openai/gpt-oss-20b`, `openai/gpt-oss-safeguard-20b`, `qwen/qwen3.8-27b`, `whisper-large-v3`, `whisper-large-v3-turbo`. Context-window and max-completion values are in the report §8.1.
+- **Rate-limit headers:** **none** on the `/models` response (no `x-ratelimit-*`, no `retry-after`), so no ARCH §9.1 hypothesis is verified yet.
+- **Other headers:** `x-request-id`, `x-groq-region: dls` and Cloudflare/Google edge headers; `set-cookie` redacted.
+- **Security scan** (Python; counts/booleans only, no values printed):
+  - the exact key value is absent from all 4 files;
+  - 0 hits for `gsk_`, `Bearer`, `authorization`, `org_`, `sk-`, `api_key`, `user_` / `proj_` / `acct_` ids and emails;
+  - the single "cookie" hit is the `set-cookie` header name, whose value is `[REDACTED]`.
+
+  Result: **PASS**.
+- **Post-run checks:** `pytest` → 163 passed; `ruff check .` → All checks passed! These ran after the final code-comment edits.
+- **Errors:** none.
+- **Files created:** the evidence run directory above; `reports/phase-02-live-discovery.md`.
+- **Remaining issues:**
+  - header semantics, limits, latency and token ratios are not measured (they need the baseline step);
+  - no model selected;
+  - the shortlist decision belongs to the owner.
+- **Owner approval status:** pending owner review
+- **Next action:** The owner reviews the report, confirms a shortlist of up to 3 models and approves a `baseline` cap. Claude does not proceed until then.
+
+---
+
+### Execution Entry
+
+- **Date and time:** 2026-11-12 08:48 IST (run 03:18:16.680Z → 03:18:24.324Z)
+- **Phase identifier:** `p02-live` Step 2 (baseline)
+- **Task requested:** The owner approved the shortlist `openai/gpt-oss-20b`, `openai/gpt-oss-120b`, `qwen/qwen3.8-27b` and a baseline on the approved defaults (3 short + 400 w + 1600 w per model, `max_completion_tokens=256`), with a hard cap of 15 real calls. Dry-run first, execute once, report. No discover, no minute-limit, no extra or retry calls, no model selection, no P03.
+- **Status:** completed
+- **Pre-run:**
+  - `probe_groq.py --help` checked.
+  - Dry run with the real `.env` and explicit flags → `dry_run`, `planned_calls=15`, `live_blocked_by=[]`.
+  - Programmatic check: 3 approved models × 5 calls (`short ×3`, `prompt_400w`, `prompt_1600w`), all `max_completion_tokens=256` → **True**.
+- **Command executed once:** `python scripts/probe_groq.py baseline --model openai/gpt-oss-20b --model openai/gpt-oss-120b --model qwen/qwen3.8-27b --calls-per-model 3 --prompt-words 400,1600 --max-completion-tokens 256 --max-real-calls 15 --live` (`the-relay` interpreter; sandbox lifted for network). Exit 0.
+- **Real requests sent:** **15**, all HTTP 200, 0 failed, 0 retries, `stopped_reason=null`. **Day-1 cumulative: 16 of 40.**
+- **Evidence:** `probe-20261112T031816Z-2b5d017` → `evidence/groq_probes/probe-20261112T031816Z-2b5d017/` (manifest complete with `real_call_count=15`; 15 rows; 15 traces; summary).
+- **Measured results** (client-side ms, n = 5 per model; descriptive only, not percentiles):
+  - gpt-oss-20b first content 320.5 / 520.1 / 688.6 (min / median / max), total median 521.3;
+  - gpt-oss-120b first content 601.6 / 631.1 / 735.2, total median 638.3;
+  - qwen3.8-27b first content 261.0 / 280.2 / 391.3, total median 283.9.
+  - Provider usage on all 15 calls (top-level `usage`; the `x_groq` fallback was not needed).
+  - gpt-oss models: 40–54 reasoning tokens, streamed as reasoning deltas before the content. qwen: no reasoning, 2 completion tokens.
+  - All `finish_reason=stop`; `max_completion_tokens=256` accepted and never reached.
+  - Prompt tokens: gpt-oss 95 / 499 / 1699 vs qwen 38 / 443 / 1643 for identical messages (about 56–57 tokens of fixed overhead on gpt-oss).
+- **Headers (measured):**
+  - `x-ratelimit-limit-requests=1000` and `x-ratelimit-limit-tokens=8000` for each model.
+  - `remaining-requests` decrements by 1 per call, with a separate counter per model. `reset-requests` grows by 86.4 s per request used: *consistent with* RPD (86,400 s / 1,000), **not formally verified**.
+  - Token resets are seconds-scale: *consistent with* TPM. The `remaining-tokens` drop ≠ `usage.total_tokens`, which is **unreconciled**; Groq possibly reserves `max_completion_tokens` (unverified).
+  - No `retry-after`. RPM and TPD are not in any header (**not measured**).
+  - `x-groq-region=bom` on all 15.
+- **Security scan:**
+  - the exact key is absent from all 4 files;
+  - 0 hits for `gsk_`, `Bearer`, `authorization`, `org_`, `sk-`, `api_key`, `user_` / `proj_` / `acct_`, emails;
+  - 1 "cookie" hit = the `set-cookie` header name; unredacted cookie headers: 0.
+
+  Result: **PASS**.
+- **Errors:** none. **Code changes:** none, so the test suite was not re-run (last run 163 passed, ruff clean).
+- **Files created:** the evidence run above; `reports/phase-02-live-baseline.md`; `scratch/baseline_dryrun.json` (gitignored).
+- **Remaining issues:**
+  - TPM header accounting unreconciled;
+  - RPM / TPD not measured;
+  - truncation at the limit not observed;
+  - latency based on tiny outputs and synthetic prompts only;
+  - `git_dirty=true` (uncommitted Step-1 docs).
+  - No model selected; no quality claims.
+- **Owner approval status:** pending owner review
+- **Next action:** Owner reviews `reports/phase-02-live-baseline.md`. Optional decision: a separately approved minute-limit probe. P03 does not start until the owner instructs it.

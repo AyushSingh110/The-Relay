@@ -1,0 +1,24 @@
+{
+  "attempted_calls": 1,
+  "header_semantics": "documented_unverified",
+  "last_rate_limit_snapshot": {
+    "limit_requests": null,
+    "limit_tokens": null,
+    "parse_issues": [],
+    "raw": {},
+    "remaining_requests": null,
+    "remaining_tokens": null,
+    "reset_requests_s": null,
+    "reset_tokens_s": null,
+    "retry_after_s": null,
+    "semantics": "documented_unverified"
+  },
+  "max_real_calls": 1,
+  "mode": "discover",
+  "note": "Computed only from calls recorded in this run's traces.jsonl.",
+  "per_model": {},
+  "planned_calls": 1,
+  "real_calls_sent": 1,
+  "run_id": "probe-20261112T031108Z-2b5d017",
+  "stopped_reason": null
+}

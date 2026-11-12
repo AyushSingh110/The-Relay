@@ -1,0 +1,107 @@
+{
+  "attempted_calls": 15,
+  "header_semantics": "documented_unverified",
+  "last_rate_limit_snapshot": {
+    "limit_requests": 1000,
+    "limit_tokens": 8000,
+    "parse_issues": [],
+    "raw": {
+      "x-ratelimit-limit-requests": "1000",
+      "x-ratelimit-limit-tokens": "8000",
+      "x-ratelimit-remaining-requests": "995",
+      "x-ratelimit-remaining-tokens": "5774",
+      "x-ratelimit-reset-requests": "7m12s",
+      "x-ratelimit-reset-tokens": "17.665s"
+    },
+    "remaining_requests": 995,
+    "remaining_tokens": 5774,
+    "reset_requests_s": 432.0,
+    "reset_tokens_s": 17.665,
+    "retry_after_s": null,
+    "semantics": "documented_unverified"
+  },
+  "max_real_calls": 15,
+  "mode": "baseline",
+  "note": "Computed only from calls recorded in this run's traces.jsonl.",
+  "per_model": {
+    "openai/gpt-oss-120b": {
+      "calls": 5,
+      "ok": 5,
+      "prompt_tokens_per_char": {
+        "max": 1.032609,
+        "median": 1.033,
+        "min": 0.125889,
+        "n": 5
+      },
+      "provider_first_content_ms": {
+        "max": 735.154,
+        "median": 631.07,
+        "min": 601.642,
+        "n": 5
+      },
+      "status_counts": {
+        "ok": 5
+      },
+      "total_ms_ok": {
+        "max": 738.483,
+        "median": 638.325,
+        "min": 609.398,
+        "n": 5
+      }
+    },
+    "openai/gpt-oss-20b": {
+      "calls": 5,
+      "ok": 5,
+      "prompt_tokens_per_char": {
+        "max": 1.032609,
+        "median": 1.033,
+        "min": 0.125889,
+        "n": 5
+      },
+      "provider_first_content_ms": {
+        "max": 688.647,
+        "median": 520.072,
+        "min": 320.535,
+        "n": 5
+      },
+      "status_counts": {
+        "ok": 5
+      },
+      "total_ms_ok": {
+        "max": 690.716,
+        "median": 521.333,
+        "min": 323.372,
+        "n": 5
+      }
+    },
+    "qwen/qwen3.8-27b": {
+      "calls": 5,
+      "ok": 5,
+      "prompt_tokens_per_char": {
+        "max": 0.413043,
+        "median": 0.413,
+        "min": 0.12174,
+        "n": 5
+      },
+      "provider_first_content_ms": {
+        "max": 391.255,
+        "median": 280.154,
+        "min": 260.969,
+        "n": 5
+      },
+      "status_counts": {
+        "ok": 5
+      },
+      "total_ms_ok": {
+        "max": 393.221,
+        "median": 283.895,
+        "min": 263.543,
+        "n": 5
+      }
+    }
+  },
+  "planned_calls": 15,
+  "real_calls_sent": 15,
+  "run_id": "probe-20261112T031816Z-2b5d017",
+  "stopped_reason": null
+}

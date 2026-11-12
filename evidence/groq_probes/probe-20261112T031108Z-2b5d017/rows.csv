@@ -1,0 +1,1 @@
+request_id,scenario,source,start_time,first_token_ms,total_ms,status,retries,tokens_in,tokens_out,retrieval_setting,answer_grade,run_id,question_id,provider_first_token_ms,server_total_ms,queue_depth_at_entry,waiting_ms,working_ms,retrying_ms,retrieval_ms,cache_status,provider_called,degraded,model_id,usage_source,cost_usd,verification_verdict,error_code

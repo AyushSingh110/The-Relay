@@ -1,0 +1,57 @@
+{
+  "cache_mode": null,
+  "config_snapshot": {
+    "max_real_calls": 15,
+    "planned_calls": 15,
+    "probe_options": {
+      "calls_per_model": 3,
+      "max_completion_tokens": 256,
+      "minute_limit_calls": null,
+      "minute_limit_max_completion_tokens": 8,
+      "mode": "baseline",
+      "models": [
+        "openai/gpt-oss-20b",
+        "openai/gpt-oss-120b",
+        "qwen/qwen3.8-27b"
+      ],
+      "prompt_words": [
+        400,
+        1600
+      ],
+      "reasoning_effort": null
+    },
+    "settings": {
+      "cache_mode": "exact",
+      "daily_safety_fraction": 0.75,
+      "evidence_dir": "evidence",
+      "groq_base_url": "https://api.groq.com/openai/v1",
+      "groq_credential_configured": true,
+      "groq_model": "openai/gpt-oss-20b",
+      "max_real_calls": 40,
+      "provider_mode": "scripted",
+      "results_path": "results.csv",
+      "scratch_dir": "scratch",
+      "standin_url": "http://127.0.0.1:8001/openai/v1"
+    }
+  },
+  "ended_at": "2026-11-12T03:18:24.324265Z",
+  "git_commit": "2b5d017",
+  "git_dirty": true,
+  "kind": "groq_probe",
+  "model_id": null,
+  "notes": "probe mode=baseline; stopped: no",
+  "real_call_count": 15,
+  "reasoning_settings": null,
+  "retrieval_settings": [
+    "none"
+  ],
+  "run_id": "probe-20261112T031816Z-2b5d017",
+  "scenarios": [
+    "probe_baseline"
+  ],
+  "schema_version": 1,
+  "seed": null,
+  "source": "real",
+  "started_at": "2026-11-12T03:18:16.680027Z",
+  "status": "complete"
+}

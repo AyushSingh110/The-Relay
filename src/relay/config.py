@@ -41,7 +41,7 @@ class Settings(BaseSettings):
 
     # Hard cap on real provider calls per script run. 0 = no real calls permitted.
     max_real_calls: int = Field(default=0, ge=0)
-    # [PROPOSED] fraction of known daily limits at which real runs stop.
+    # [OWNER-DECIDED 2026-11-12] fraction of known daily limits at which real runs stop.
     daily_safety_fraction: float = Field(default=0.75, gt=0.0, le=1.0)
 
     @model_validator(mode="after")
