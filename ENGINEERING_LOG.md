@@ -118,3 +118,51 @@
 - **Deviations from ARCHITECTURE.md:** none.
 - **Owner approval status:** pending owner review
 - **Next action:** Owner reviews `reports/phase-01-foundation-contracts.md`; on approval, authorise P02 (offline provider client and probe tooling).
+
+---
+
+### Execution Entry
+
+- **Date and time:** 2026-11-11 16:46 IST
+- **Phase identifier:** `p02` (Offline Provider Client and Probe Tooling)
+- **Task requested:** Implement P02 offline only: async `httpx` provider client (streaming + non-streaming, SSE, usage, rate-limit header capture, typed errors, no retries), model discovery, capped probe tooling with dry-run and offline paths, MockTransport tests. No P02-LIVE, no real Groq calls, no commits.
+- **Objective:** Provider communication layer and probe tooling ready for the owner-approved P02-LIVE measurements that will later calibrate the Stand-In.
+- **Status:** completed (offline scope), pending owner review
+- **Files created:** `src/relay/providers/__init__.py`, `src/relay/providers/errors.py`, `src/relay/providers/headers.py`, `src/relay/providers/sse.py`, `src/relay/providers/base.py`, `src/relay/providers/http_provider.py`, `src/relay/providers/probing.py`, `scripts/probe_groq.py`, `tests/test_http_provider.py`, `tests/test_probe_groq.py`, `reports/phase-02-provider-client.md`.
+- **Files modified:**
+  - `tests/conftest.py`: the network guard now also patches httpx's real sync/async transports to refuse non-loopback hosts, because asyncio's Windows proactor sockets bypass `socket.connect`.
+  - `README.md`: probe commands and safeguards.
+  - `ENGINEERING_LOG.md`: this entry.
+  - No P01 source module changed. No dependency installed or added.
+- **Decisions made:** see report §5. Highlights:
+  - Transport `retries=0`; exactly one request per call; the retryable flag is a hint for P06.
+  - Stall timer resets only on SSE data events.
+  - Error codes reuse `relay.schemas.ErrorCode`.
+  - Header meanings labelled `documented_unverified`, with the raw headers kept.
+  - Model metadata is tolerated field by field.
+  - Live probes need `--live` + `--max-real-calls` + `MAX_REAL_CALLS` + key; `minute-limit` also needs `--owner-approved-rate-limit-probe`, even for a dry run.
+  - Probe records go to `traces.jsonl`.
+- **Commands executed and observed output** (Git Bash, `the-relay` Python 3.12.16; `.env` never read):
+  - `git status --short` → clean at start; HEAD `d3c7bfa`.
+  - Version check → `httpx 0.28.1`, `pytest-asyncio 1.4.1.post1`.
+  - `python -m pytest -q`, run 1 → `2 failed, 161 passed`. Both were test bugs (see errors).
+  - After the fixes → `163 passed`; `python -m ruff check .` → 3 errors.
+  - After the ruff fixes (final): `python -m ruff check .` → `All checks passed!`; `python -m pytest -q` → `163 passed in 2.08s`; new files alone → `90 passed in 1.75s`.
+  - CLI smoke with `--env-file scratch/none.env`: `discover` dry run → exit 0; `baseline --max-real-calls 5` dry run → exit 0 (blocked by `MAX_REAL_CALLS=0` and the missing key); `minute-limit --live` without approval → exit 2; `discover --live --max-real-calls 1` → exit 2.
+  - `ls evidence` → unchanged (`README.md`, `canonical_runs.json`).
+- **Tests performed:** full suite, 163 passed / 0 failed / 0 skipped, no warnings (`filterwarnings=error`). Per file: http_provider 75, probe_groq 15, schemas 29, foundation 21, run_store/aggregation 23.
+- **Errors, root causes, fixes:**
+  1. Dry-run test expected an env-cap problem with both caps at 0. The expectation was wrong; the test now uses CLI cap 5 with env cap 0.
+  2. Aggregation test used `summary.rows`; the field is `row_count`.
+  3. Ruff: one split-constant finding and two E501s; fixed.
+  4. Drafting bug, caught before the first test run: `collect_stream` used `or` for first timestamps; changed to an `is None` check.
+  - All validated by the final runs above.
+- **Real Groq calls:** 0. No network access to any external host.
+- **Remaining issues / deviations:** see report §11.
+  - Evidence file name conflict in the docs: `probes.jsonl` (ARCH §13.1, plan P02-LIVE) vs `traces.jsonl` (ARCH §13.2, run_store).
+  - Daily-scope 429 → `daily_budget_exhausted`: mapping needs owner confirmation.
+  - Every header meaning and Groq wire detail is unverified until P02-LIVE.
+  - New [PROPOSED] defaults: timeouts, chars-per-token estimate, baseline sizes.
+  - No deviation from binding architecture decisions.
+- **Owner approval status:** pending owner review
+- **Next action:** Owner reviews `reports/phase-02-provider-client.md` and decides §11 items 1–2. P02-LIVE starts only after explicit approval of the key, the `MAX_REAL_CALLS` cap and the `discover` run.

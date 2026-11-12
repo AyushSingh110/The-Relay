@@ -22,6 +22,21 @@ python -m pytest -v
 python -m ruff check .
 ```
 
+## Groq probes (`scripts/probe_groq.py`)
+
+Default is a **dry run** that prints the planned calls and contacts nothing:
+
+```powershell
+python scripts/probe_groq.py discover
+python scripts/probe_groq.py baseline --model openai/gpt-oss-20b --max-real-calls 5
+```
+
+A live run (owner-approved runs only) needs all of: `--live`, `--max-real-calls N` covering
+the whole plan, `MAX_REAL_CALLS >= N` in `.env`, and `GROQ_API_KEY`. The `minute-limit` mode
+additionally needs `--owner-approved-rate-limit-probe`. Runs stop at the first daily-scope
+429, at any 429 outside `minute-limit`, and at `DAILY_SAFETY_FRACTION` of the
+`x-ratelimit-*-requests` headers. Exit codes: 0 ok/dry run, 1 failure, 2 refused by a safeguard.
+
 ## Evidence and results
 
 - `evidence/groq_probes/<run_id>/`, `evidence/standin_calibration/<run_id>/`,
