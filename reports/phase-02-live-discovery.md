@@ -3,7 +3,7 @@
 > **Phase ID:** `p02-live` (Step 1 only: `discover`)
 > **Date:** `2026-11-12 08:41 IST` (run started `2026-11-12T03:11:08Z`)
 > **Status:** `Completed` — discovery succeeded; **exactly 1 real request** sent
-> **Owner Approval:** `Pending Review`
+> **Owner Approval:** `Owner Approved (2026-11-12)`
 
 ---
 

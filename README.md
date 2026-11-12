@@ -37,6 +37,17 @@ additionally needs `--owner-approved-rate-limit-probe`. Runs stop at the first d
 429, at any 429 outside `minute-limit`, and at `DAILY_SAFETY_FRACTION` of the
 `x-ratelimit-*-requests` headers. Exit codes: 0 ok/dry run, 1 failure, 2 refused by a safeguard.
 
+## Paper ingestion (`scripts/ingest_papers.py`)
+
+```powershell
+python scripts/ingest_papers.py            # download missing pinned PDFs from arXiv, then process
+python scripts/ingest_papers.py --offline  # never touch the network (PDFs must exist)
+python scripts/ingest_papers.py --check    # offline; exit 1 if data/papers/manifest.json would change
+```
+
+PDFs (`data/papers/*.pdf`) and generated text/chunks (`data/processed/`) are gitignored and
+regenerable; `data/papers/manifest.json` (checksums, page counts, extraction summary) is tracked.
+
 ## Evidence and results
 
 - `evidence/groq_probes/<run_id>/`, `evidence/standin_calibration/<run_id>/`,

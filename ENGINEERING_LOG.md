@@ -277,3 +277,69 @@
   - No model selected; no quality claims.
 - **Owner approval status:** pending owner review
 - **Next action:** Owner reviews `reports/phase-02-live-baseline.md`. Optional decision: a separately approved minute-limit probe. P03 does not start until the owner instructs it.
+
+---
+
+### Execution Entry
+
+- **Date and time:** 2026-11-12 (start of P03)
+- **Phase identifier:** `p02-live` approvals recorded
+- **Owner approvals:**
+  - P02-LIVE Step 1 (discovery, run `probe-20261112T031108Z-2b5d017`) and Step 2 (baseline, run `probe-20261112T031816Z-2b5d017`) are reviewed and accepted.
+  - `reports/phase-02-live-discovery.md` and `reports/phase-02-live-baseline.md` are marked `Owner Approved (2026-11-12)`.
+  - The owner committed the evidence as `0d7dfd9`.
+- **Findings preserved for later phases (settings unchanged):**
+  1. `max_completion_tokens=256` was accepted by all three models but never reached (peak 64 completion tokens), so truncation behaviour is unobserved.
+  2. The 3.0 characters/token fallback may **underestimate** very short prompts, because a fixed message overhead is counted per request (gpt-oss: 95 prompt tokens for a 92-character prompt). For long prompts it overestimates.
+- **Next action:** P03 (PDF ingestion) per the owner's instruction.
+
+---
+
+### Execution Entry
+
+- **Date and time:** 2026-11-12 09:16 IST
+- **Phase identifier:** `p03` (Research PDF Ingestion)
+- **Task requested:** Fetch exactly `1706.03762v7`, `2410.00037v1` and `2507.07955v2` from their version-specific arXiv URLs; validate each and record ID, version, SHA-256, size and page count in the tracked manifest; extract text with PyMuPDF (page numbers, multi-column reading order); tag sections, references and metadata; chunk deterministically with stable IDs; test it all. No indexes, no generation, no Groq calls.
+- **Status:** completed, pending owner review
+- **Files created:** `src/relay/ingestion/{__init__,errors,arxiv_fetcher,pdf_parser,chunker,pipeline}.py`, `scripts/ingest_papers.py`, `tests/test_ingestion.py`, `data/papers/manifest.json` (tracked), `reports/phase-03-pdf-ingestion.md`. Gitignored and regenerable: the 3 PDFs in `data/papers/` and 12 files in `data/processed/`.
+- **Files modified:** `.gitignore` (+`data/processed/`), `README.md` (ingestion commands), `reports/phase-02-live-{discovery,baseline}.md` (Owner Approved), `ENGINEERING_LOG.md`. No P01/P02 module was changed; nothing was installed.
+- **Network:** one arXiv fetch session, 3 PDFs. **Groq calls: 0.**
+- **Corpus (validated; each PDF carries the arXiv stamp `arXiv:<id>v<ver>` and its title on page 1):**
+
+  | paper | SHA-256 | bytes | pages |
+  | :--- | :--- | -: | -: |
+  | `1706.03762v7` | `bdfaa68d8984f0dc02beaca527b76f207d99b666d31d1da728ee0728182df697` | 2,215,244 | 15 |
+  | `2410.00037v1` | `a687144cc77bea86b0c60ae800ccb1d3e0816033fa5c7960388fe29a0dbfcfac` | 4,694,312 | 66 |
+  | `2507.07955v2` | `04a2b32e6e82853cfc23c5db132750874a86cde99219ec6f664128f4aa83122f` | 1,375,282 | 39 |
+- **Extraction:**
+  - **Words:** Attention 5,716; Moshi 28,860; H-Net 20,341.
+  - **Sections:** 27 / 48 / 38. Every PDF-outline entry was matched to a numbered heading (0 outline issues).
+  - **References pages:** 10–12 / 42–52 / 25–30.
+  - **Pages without text:** 0.
+  - **Flagged pages** (text kept but less reliable): see report §8.4 — tables (row-wise cells, header/row merge), math (flattened equations), figure text removed (Moshi 34, 59; H-Net 3, 7, 15, 18, 38, 39), and low-text pages (Attention 13–15 figure pages, H-Net 24 acknowledgements).
+- **Chunks** (presets [PROPOSED]):
+  - `small_fast` 180/30 → 402 (49 / 207 / 146);
+  - `balanced_rerank` 330/50 → 235 (32 / 119 / 84);
+  - `large_wide` 600/90 → 164 (27 / 77 / 60).
+  - Chunk-set SHA-256 values are recorded in the manifest.
+- **Reproducibility:**
+  - final `ingest_papers.py --offline` run twice → manifest and all 12 processed files byte-identical;
+  - `--check` → `manifest_unchanged: true`, exit 0.
+- **Tests:** `pytest -q` → **209 passed** (0 failed, 0 skipped); `tests/test_ingestion.py` → 46 passed, including the real-corpus test; `ruff check .` → All checks passed! These ran after the final code edit.
+- **Errors found and fixed** (details in report §9–§10):
+  - figure labels matched as headings → numbered match preferred;
+  - figure pages detected as two-column → paragraph-sized blocks only;
+  - the glyph filter dropped an equation and a table header → `=` guard;
+  - several hyphenation rule errors → vocabulary of standalone words plus compound rules, reviewed per paper;
+  - glued superscripts and interleaved author/affiliation blocks;
+  - fixture sizing and MuPDF block-merging in tests;
+  - 4 ruff findings.
+- **Known limitations:**
+  - flattened equations and merged table headers;
+  - 4 questionable hyphen merges (`crossmatch`, `melspectrogram`, `bitsper`, `predecay`);
+  - footnotes inline;
+  - two-column ordering verified on synthetic PDFs only.
+- **P02-LIVE findings preserved:** settings unchanged (256-token limit; 3.0 characters/token fallback).
+- **Deviations from ARCHITECTURE.md:** none. Chunk presets remain [PROPOSED].
+- **Owner approval status:** pending owner review
+- **Next action:** Owner reviews `reports/phase-03-pdf-ingestion.md`. P04 starts only on explicit approval.

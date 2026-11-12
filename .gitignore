@@ -19,6 +19,7 @@ venv/
 # --- Local, regenerable working data ---
 scratch/
 data/papers/*.pdf
+data/processed/
 data/indexes/
 
 # NOTE: `results.csv` and everything under `evidence/` are submission evidence

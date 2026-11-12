@@ -3,7 +3,7 @@
 > **Phase ID:** `p02-live` (Step 2: `baseline`)
 > **Date:** `2026-11-12 08:48 IST` (run `2026-11-12T03:18:16.680Z` → `03:18:24.324Z`)
 > **Status:** `Completed`. 15 of 15 planned calls were sent and all 15 succeeded. No early stop.
-> **Owner Approval:** `Pending Review`
+> **Owner Approval:** `Owner Approved (2026-11-12)`
 
 ---
 
