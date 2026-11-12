@@ -420,3 +420,100 @@
 - **Next action:**
   - Owner reviews the report and approves the presets and setting parameters.
   - Owner writes `eval/questions.json`; P04B (question verification) starts only on instruction.
+
+---
+
+### Execution Entry
+
+- **Date and time:** 2026-11-12 (evening)
+- **Phase identifier:** `p04` approval recorded; `p04b` (Evaluation Question Verification) **blocked before start**
+- **Owner approvals recorded:**
+  - P04 reviewed and approved. `reports/phase-04-retrieval-and-evaluation-tooling.md` is marked `Owner Approved (2026-11-12)`. The owner committed P04 as `c6907c1`.
+  - **Final retrieval settings approved:** chunk presets 160/25, 220/35, 400/60 words; RRF k = 60; reference down-weighting ×0.5 on the fused score and −2.0 rerank penalty; rerank top 12; top-k 4 / 4 / 5.
+  - `ARCHITECTURE.md` §6 is now marked `[OWNER-DECIDED 2026-11-12]`, and §16 item 8 is resolved.
+- **P04B precondition check:**
+  - `eval/questions.json` exists (owner-authored, 20 questions, untracked).
+  - `python scripts/validate_questions.py` → `"valid": false`, exit 1. The one error is `coverage: 2 distinct trap types (< 3)`. The trap types present are `garbled_extraction` (q02) and `shared_vocabulary` (q03, q13); neither `bibliography_match` nor `version_leak` is used.
+  - `python scripts/validate_questions.py --allow-incomplete` → `"valid": true`, no errors. The schema, consistency and page checks all pass.
+  - Coverage: 20 questions (15 answerable, 5 unanswerable); categories direct_factual 8, multi_hop 4, numeric_technical 2, cross_paper 1, unanswerable 5; gold citations Attention 11, Moshi 13, H-Net 13.
+- **Status:** **blocked.** Per the owner's instruction ("if `eval/questions.json` is missing or invalid, stop and report"), P04B verification was not started.
+  - No question was edited, added or rewritten.
+  - No retrieval verification was run.
+  - No P04B report was created, since no verification was performed.
+- **Observation for the owner (not a validator error):** all 5 unanswerable questions (q16–q20: blockchain consensus, photosynthesis, the TCP handshake, Newton's laws, MySQL vs MongoDB) are far outside the corpus. ASSIGNMENT p.1 only promises "some that the papers do not answer at all", so this is compliant. However, these questions will most likely be stopped by the deterministic early refusal and won't exercise the LLM's cite-or-refuse path or the verifier on near-topic unanswerable questions (ARCH §6 known limitation).
+- **Groq calls:** 0. **Files modified:** `reports/phase-04-retrieval-and-evaluation-tooling.md`, `ARCHITECTURE.md`, `ENGINEERING_LOG.md`.
+- **Next action:** the owner either:
+  - (a) tags or adds a question with a third trap type (`bibliography_match` or `version_leak`) so strict validation passes; or
+  - (b) explicitly authorises P04B to proceed with the 2-trap-type coverage (lenient validation), recording that deviation.
+
+---
+
+### Execution Entry
+
+- **Date and time:** 2026-11-12 19:57 IST
+- **Phase identifier:** `p04b` (Evaluation Question Verification)
+- **Task requested:** Verify the owner's `eval/questions.json` against the pinned PDFs:
+  - answers, facts, citations, pages, sections and quotes;
+  - unanswerable questions;
+  - gold-page reachability under all three retrieval settings;
+  - the known traps.
+
+  Report confirmed / discrepancy and list proposed corrections without editing. No corpus change, no new features, no Groq, no P05.
+- **Status:** completed (verification only), pending owner review
+- **Precondition:** the owner added q21 (WavLM, near-topic unanswerable, `bibliography_match`). `python scripts/validate_questions.py` (strict) → `valid: true`, 0 errors, 0 warnings, exit 0, 21 questions.
+- **Integrity:** `eval/questions.json` SHA-256 is `14616cd5271b08c911c418787d6e95c20f7ba043ae6bb345d2b91e4b22d085af` at start and end. **No question edited.**
+- **Method:** read-only scratch harness (outside the repo) over `data/processed`, the raw PDFs (PyMuPDF), the P04 grader and the retrievers (offline, local models). Detail in report §2.
+- **Results:**
+  - **Quotes:** 45/45 found verbatim on the stated page, in both extracted and raw PDF text; 45/45 cited sections correct.
+  - **Grader self-check** (expected answer + gold citations): 14/15 `correct`; **q09 → `wrong`**.
+  - **Unanswerable:** 6/6 confirmed. q16–q19 have 0 term hits; q20's only hit is "bson" inside the author name "Webson". q21: WavLM appears only as a distillation target, ablation entry, speaker-verification model and reference, never with its pretraining objectives.
+  - **Reachability** (≥ 1 gold page in top-k): `small_fast` 13/15, `balanced_rerank` 13/15, `large_wide` 13/15. Gold pages reached: 17 / 18 / 19 of 31. **q09 and q15 reach no gold page in any setting.**
+  - **Verdicts:** 17 confirmed (8 with notes); discrepancies q09 (grading-blocking: required facts vs reference answer, facts' source p. 1 not cited), q15 (direct evidence on pp. 22 and 1 not cited), q14 ("most damaging ablation" not in text), q13 (EMA weight is P_t, not p_t).
+  - **Traps:**
+    - `shared_vocabulary` q03 did not fire; q13's Attention half is never retrieved, and the scope filter suggestion (H-Net only) would exclude it;
+    - `garbled_extraction` q02 is present in the rank-1 gold chunk;
+    - `bibliography_match` q21 is defused by reference down-weighting (0 reference chunks in the top 12; without it the WavLM reference ranks 2–7);
+    - no `version_leak` question.
+  - **Rerank scores:** off-topic q16–q20 −8.5 to −10.3; near-topic q21 +2.09.
+- **Proposed corrections (not applied; for owner approval):** C-1 … C-9 (q09 facts and citations, q15 citations, q13/q14/q15 wording, notes for q21/q02, optional q01 citation), G-1 (generic or substring-prone fact alternatives), G-2 (full-sentence forbidden claims rarely match). See report §8.3.
+- **Commands and outputs:**
+  - validator → valid;
+  - `pytest tests/test_grader.py tests/test_retrieval.py tests/test_scope.py` → **65 passed**;
+  - `pytest -q` → **274 passed**;
+  - `ruff check .` → All checks passed!
+- **Errors:** the first results print exceeded the output limit (read from the saved file); a 12-hit search limit truncated the WavLM mention list (re-run unlimited). Neither affected the repo.
+- **Files created:** `reports/phase-04b-eval-verification.md`. **Files modified:** `ENGINEERING_LOG.md`. Groq calls: 0.
+- **Owner approval status:** pending owner review
+- **Next action:** Owner decides on C-1 … C-9 / G-1 / G-2 and applies approved changes (or instructs Claude to apply exactly those), then re-runs the validator. P05 only on explicit approval.
+
+---
+
+### Execution Entry
+
+- **Date and time:** 2026-11-12 (after P04B review)
+- **Phase identifier:** `p04b`: owner approval + approved corrections applied
+- **Owner approval:** P04B approved. `reports/phase-04b-eval-verification.md` is marked `Owner Approved (2026-11-12)`.
+- **Correction to the previous P04B entry:** the gold-quote count is **37**, not 45 (a counting error). The finding is unchanged: every quote was verbatim on its page with the correct section. The report's headline table and text were corrected to 37/37. That earlier log entry is left as written, per the append-only rule.
+- **Authorised changes applied to `eval/questions.json`** (data only; `src/relay/eval/grader.py` unchanged, confirmed by an empty `git diff`):
+  - **C-1 / C-2 (q09):** facts widened; citations p. 1 (Abstract) and p. 7 (§3.1) added.
+  - **C-3 (q15):** citations p. 22 (§4) and p. 1 (Abstract) added.
+  - **C-4 / C-5 / C-6:** wording fixes in q13, q14 and q15.
+  - **C-7 / C-8:** notes for q21 and q02.
+  - **C-9 (q01):** citation p. 6 (§4) added.
+  - **G-1:** specific fact alternatives in q03, q04, q06, q07, q10, q12, q13, q14, q15.
+  - **G-2:** short forbidden phrases appended in q01, q04–q15; the owner's original sentences were kept.
+- **Process note:** the first edit command failed to parse (shell quoting), and its `cp` backup never ran. I didn't notice before running the edit script. Integrity was established by inverting the edits programmatically: the reconstruction is **byte-identical** to the original (SHA-256 `14616cd5…22d085af`) and is kept as the backup in scratch. New SHA-256: `ce4dfe418b92a22b4b88ed6667a1f0d4e4470bc89cb1eb9ee7d18d07f05b3903`.
+- **Re-verification (offline):**
+  - 42/42 gold quotes verbatim (extracted and raw PDF), 42/42 sections correct;
+  - grader self-check 15/15 `correct` (q09 fixed);
+  - no forbidden phrase matches its expected answer;
+  - restatement test: all `wrong`, with fewer facts satisfied by restatement (q07 2→0, q12 3→0, q13 1→0, q03 2→1);
+  - reachability: `small_fast` 15/15 questions (20/36 gold pages), `balanced_rerank` 14/15 (19/36), `large_wide` 15/15 (22/36).
+- **Commands and outputs (after all edits):**
+  - `python scripts/validate_questions.py` → `valid: true`, errors [], warnings [], exit 0 (21 questions);
+  - `pytest tests/test_grader.py tests/test_retrieval.py tests/test_scope.py` → 65 passed;
+  - `pytest -q` → **274 passed**;
+  - `ruff check .` → All checks passed!
+- **Files modified:** `eval/questions.json`, `reports/phase-04b-eval-verification.md` (approval, 45→37, addendum), `ENGINEERING_LOG.md`. Groq calls: 0.
+- **Owner approval status:** P04B approved; the corrections await owner review.
+- **Next action:** wait for the owner's go-ahead before starting P05.
