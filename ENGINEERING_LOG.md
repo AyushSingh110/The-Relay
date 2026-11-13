@@ -606,3 +606,81 @@
 - **Real Groq calls:** 0. **Network:** none.
 - **Owner approval status:** pending owner review
 - **Next action:** Owner reviews `reports/phase-06-provider-guard-and-admission.md`, decides the P05 §11.1 items and the P06 defaults, and supplies RPM/TPD values with their source. The next phase starts only on explicit approval.
+
+---
+
+### Execution Entry
+
+- **Date and time:** 2026-11-13 (start of P08)
+- **Phase identifier:** `p05` and `p06` approvals recorded
+- **Owner approvals:** P05 and P06 are approved **with all proposed defaults**. Both reports are marked `Owner Approved (2026-11-13)`. The owner committed P06 as `49afd77`.
+- **Defaults now owner-approved:**
+  - **P05:**
+    - early-refusal rerank threshold −5.0;
+    - early refusal for non-pinned arXiv versions;
+    - exact-marker refusal rule;
+    - re-query appends up to `top_k // 2` passages;
+    - `max_completion_tokens` 512;
+    - tool timeout 10 s;
+    - at most 6 answer sentences.
+  - **P06:**
+    - retry: 3 attempts, base 0.5 s, cap 8 s, deadline share 0.5;
+    - retry budget: 0.2 × first attempts + 3 per 60 s;
+    - circuit: 5 failures, 30 s cooldown;
+    - guard concurrency: 2;
+    - chars-per-token adaptation: weight 0.2, margin 0.9, bounds 1.0–6.0.
+- **Sequence note:** the owner instructed P08 next. P07 (real Groq evaluation) has not been run.
+- **Next action:** P08 (FastAPI service, exact cache, SingleFlight); real Groq calls: none.
+
+---
+
+### Execution Entry
+
+- **Date and time:** 2026-11-13 07:27 IST
+- **Phase identifier:** `p08` — Service: FastAPI, Exact Cache, SingleFlight
+- **Task requested and objective:** Mark P05/P06 approved (done in the previous entry), then build `create_app` (pipeline + guard + admission + cache + SingleFlight), `POST /ask` as SSE with a final metadata event, disconnect propagation, the daily-exhausted behaviour, server traces to the run directory, and an exact cache reset per run. Real Groq calls: none.
+- **Status:** completed
+- **Files created:**
+  - `src/relay/control/cache.py`
+  - `src/relay/api/__init__.py`
+  - `src/relay/api/app.py`
+  - `tests/test_cache_and_api.py`
+  - `reports/phase-08-fastapi-service-and-cache.md`
+- **Files modified:**
+  - `src/relay/telemetry/spans.py` (P01): additive read-only `ServerSpanTracker.snapshot()`; no existing line changed.
+  - `reports/phase-05-pipeline-and-verifier.md`, `reports/phase-06-provider-guard-and-admission.md`: marked `Owner Approved (2026-11-13)`.
+  - `ENGINEERING_LOG.md`: this entry and the approvals entry.
+- **Engineering decisions (all [PROPOSED]):**
+  - Cache key: SHA-256 of the question after NFKC + whitespace collapse, case preserved; scoped by corpus digest, retrieval setting, prompt version and model.
+  - Cache admits `VERIFIED` and `REFUSAL_VERIFIED` only, never degraded; early refusals are not cached; 1024 entries, LRU.
+  - `cache_mode=off` disables SingleFlight too (`cache_status=off`).
+  - SingleFlight leader is a detached task, cancelled only when no waiter remains; the key is unregistered before cancellation.
+  - The response is SSE written in one piece: `answer` or `unavailable`, then `final` with `results.csv` column names. HTTP status 200 / 429 / 504 / 502 / 500; 422 for invalid input; 499 after a disconnect.
+  - `unavailable` carries passage pointers (no text) whenever retrieval had run.
+  - Followers: 0 tokens, all server time as waiting, blank queue depth and retrieval time; they share the leader's result and deadline.
+  - Traces: one `request` record per HTTP request, one `flight` record per leader work. The flight record is the authority for spend; cancelled flights report estimated tokens for calls already sent.
+  - Trace write failures are counted and logged, not raised.
+- **Commands executed and observed outputs:**
+  - `python -c "import relay.api.app"` → `import ok`
+  - `python -m ruff check src/relay/api src/relay/control/cache.py src/relay/telemetry/spans.py` → `All checks passed!`
+  - `timeout 300 python -m pytest tests/test_cache_and_api.py -q -x` → `37 passed in 1.40s`
+  - the same file five more times → `37 passed` each time (1.21–1.27 s)
+  - `timeout 60 python scratchpad/p08_uvicorn_smoke.py` (loopback uvicorn, scripted provider) → client timed out at 0.3 s; `provider call cancelled: 1 | in flight: 0 | queue active: 0`; next request `status: 200 | text/event-stream; charset=utf-8`
+  - `timeout 900 python -m pytest -q` (after the final edit) → `409 passed in 5.63s`
+  - `python -m ruff check .` (after the final edit) → `All checks passed!`
+- **Tests performed and results:** 409 passed, 0 failed, 0 skipped (372 earlier + 37 new). All five P08 acceptance criteria are covered and pass.
+- **Errors, root causes, fixes, validation:**
+  - A bash heredoc failed to parse ("unexpected EOF") and wrote nothing. Root cause: the known quoting pitfall. Fix: files written directly and edits through scratch scripts. Validated by the import check, ruff and tests.
+  - Model id for cancelled-flight records was first taken from the cache scope (blank with the cache off). Found by reading before any test ran. Fix: explicit `model_id` on `RelayService`. Validated by `test_sole_client_disconnect_cancels_the_provider_call`.
+- **Remaining issues and incomplete work:**
+  - No production composition root: real indexes, provider from `Settings`, guard limits and queue capacity are not wired, because RPM/TPD, the final model and the patience quantile are still open.
+  - The server writes traces only; P10 must build rows from the `final` event and read flight records for clients that gave up.
+  - Cancelled-flight tokens are estimates at 3.0 chars/token.
+  - Followers inherit the leader's deadline and failures.
+  - Trace appends are synchronous writes on the event loop.
+  - `start_run` must be called with no request in flight (documented, not enforced).
+  - P07 has not been run.
+- **Deviations from ARCHITECTURE.md:** none to binding decisions. `ARCHITECTURE.md` was not edited; its `[PROPOSED]` tags on the approved P05/P06 defaults are unchanged.
+- **Real Groq calls:** 0. **Network:** one loopback-only (`127.0.0.1`) uvicorn smoke check; nothing external.
+- **Owner approval status:** pending owner review
+- **Next action:** Owner reviews `reports/phase-08-fastapi-service-and-cache.md` and decides the §5 items. Recommended next phase: P09 (stand-in service). The next phase starts only on explicit approval.

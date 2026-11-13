@@ -77,6 +77,26 @@ class ServerSpanTracker:
         if self._provider_first_token_ns is None:
             self._provider_first_token_ns = self._clock() - self._start_ns
 
+    def snapshot(self) -> SpanSummary:
+        """Totals as of now, without closing the tracker (the final summary if finished).
+
+        Lets a second party read the spans of work that is still running, e.g. a client
+        that gives up while its request keeps running for coalesced followers.
+        """
+        if self._summary is not None:
+            return self._summary
+        now = self._clock()
+        totals = dict(self._totals_ns)
+        totals[self._current] += now - self._last_ns
+        first = self._provider_first_token_ns
+        return SpanSummary(
+            server_total_ms=ns_to_ms(now - self._start_ns),
+            waiting_ms=ns_to_ms(totals["waiting"]),
+            working_ms=ns_to_ms(totals["working"]),
+            retrying_ms=ns_to_ms(totals["retrying"]),
+            provider_first_token_ms=None if first is None else ns_to_ms(first),
+        )
+
     def finish(self) -> SpanSummary:
         self._ensure_open()
         self._accumulate()
