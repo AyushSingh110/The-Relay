@@ -1,0 +1,138 @@
+{
+  "by_phase": {
+    "main": {
+      "cache_status": {
+        "off": 10
+      },
+      "error_codes": {},
+      "provider_calls_rows": 10,
+      "requests": 10,
+      "status": {
+        "ok": 10
+      }
+    }
+  },
+  "cache_mode": "off",
+  "cache_status": {
+    "off": 10
+  },
+  "capacity": {
+    "binding_bound": "tpm",
+    "capacity": 1,
+    "inputs": {
+      "patience_quantile_s": 20.0,
+      "rpm": null,
+      "service_slots": null,
+      "service_time_s": null,
+      "tokens_per_answer": 1513.0,
+      "tpm": 8000.0
+    },
+    "rate_bounds_per_s": {
+      "tpm": 0.088125
+    },
+    "service_rate_per_s": 0.088125
+  },
+  "client_errors": {},
+  "deadline_ms": 30000,
+  "delivered": 10,
+  "description": "Owner-approved real run: 10 distinct answerable questions at 2/min.",
+  "drained": true,
+  "error_codes": {},
+  "first_token_ms_delivered": {
+    "max": 3455.6,
+    "n": 10,
+    "p50": 814.4,
+    "p95": 3455.6,
+    "p99": 3455.6
+  },
+  "given_up": 0,
+  "guard_final": {
+    "chars_per_token": 3.6405,
+    "circuit": "closed",
+    "daily_stop": null,
+    "day_requests": 10,
+    "day_tokens": 15123,
+    "requests_last_minute": 2,
+    "rpd_limit": 1000,
+    "rpd_remaining_header": 981,
+    "rpm_limit": null,
+    "tokens_last_minute": 3285,
+    "tpd_limit": null,
+    "tpm_available": 4715,
+    "tpm_limit": 8000
+  },
+  "mean_spans_ms_delivered": {
+    "retrying_ms": 0.0,
+    "waiting_ms": 0.2,
+    "working_ms": 1110.1
+  },
+  "model_id": "qwen/qwen3.8-27b",
+  "offered_rate_per_min": 2.22,
+  "patience": {
+    "kind": "lognormal",
+    "max_s": null,
+    "median_s": 20.0,
+    "min_s": 1.0,
+    "sigma": 0.6
+  },
+  "percentile_method": "nearest rank; p95/p99 equal the maximum when n < 20 / n < 100",
+  "queue_peak_depth": 0,
+  "real_calls": 10,
+  "relay_trace_failures": 0,
+  "requests_sent": 10,
+  "retries_total": 0,
+  "retrieval_setting": "small_fast",
+  "retry_budget_enabled": true,
+  "rows_with_provider_call": 10,
+  "scenario": "real_steady",
+  "schedule_span_s": 270.0,
+  "server_trace_records": {
+    "flight": 10,
+    "request": 10
+  },
+  "slowest_delivered": {
+    "cache_status": "off",
+    "client_overhead_ms": 10.195,
+    "first_token_ms": 3455.58,
+    "note": "first_token_ms is the client's first delivered byte; answers are buffered until verified, so all server time precedes it",
+    "provider_first_token_ms": 3093.639,
+    "question_id": "q07",
+    "request_id": "exp-20261113T081218Z-c26f18c-000005",
+    "retries": 0,
+    "retrieval_ms": 14.849,
+    "retrying_ms": 0.0,
+    "server_total_ms": 3447.169,
+    "total_ms": 3457.364,
+    "waiting_ms": 0.141,
+    "working_ms": 3447.028
+  },
+  "source": "real",
+  "status": {
+    "ok": 10
+  },
+  "tokens_in_total": 13778,
+  "tokens_out_total": 1345,
+  "tokens_per_answer_basis": "P07 Table 3 real qwen/qwen3.8-27b small_fast: mean tokens_in 1406.7 + tokens_out 106.2",
+  "tokens_per_called_row": 1512.3,
+  "total_ms_all": {
+    "max": 3457.4,
+    "n": 10,
+    "p50": 816.0,
+    "p95": 3457.4,
+    "p99": 3457.4
+  },
+  "total_ms_delivered": {
+    "max": 3457.4,
+    "n": 10,
+    "p50": 816.0,
+    "p95": 3457.4,
+    "p99": 3457.4
+  },
+  "usage_sources": {
+    "provider": 10
+  },
+  "verdicts": {
+    "VERIFIED": 10
+  },
+  "wall_duration_s": 271.125
+}

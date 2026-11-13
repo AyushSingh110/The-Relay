@@ -1,0 +1,184 @@
+{
+  "by_phase": {
+    "exhausted": {
+      "cache_status": {
+        "exact_hit": 4,
+        "miss": 11
+      },
+      "error_codes": {
+        "daily_budget_exhausted": 11
+      },
+      "provider_calls_rows": 0,
+      "requests": 15,
+      "status": {
+        "ok": 4,
+        "rate_limited": 11
+      }
+    },
+    "warmup": {
+      "cache_status": {
+        "miss": 3
+      },
+      "error_codes": {},
+      "provider_calls_rows": 3,
+      "requests": 3,
+      "status": {
+        "ok": 3
+      }
+    }
+  },
+  "cache_mode": "exact",
+  "cache_status": {
+    "exact_hit": 4,
+    "miss": 14
+  },
+  "capacity": {
+    "binding_bound": "tpm",
+    "capacity": 3,
+    "inputs": {
+      "patience_quantile_s": 20.0,
+      "rpm": null,
+      "service_slots": null,
+      "service_time_s": null,
+      "tokens_per_answer": 809.1,
+      "tpm": 8000.0
+    },
+    "rate_bounds_per_s": {
+      "tpm": 0.164792
+    },
+    "service_rate_per_s": 0.164792
+  },
+  "client_errors": {},
+  "deadline_ms": 30000,
+  "delivered": 7,
+  "description": "3 sequential warm-up requests use the daily budget the guard is given (RPD 4 x 0.75); then 20 requests at 10/min mix cached and uncached questions.",
+  "drained": true,
+  "error_codes": {
+    "daily_budget_exhausted": 11
+  },
+  "first_token_ms_delivered": {
+    "max": 740.2,
+    "n": 7,
+    "p50": 13.6,
+    "p95": 740.2,
+    "p99": 740.2
+  },
+  "given_up": 0,
+  "guard_final": {
+    "chars_per_token": 5.053,
+    "circuit": "closed",
+    "daily_stop": "local daily requests 3 >= 0.75 x 4",
+    "day_requests": 3,
+    "day_tokens": 2362,
+    "requests_last_minute": 0,
+    "rpd_limit": 4,
+    "rpd_remaining_header": 997,
+    "rpm_limit": null,
+    "tokens_last_minute": 0,
+    "tpd_limit": null,
+    "tpm_available": 8000,
+    "tpm_limit": 8000
+  },
+  "mean_spans_ms_delivered": {
+    "retrying_ms": 0.0,
+    "waiting_ms": 0.3,
+    "working_ms": 263.2
+  },
+  "model_id": "qwen/qwen3.8-27b",
+  "offered_rate_per_min": 10.19,
+  "patience": {
+    "kind": "lognormal",
+    "max_s": null,
+    "median_s": 20.0,
+    "min_s": 1.0,
+    "sigma": 0.6
+  },
+  "percentile_method": "nearest rank; p95/p99 equal the maximum when n < 20 / n < 100",
+  "queue_peak_depth": 0,
+  "relay_trace_failures": 0,
+  "requests_sent": 18,
+  "retries_total": 0,
+  "retrieval_setting": "small_fast",
+  "retry_budget_enabled": true,
+  "rows_with_provider_call": 3,
+  "scenario": "daily_exhausted",
+  "schedule_span_s": 105.969,
+  "server_trace_records": {
+    "flight": 14,
+    "request": 18
+  },
+  "slowest_delivered": {
+    "cache_status": "miss",
+    "client_overhead_ms": 60.325,
+    "first_token_ms": 740.223,
+    "note": "first_token_ms is the client's first delivered byte; answers are buffered until verified, so all server time precedes it",
+    "provider_first_token_ms": 396.975,
+    "question_id": "q01",
+    "request_id": "exp-20261113T075725Z-c26f18c-000001",
+    "retries": 0,
+    "retrieval_ms": 28.715,
+    "retrying_ms": 0.0,
+    "server_total_ms": 682.942,
+    "total_ms": 743.267,
+    "waiting_ms": 0.511,
+    "working_ms": 682.43
+  },
+  "source": "stand-in",
+  "standin_stats": {
+    "active": 0,
+    "by_status": {
+      "200": 3
+    },
+    "completed_streams": 3,
+    "completion_tokens": 350,
+    "disconnects": 0,
+    "errors_injected": 0,
+    "label": "calibrated",
+    "limits": {
+      "RPD": {
+        "capacity": 1000,
+        "level": 998.229
+      },
+      "TPM": {
+        "capacity": 8000,
+        "level": 8000.0
+      }
+    },
+    "peak_active": 1,
+    "prompt_tokens": 2012,
+    "rate_limited": {},
+    "requests": 3,
+    "stalls": 0,
+    "stragglers": 0
+  },
+  "status": {
+    "ok": 7,
+    "rate_limited": 11
+  },
+  "tokens_in_total": 2012,
+  "tokens_out_total": 350,
+  "tokens_per_answer_basis": "measured in stand-in steady run exp-20261113T074251Z-c26f18c: mean tokens_in + tokens_out per provider-called row",
+  "tokens_per_called_row": 787.3,
+  "total_ms_all": {
+    "max": 743.3,
+    "n": 18,
+    "p50": 43.9,
+    "p95": 743.3,
+    "p99": 743.3
+  },
+  "total_ms_delivered": {
+    "max": 743.3,
+    "n": 7,
+    "p50": 16.2,
+    "p95": 743.3,
+    "p99": 743.3
+  },
+  "usage_sources": {
+    "provider": 3
+  },
+  "verdicts": {
+    "NOT_RUN": 11,
+    "VERIFIED": 7
+  },
+  "wall_duration_s": 106.25
+}

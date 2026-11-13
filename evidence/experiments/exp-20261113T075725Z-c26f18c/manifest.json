@@ -1,0 +1,117 @@
+{
+  "cache_mode": "exact",
+  "config_snapshot": {
+    "corpus_sha256": "296bb2b6d23ed6c56775b105e38e9006548784864836b06eb44c042119687775",
+    "guard": {
+      "adapt_safety_margin": 0.9,
+      "adapt_weight": 0.2,
+      "circuit_cooldown_s": 30.0,
+      "circuit_failure_threshold": 5,
+      "daily_safety_fraction": 0.75,
+      "initial_chars_per_token": 3.0,
+      "max_chars_per_token": 6.0,
+      "max_concurrency": 2,
+      "min_chars_per_token": 1.0,
+      "rpd_limit": 4,
+      "rpm_limit": null,
+      "tpd_limit": null,
+      "tpm_limit": 8000
+    },
+    "guard_basis": {
+      "rpd_limit": "x-ratelimit-limit-requests header (P02-LIVE) unless overridden",
+      "rpm_limit": "unknown (not measured); not enforced locally",
+      "tpm_limit": "x-ratelimit-limit-tokens header (P02-LIVE) unless overridden"
+    },
+    "load_questions_sha256": "9ff007afcfe1b3a2926d7a0432455ad1cd77f756e3d32e5b203c2fd8dc859907",
+    "max_real_calls": 0,
+    "questions_file_sha256": "ce4dfe418b92a22b4b88ed6667a1f0d4e4470bc89cb1eb9ee7d18d07f05b3903",
+    "requests_planned": 18,
+    "scenario": {
+      "cache_mode": "exact",
+      "deadline_ms": 30000,
+      "description": "3 sequential warm-up requests use the daily budget the guard is given (RPD 4 x 0.75); then 20 requests at 10/min mix cached and uncached questions.",
+      "guard_overrides": {
+        "rpd_limit": 4
+      },
+      "name": "daily_exhausted",
+      "patience": {
+        "kind": "lognormal",
+        "max_s": null,
+        "median_s": 20.0,
+        "min_s": 1.0,
+        "sigma": 0.6
+      },
+      "phases": [
+        {
+          "count": 3,
+          "draw": "in_order",
+          "duration_s": null,
+          "name": "warmup",
+          "pool": "daily_warm",
+          "rate_per_min": 60.0,
+          "sequential": true,
+          "shape": "fixed_rate",
+          "start_s": 0.0,
+          "window_s": 2.0
+        },
+        {
+          "count": null,
+          "draw": "random",
+          "duration_s": 120.0,
+          "name": "exhausted",
+          "pool": "daily_mix",
+          "rate_per_min": 10.0,
+          "sequential": false,
+          "shape": "poisson",
+          "start_s": 10.0,
+          "window_s": 2.0
+        }
+      ],
+      "retrieval_setting": "small_fast",
+      "retry_budget_enabled": true,
+      "seed": 0,
+      "standin_overrides": {}
+    },
+    "settings": {
+      "cache_mode": "exact",
+      "daily_safety_fraction": 0.75,
+      "evidence_dir": "evidence",
+      "groq_base_url": "https://api.groq.com/openai/v1",
+      "groq_credential_configured": true,
+      "groq_model": "openai/gpt-oss-20b",
+      "max_real_calls": 85,
+      "provider_mode": "scripted",
+      "results_path": "results.csv",
+      "scratch_dir": "scratch",
+      "standin_url": "http://127.0.0.1:8001/openai/v1"
+    },
+    "standin_profile": {
+      "calibration_run_id": "cal-20261113T022403Z-3f687c6",
+      "label": "calibrated",
+      "overrides": {},
+      "path": "evidence\\standin_calibration\\cal-20261113T022403Z-3f687c6\\profile.json"
+    },
+    "tokens_per_answer": 809.1,
+    "tokens_per_answer_basis": "measured in stand-in steady run exp-20261113T074251Z-c26f18c: mean tokens_in + tokens_out per provider-called row"
+  },
+  "ended_at": "2026-11-13T07:59:12.530183Z",
+  "git_commit": "c26f18c",
+  "git_dirty": true,
+  "kind": "experiment",
+  "model_id": "qwen/qwen3.8-27b",
+  "notes": "daily_exhausted; cache=exact; retry_budget=on; source=stand-in; rows 18; status {'ok': 7, 'rate_limited': 11}",
+  "real_call_count": 0,
+  "reasoning_settings": null,
+  "retrieval_settings": [
+    "small_fast"
+  ],
+  "run_id": "exp-20261113T075725Z-c26f18c",
+  "scenarios": [
+    "daily_exhausted"
+  ],
+  "schema_version": 1,
+  "seed": 0,
+  "source": "stand-in",
+  "started_at": "2026-11-13T07:57:25.735779Z",
+  "status": "complete"
+}

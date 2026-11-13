@@ -1,0 +1,97 @@
+{
+  "schema_version": 1,
+  "source_file": "eval/questions.json",
+  "source_sha256": "ce4dfe418b92a22b4b88ed6667a1f0d4e4470bc89cb1eb9ee7d18d07f05b3903",
+  "note": "Question ids only. Question text is read from the owner's eval/questions.json at run time; no question was written, edited or paraphrased here. Pools are a selection for load shapes and are pending owner review.",
+  "paraphrases": {},
+  "paraphrases_note": "None written: paraphrase variants are question content and are left to the owner.",
+  "pools": {
+    "all": [
+      "q01",
+      "q02",
+      "q03",
+      "q04",
+      "q05",
+      "q06",
+      "q07",
+      "q08",
+      "q09",
+      "q10",
+      "q11",
+      "q12",
+      "q13",
+      "q14",
+      "q15",
+      "q16",
+      "q17",
+      "q18",
+      "q19",
+      "q20",
+      "q21"
+    ],
+    "answerable": [
+      "q01",
+      "q02",
+      "q03",
+      "q04",
+      "q05",
+      "q06",
+      "q07",
+      "q08",
+      "q09",
+      "q10",
+      "q11",
+      "q12",
+      "q13",
+      "q14",
+      "q15"
+    ],
+    "unanswerable": [
+      "q16",
+      "q17",
+      "q18",
+      "q19",
+      "q20",
+      "q21"
+    ],
+    "burst_hot": [
+      "q01",
+      "q03",
+      "q06",
+      "q10",
+      "q11",
+      "q14"
+    ],
+    "daily_warm": [
+      "q01",
+      "q03",
+      "q06"
+    ],
+    "daily_mix": [
+      "q01",
+      "q03",
+      "q06",
+      "q04",
+      "q10",
+      "q11"
+    ],
+    "real_steady": [
+      "q01",
+      "q03",
+      "q04",
+      "q06",
+      "q07",
+      "q10",
+      "q11",
+      "q12",
+      "q14",
+      "q15"
+    ]
+  },
+  "pool_notes": {
+    "burst_hot": "6 answerable questions across the three papers; a burst draws 30 times with replacement, so duplicates occur",
+    "daily_warm": "answered (and cached) before the daily budget runs out",
+    "daily_mix": "3 cached (daily_warm) + 3 not cached",
+    "real_steady": "10 distinct answerable questions for the owner-approved real run"
+  }
+}

@@ -1,0 +1,604 @@
+[
+ {
+  "index": 0,
+  "at_s": 0.419,
+  "question_id": "q17",
+  "patience_s": 39.863,
+  "phase": "main"
+ },
+ {
+  "index": 1,
+  "at_s": 1.033,
+  "question_id": "q16",
+  "patience_s": 38.855,
+  "phase": "main"
+ },
+ {
+  "index": 2,
+  "at_s": 1.777,
+  "question_id": "q03",
+  "patience_s": 18.151,
+  "phase": "main"
+ },
+ {
+  "index": 3,
+  "at_s": 2.401,
+  "question_id": "q08",
+  "patience_s": 17.459,
+  "phase": "main"
+ },
+ {
+  "index": 4,
+  "at_s": 11.154,
+  "question_id": "q03",
+  "patience_s": 29.42,
+  "phase": "main"
+ },
+ {
+  "index": 5,
+  "at_s": 12.665,
+  "question_id": "q06",
+  "patience_s": 16.793,
+  "phase": "main"
+ },
+ {
+  "index": 6,
+  "at_s": 13.809,
+  "question_id": "q06",
+  "patience_s": 21.322,
+  "phase": "main"
+ },
+ {
+  "index": 7,
+  "at_s": 17.038,
+  "question_id": "q03",
+  "patience_s": 5.174,
+  "phase": "main"
+ },
+ {
+  "index": 8,
+  "at_s": 17.46,
+  "question_id": "q06",
+  "patience_s": 4.371,
+  "phase": "main"
+ },
+ {
+  "index": 9,
+  "at_s": 19.788,
+  "question_id": "q02",
+  "patience_s": 17.741,
+  "phase": "main"
+ },
+ {
+  "index": 10,
+  "at_s": 22.102,
+  "question_id": "q18",
+  "patience_s": 11.803,
+  "phase": "main"
+ },
+ {
+  "index": 11,
+  "at_s": 24.456,
+  "question_id": "q11",
+  "patience_s": 51.536,
+  "phase": "main"
+ },
+ {
+  "index": 12,
+  "at_s": 25.644,
+  "question_id": "q07",
+  "patience_s": 42.396,
+  "phase": "main"
+ },
+ {
+  "index": 13,
+  "at_s": 28.673,
+  "question_id": "q06",
+  "patience_s": 42.048,
+  "phase": "main"
+ },
+ {
+  "index": 14,
+  "at_s": 29.407,
+  "question_id": "q07",
+  "patience_s": 13.549,
+  "phase": "main"
+ },
+ {
+  "index": 15,
+  "at_s": 38.453,
+  "question_id": "q17",
+  "patience_s": 6.332,
+  "phase": "main"
+ },
+ {
+  "index": 16,
+  "at_s": 43.506,
+  "question_id": "q05",
+  "patience_s": 22.087,
+  "phase": "main"
+ },
+ {
+  "index": 17,
+  "at_s": 44.328,
+  "question_id": "q05",
+  "patience_s": 18.286,
+  "phase": "main"
+ },
+ {
+  "index": 18,
+  "at_s": 44.49,
+  "question_id": "q09",
+  "patience_s": 19.662,
+  "phase": "main"
+ },
+ {
+  "index": 19,
+  "at_s": 49.039,
+  "question_id": "q19",
+  "patience_s": 12.389,
+  "phase": "main"
+ },
+ {
+  "index": 20,
+  "at_s": 50.241,
+  "question_id": "q03",
+  "patience_s": 14.24,
+  "phase": "main"
+ },
+ {
+  "index": 21,
+  "at_s": 51.338,
+  "question_id": "q20",
+  "patience_s": 20.693,
+  "phase": "main"
+ },
+ {
+  "index": 22,
+  "at_s": 56.791,
+  "question_id": "q11",
+  "patience_s": 40.202,
+  "phase": "main"
+ },
+ {
+  "index": 23,
+  "at_s": 58.625,
+  "question_id": "q19",
+  "patience_s": 11.199,
+  "phase": "main"
+ },
+ {
+  "index": 24,
+  "at_s": 60.6,
+  "question_id": "q04",
+  "patience_s": 15.253,
+  "phase": "main"
+ },
+ {
+  "index": 25,
+  "at_s": 61.24,
+  "question_id": "q03",
+  "patience_s": 53.784,
+  "phase": "main"
+ },
+ {
+  "index": 26,
+  "at_s": 63.253,
+  "question_id": "q21",
+  "patience_s": 10.054,
+  "phase": "main"
+ },
+ {
+  "index": 27,
+  "at_s": 66.328,
+  "question_id": "q11",
+  "patience_s": 75.377,
+  "phase": "main"
+ },
+ {
+  "index": 28,
+  "at_s": 67.424,
+  "question_id": "q16",
+  "patience_s": 28.749,
+  "phase": "main"
+ },
+ {
+  "index": 29,
+  "at_s": 67.505,
+  "question_id": "q10",
+  "patience_s": 13.42,
+  "phase": "main"
+ },
+ {
+  "index": 30,
+  "at_s": 67.563,
+  "question_id": "q07",
+  "patience_s": 8.749,
+  "phase": "main"
+ },
+ {
+  "index": 31,
+  "at_s": 69.02,
+  "question_id": "q11",
+  "patience_s": 42.88,
+  "phase": "main"
+ },
+ {
+  "index": 32,
+  "at_s": 76.303,
+  "question_id": "q10",
+  "patience_s": 21.442,
+  "phase": "main"
+ },
+ {
+  "index": 33,
+  "at_s": 76.458,
+  "question_id": "q08",
+  "patience_s": 11.945,
+  "phase": "main"
+ },
+ {
+  "index": 34,
+  "at_s": 76.463,
+  "question_id": "q06",
+  "patience_s": 36.266,
+  "phase": "main"
+ },
+ {
+  "index": 35,
+  "at_s": 79.407,
+  "question_id": "q12",
+  "patience_s": 35.557,
+  "phase": "main"
+ },
+ {
+  "index": 36,
+  "at_s": 80.74,
+  "question_id": "q15",
+  "patience_s": 34.67,
+  "phase": "main"
+ },
+ {
+  "index": 37,
+  "at_s": 83.377,
+  "question_id": "q11",
+  "patience_s": 36.015,
+  "phase": "main"
+ },
+ {
+  "index": 38,
+  "at_s": 85.911,
+  "question_id": "q08",
+  "patience_s": 40.146,
+  "phase": "main"
+ },
+ {
+  "index": 39,
+  "at_s": 86.464,
+  "question_id": "q17",
+  "patience_s": 24.88,
+  "phase": "main"
+ },
+ {
+  "index": 40,
+  "at_s": 89.509,
+  "question_id": "q09",
+  "patience_s": 12.7,
+  "phase": "main"
+ },
+ {
+  "index": 41,
+  "at_s": 97.087,
+  "question_id": "q03",
+  "patience_s": 18.638,
+  "phase": "main"
+ },
+ {
+  "index": 42,
+  "at_s": 97.97,
+  "question_id": "q03",
+  "patience_s": 29.838,
+  "phase": "main"
+ },
+ {
+  "index": 43,
+  "at_s": 101.877,
+  "question_id": "q12",
+  "patience_s": 21.38,
+  "phase": "main"
+ },
+ {
+  "index": 44,
+  "at_s": 102.25,
+  "question_id": "q01",
+  "patience_s": 7.429,
+  "phase": "main"
+ },
+ {
+  "index": 45,
+  "at_s": 102.796,
+  "question_id": "q05",
+  "patience_s": 36.303,
+  "phase": "main"
+ },
+ {
+  "index": 46,
+  "at_s": 103.898,
+  "question_id": "q10",
+  "patience_s": 16.494,
+  "phase": "main"
+ },
+ {
+  "index": 47,
+  "at_s": 110.56,
+  "question_id": "q08",
+  "patience_s": 26.529,
+  "phase": "main"
+ },
+ {
+  "index": 48,
+  "at_s": 111.394,
+  "question_id": "q17",
+  "patience_s": 9.414,
+  "phase": "main"
+ },
+ {
+  "index": 49,
+  "at_s": 112.698,
+  "question_id": "q04",
+  "patience_s": 7.235,
+  "phase": "main"
+ },
+ {
+  "index": 50,
+  "at_s": 117.802,
+  "question_id": "q07",
+  "patience_s": 24.883,
+  "phase": "main"
+ },
+ {
+  "index": 51,
+  "at_s": 119.03,
+  "question_id": "q10",
+  "patience_s": 25.831,
+  "phase": "main"
+ },
+ {
+  "index": 52,
+  "at_s": 122.677,
+  "question_id": "q07",
+  "patience_s": 35.457,
+  "phase": "main"
+ },
+ {
+  "index": 53,
+  "at_s": 124.905,
+  "question_id": "q19",
+  "patience_s": 19.656,
+  "phase": "main"
+ },
+ {
+  "index": 54,
+  "at_s": 135.016,
+  "question_id": "q02",
+  "patience_s": 31.324,
+  "phase": "main"
+ },
+ {
+  "index": 55,
+  "at_s": 137.146,
+  "question_id": "q21",
+  "patience_s": 17.322,
+  "phase": "main"
+ },
+ {
+  "index": 56,
+  "at_s": 139.688,
+  "question_id": "q01",
+  "patience_s": 11.903,
+  "phase": "main"
+ },
+ {
+  "index": 57,
+  "at_s": 140.348,
+  "question_id": "q05",
+  "patience_s": 20.072,
+  "phase": "main"
+ },
+ {
+  "index": 58,
+  "at_s": 143.779,
+  "question_id": "q19",
+  "patience_s": 15.147,
+  "phase": "main"
+ },
+ {
+  "index": 59,
+  "at_s": 145.905,
+  "question_id": "q18",
+  "patience_s": 11.246,
+  "phase": "main"
+ },
+ {
+  "index": 60,
+  "at_s": 146.311,
+  "question_id": "q06",
+  "patience_s": 64.134,
+  "phase": "main"
+ },
+ {
+  "index": 61,
+  "at_s": 152.266,
+  "question_id": "q14",
+  "patience_s": 21.707,
+  "phase": "main"
+ },
+ {
+  "index": 62,
+  "at_s": 154.809,
+  "question_id": "q06",
+  "patience_s": 17.821,
+  "phase": "main"
+ },
+ {
+  "index": 63,
+  "at_s": 165.28,
+  "question_id": "q13",
+  "patience_s": 34.261,
+  "phase": "main"
+ },
+ {
+  "index": 64,
+  "at_s": 171.978,
+  "question_id": "q19",
+  "patience_s": 31.072,
+  "phase": "main"
+ },
+ {
+  "index": 65,
+  "at_s": 173.111,
+  "question_id": "q20",
+  "patience_s": 16.926,
+  "phase": "main"
+ },
+ {
+  "index": 66,
+  "at_s": 176.74,
+  "question_id": "q05",
+  "patience_s": 17.986,
+  "phase": "main"
+ },
+ {
+  "index": 67,
+  "at_s": 185.65,
+  "question_id": "q12",
+  "patience_s": 21.62,
+  "phase": "main"
+ },
+ {
+  "index": 68,
+  "at_s": 185.909,
+  "question_id": "q04",
+  "patience_s": 19.04,
+  "phase": "main"
+ },
+ {
+  "index": 69,
+  "at_s": 187.436,
+  "question_id": "q19",
+  "patience_s": 29.984,
+  "phase": "main"
+ },
+ {
+  "index": 70,
+  "at_s": 189.613,
+  "question_id": "q09",
+  "patience_s": 37.006,
+  "phase": "main"
+ },
+ {
+  "index": 71,
+  "at_s": 198.12,
+  "question_id": "q01",
+  "patience_s": 20.065,
+  "phase": "main"
+ },
+ {
+  "index": 72,
+  "at_s": 198.126,
+  "question_id": "q02",
+  "patience_s": 53.242,
+  "phase": "main"
+ },
+ {
+  "index": 73,
+  "at_s": 199.768,
+  "question_id": "q08",
+  "patience_s": 20.497,
+  "phase": "main"
+ },
+ {
+  "index": 74,
+  "at_s": 201.267,
+  "question_id": "q01",
+  "patience_s": 17.863,
+  "phase": "main"
+ },
+ {
+  "index": 75,
+  "at_s": 213.28,
+  "question_id": "q13",
+  "patience_s": 67.592,
+  "phase": "main"
+ },
+ {
+  "index": 76,
+  "at_s": 214.714,
+  "question_id": "q09",
+  "patience_s": 6.143,
+  "phase": "main"
+ },
+ {
+  "index": 77,
+  "at_s": 216.503,
+  "question_id": "q10",
+  "patience_s": 30.144,
+  "phase": "main"
+ },
+ {
+  "index": 78,
+  "at_s": 216.65,
+  "question_id": "q04",
+  "patience_s": 45.399,
+  "phase": "main"
+ },
+ {
+  "index": 79,
+  "at_s": 217.791,
+  "question_id": "q14",
+  "patience_s": 35.19,
+  "phase": "main"
+ },
+ {
+  "index": 80,
+  "at_s": 221.176,
+  "question_id": "q07",
+  "patience_s": 35.869,
+  "phase": "main"
+ },
+ {
+  "index": 81,
+  "at_s": 223.816,
+  "question_id": "q04",
+  "patience_s": 10.851,
+  "phase": "main"
+ },
+ {
+  "index": 82,
+  "at_s": 225.84,
+  "question_id": "q17",
+  "patience_s": 18.133,
+  "phase": "main"
+ },
+ {
+  "index": 83,
+  "at_s": 233.619,
+  "question_id": "q21",
+  "patience_s": 9.51,
+  "phase": "main"
+ },
+ {
+  "index": 84,
+  "at_s": 234.872,
+  "question_id": "q09",
+  "patience_s": 28.238,
+  "phase": "main"
+ },
+ {
+  "index": 85,
+  "at_s": 236.467,
+  "question_id": "q15",
+  "patience_s": 14.122,
+  "phase": "main"
+ }
+]

@@ -1,0 +1,175 @@
+{
+  "by_phase": {
+    "main": {
+      "cache_status": {
+        "coalesced": 16,
+        "exact_hit": 7,
+        "miss": 7
+      },
+      "error_codes": {
+        "queue_full": 1
+      },
+      "provider_calls_rows": 6,
+      "requests": 30,
+      "status": {
+        "ok": 29,
+        "rate_limited": 1
+      }
+    }
+  },
+  "cache_mode": "exact",
+  "cache_status": {
+    "coalesced": 16,
+    "exact_hit": 7,
+    "miss": 7
+  },
+  "capacity": {
+    "binding_bound": "tpm",
+    "capacity": 3,
+    "inputs": {
+      "patience_quantile_s": 20.0,
+      "rpm": null,
+      "service_slots": null,
+      "service_time_s": null,
+      "tokens_per_answer": 809.1,
+      "tpm": 8000.0
+    },
+    "rate_bounds_per_s": {
+      "tpm": 0.164792
+    },
+    "service_rate_per_s": 0.164792
+  },
+  "client_errors": {},
+  "deadline_ms": 30000,
+  "delivered": 29,
+  "description": "30 requests within 2 s over 6 hot questions (duplicates); run with cache on and with cache off.",
+  "drained": true,
+  "error_codes": {
+    "queue_full": 1
+  },
+  "first_token_ms_delivered": {
+    "max": 1492.2,
+    "n": 29,
+    "p50": 604.5,
+    "p95": 1484.7,
+    "p99": 1492.2
+  },
+  "given_up": 0,
+  "guard_final": {
+    "chars_per_token": 6.0,
+    "circuit": "closed",
+    "daily_stop": null,
+    "day_requests": 6,
+    "day_tokens": 5062,
+    "requests_last_minute": 6,
+    "rpd_limit": 1000,
+    "rpd_remaining_header": 994,
+    "rpm_limit": null,
+    "tokens_last_minute": 5062,
+    "tpd_limit": null,
+    "tpm_available": 2419,
+    "tpm_limit": 8000
+  },
+  "mean_spans_ms_delivered": {
+    "retrying_ms": 0.0,
+    "waiting_ms": 504.3,
+    "working_ms": 139.0
+  },
+  "model_id": "qwen/qwen3.8-27b",
+  "offered_rate_per_min": 1049.56,
+  "patience": {
+    "kind": "lognormal",
+    "max_s": null,
+    "median_s": 20.0,
+    "min_s": 1.0,
+    "sigma": 0.6
+  },
+  "percentile_method": "nearest rank; p95/p99 equal the maximum when n < 20 / n < 100",
+  "queue_peak_depth": 3,
+  "relay_trace_failures": 0,
+  "requests_sent": 30,
+  "retries_total": 0,
+  "retrieval_setting": "small_fast",
+  "retry_budget_enabled": true,
+  "rows_with_provider_call": 6,
+  "scenario": "burst",
+  "schedule_span_s": 1.715,
+  "server_trace_records": {
+    "flight": 7,
+    "request": 30
+  },
+  "slowest_delivered": {
+    "cache_status": "miss",
+    "client_overhead_ms": 67.712,
+    "first_token_ms": 1492.247,
+    "note": "first_token_ms is the client's first delivered byte; answers are buffered until verified, so all server time precedes it",
+    "provider_first_token_ms": 999.881,
+    "question_id": "q11",
+    "request_id": "exp-20261113T074759Z-c26f18c-000011",
+    "retries": 0,
+    "retrieval_ms": 56.668,
+    "retrying_ms": 0.0,
+    "server_total_ms": 1437.915,
+    "total_ms": 1505.627,
+    "waiting_ms": 703.878,
+    "working_ms": 734.037
+  },
+  "source": "stand-in",
+  "standin_stats": {
+    "active": 0,
+    "by_status": {
+      "200": 6
+    },
+    "completed_streams": 6,
+    "completion_tokens": 754,
+    "disconnects": 0,
+    "errors_injected": 0,
+    "label": "calibrated",
+    "limits": {
+      "RPD": {
+        "capacity": 1000,
+        "level": 994.026
+      },
+      "TPM": {
+        "capacity": 8000,
+        "level": 3238.0
+      }
+    },
+    "peak_active": 2,
+    "prompt_tokens": 4308,
+    "rate_limited": {},
+    "requests": 6,
+    "stalls": 0,
+    "stragglers": 0
+  },
+  "status": {
+    "ok": 29,
+    "rate_limited": 1
+  },
+  "tokens_in_total": 4308,
+  "tokens_out_total": 754,
+  "tokens_per_answer_basis": "measured in stand-in steady run exp-20261113T074251Z-c26f18c: mean tokens_in + tokens_out per provider-called row",
+  "tokens_per_called_row": 843.7,
+  "total_ms_all": {
+    "max": 1505.6,
+    "n": 30,
+    "p50": 607.1,
+    "p95": 1497.6,
+    "p99": 1505.6
+  },
+  "total_ms_delivered": {
+    "max": 1505.6,
+    "n": 29,
+    "p50": 614.2,
+    "p95": 1497.6,
+    "p99": 1505.6
+  },
+  "usage_sources": {
+    "provider": 6
+  },
+  "verdicts": {
+    "NOT_RUN": 1,
+    "VERIFIED": 29
+  },
+  "wall_duration_s": 2.391
+}

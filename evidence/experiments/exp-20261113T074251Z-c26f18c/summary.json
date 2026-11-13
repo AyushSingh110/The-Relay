@@ -1,0 +1,169 @@
+{
+  "by_phase": {
+    "main": {
+      "cache_status": {
+        "off": 19
+      },
+      "error_codes": {
+        "citation_verification_failed": 1
+      },
+      "provider_calls_rows": 19,
+      "requests": 19,
+      "status": {
+        "ok": 19
+      }
+    }
+  },
+  "cache_mode": "off",
+  "cache_status": {
+    "off": 19
+  },
+  "capacity": {
+    "binding_bound": "tpm",
+    "capacity": 1,
+    "inputs": {
+      "patience_quantile_s": 20.0,
+      "rpm": null,
+      "service_slots": null,
+      "service_time_s": null,
+      "tokens_per_answer": 1513.0,
+      "tpm": 8000.0
+    },
+    "rate_bounds_per_s": {
+      "tpm": 0.088125
+    },
+    "service_rate_per_s": 0.088125
+  },
+  "client_errors": {},
+  "deadline_ms": 30000,
+  "delivered": 19,
+  "description": "Poisson arrivals at 4/min for 5 min, below the TPM-bound service rate.",
+  "drained": true,
+  "error_codes": {
+    "citation_verification_failed": 1
+  },
+  "first_token_ms_delivered": {
+    "max": 835.7,
+    "n": 19,
+    "p50": 698.1,
+    "p95": 835.7,
+    "p99": 835.7
+  },
+  "given_up": 0,
+  "guard_final": {
+    "chars_per_token": 6.0,
+    "circuit": "closed",
+    "daily_stop": null,
+    "day_requests": 19,
+    "day_tokens": 15372,
+    "requests_last_minute": 4,
+    "rpd_limit": 1000,
+    "rpd_remaining_header": 984,
+    "rpm_limit": null,
+    "tokens_last_minute": 3087,
+    "tpd_limit": null,
+    "tpm_available": 4913,
+    "tpm_limit": 8000
+  },
+  "mean_spans_ms_delivered": {
+    "retrying_ms": 0.0,
+    "waiting_ms": 0.4,
+    "working_ms": 644.1
+  },
+  "model_id": "qwen/qwen3.8-27b",
+  "offered_rate_per_min": 4.07,
+  "patience": {
+    "kind": "lognormal",
+    "max_s": null,
+    "median_s": 20.0,
+    "min_s": 1.0,
+    "sigma": 0.6
+  },
+  "percentile_method": "nearest rank; p95/p99 equal the maximum when n < 20 / n < 100",
+  "queue_peak_depth": 0,
+  "relay_trace_failures": 0,
+  "requests_sent": 19,
+  "retries_total": 0,
+  "retrieval_setting": "small_fast",
+  "retry_budget_enabled": true,
+  "rows_with_provider_call": 19,
+  "scenario": "steady",
+  "schedule_span_s": 280.068,
+  "server_trace_records": {
+    "flight": 19,
+    "request": 19
+  },
+  "slowest_delivered": {
+    "cache_status": "off",
+    "client_overhead_ms": 104.752,
+    "first_token_ms": 835.723,
+    "note": "first_token_ms is the client's first delivered byte; answers are buffered until verified, so all server time precedes it",
+    "provider_first_token_ms": 449.197,
+    "question_id": "q09",
+    "request_id": "exp-20261113T074251Z-c26f18c-000001",
+    "retries": 0,
+    "retrieval_ms": 55.884,
+    "retrying_ms": 0.0,
+    "server_total_ms": 735.327,
+    "total_ms": 840.079,
+    "waiting_ms": 1.152,
+    "working_ms": 734.175
+  },
+  "source": "stand-in",
+  "standin_stats": {
+    "active": 0,
+    "by_status": {
+      "200": 19
+    },
+    "completed_streams": 19,
+    "completion_tokens": 2299,
+    "disconnects": 0,
+    "errors_injected": 0,
+    "label": "calibrated",
+    "limits": {
+      "RPD": {
+        "capacity": 1000,
+        "level": 984.249
+      },
+      "TPM": {
+        "capacity": 8000,
+        "level": 7438.4
+      }
+    },
+    "peak_active": 2,
+    "prompt_tokens": 13073,
+    "rate_limited": {},
+    "requests": 19,
+    "stalls": 0,
+    "stragglers": 0
+  },
+  "status": {
+    "ok": 19
+  },
+  "tokens_in_total": 13073,
+  "tokens_out_total": 2299,
+  "tokens_per_answer_basis": "P07 Table 3 real qwen/qwen3.8-27b small_fast: mean tokens_in 1406.7 + tokens_out 106.2",
+  "tokens_per_called_row": 809.1,
+  "total_ms_all": {
+    "max": 840.1,
+    "n": 19,
+    "p50": 701.1,
+    "p95": 840.1,
+    "p99": 840.1
+  },
+  "total_ms_delivered": {
+    "max": 840.1,
+    "n": 19,
+    "p50": 701.1,
+    "p95": 840.1,
+    "p99": 840.1
+  },
+  "usage_sources": {
+    "provider": 19
+  },
+  "verdicts": {
+    "BLOCKED": 1,
+    "VERIFIED": 18
+  },
+  "wall_duration_s": 281.546
+}

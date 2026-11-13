@@ -1,0 +1,72 @@
+[
+ {
+  "index": 0,
+  "at_s": 0.0,
+  "question_id": "q01",
+  "patience_s": 32.0,
+  "phase": "main"
+ },
+ {
+  "index": 1,
+  "at_s": 30.0,
+  "question_id": "q03",
+  "patience_s": 6.693,
+  "phase": "main"
+ },
+ {
+  "index": 2,
+  "at_s": 60.0,
+  "question_id": "q04",
+  "patience_s": 35.122,
+  "phase": "main"
+ },
+ {
+  "index": 3,
+  "at_s": 90.0,
+  "question_id": "q06",
+  "patience_s": 30.841,
+  "phase": "main"
+ },
+ {
+  "index": 4,
+  "at_s": 120.0,
+  "question_id": "q07",
+  "patience_s": 9.096,
+  "phase": "main"
+ },
+ {
+  "index": 5,
+  "at_s": 150.0,
+  "question_id": "q10",
+  "patience_s": 48.784,
+  "phase": "main"
+ },
+ {
+  "index": 6,
+  "at_s": 180.0,
+  "question_id": "q11",
+  "patience_s": 23.911,
+  "phase": "main"
+ },
+ {
+  "index": 7,
+  "at_s": 210.0,
+  "question_id": "q12",
+  "patience_s": 8.262,
+  "phase": "main"
+ },
+ {
+  "index": 8,
+  "at_s": 240.0,
+  "question_id": "q14",
+  "patience_s": 17.344,
+  "phase": "main"
+ },
+ {
+  "index": 9,
+  "at_s": 270.0,
+  "question_id": "q15",
+  "patience_s": 28.614,
+  "phase": "main"
+ }
+]

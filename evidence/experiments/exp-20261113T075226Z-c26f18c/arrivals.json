@@ -1,0 +1,142 @@
+[
+ {
+  "index": 0,
+  "at_s": 20.168,
+  "question_id": "q16",
+  "patience_s": 63.15,
+  "phase": "main"
+ },
+ {
+  "index": 1,
+  "at_s": 35.381,
+  "question_id": "q05",
+  "patience_s": 17.48,
+  "phase": "main"
+ },
+ {
+  "index": 2,
+  "at_s": 67.588,
+  "question_id": "q18",
+  "patience_s": 12.665,
+  "phase": "main"
+ },
+ {
+  "index": 3,
+  "at_s": 68.994,
+  "question_id": "q11",
+  "patience_s": 118.446,
+  "phase": "main"
+ },
+ {
+  "index": 4,
+  "at_s": 91.034,
+  "question_id": "q04",
+  "patience_s": 33.731,
+  "phase": "main"
+ },
+ {
+  "index": 5,
+  "at_s": 92.554,
+  "question_id": "q08",
+  "patience_s": 10.803,
+  "phase": "main"
+ },
+ {
+  "index": 6,
+  "at_s": 93.877,
+  "question_id": "q07",
+  "patience_s": 13.043,
+  "phase": "main"
+ },
+ {
+  "index": 7,
+  "at_s": 97.944,
+  "question_id": "q09",
+  "patience_s": 28.199,
+  "phase": "main"
+ },
+ {
+  "index": 8,
+  "at_s": 120.08,
+  "question_id": "q02",
+  "patience_s": 17.02,
+  "phase": "main"
+ },
+ {
+  "index": 9,
+  "at_s": 128.899,
+  "question_id": "q04",
+  "patience_s": 34.733,
+  "phase": "main"
+ },
+ {
+  "index": 10,
+  "at_s": 149.959,
+  "question_id": "q05",
+  "patience_s": 20.535,
+  "phase": "main"
+ },
+ {
+  "index": 11,
+  "at_s": 162.942,
+  "question_id": "q07",
+  "patience_s": 67.227,
+  "phase": "main"
+ },
+ {
+  "index": 12,
+  "at_s": 166.111,
+  "question_id": "q05",
+  "patience_s": 33.058,
+  "phase": "main"
+ },
+ {
+  "index": 13,
+  "at_s": 233.344,
+  "question_id": "q01",
+  "patience_s": 6.359,
+  "phase": "main"
+ },
+ {
+  "index": 14,
+  "at_s": 249.031,
+  "question_id": "q19",
+  "patience_s": 5.991,
+  "phase": "main"
+ },
+ {
+  "index": 15,
+  "at_s": 251.793,
+  "question_id": "q07",
+  "patience_s": 12.232,
+  "phase": "main"
+ },
+ {
+  "index": 16,
+  "at_s": 257.682,
+  "question_id": "q19",
+  "patience_s": 14.406,
+  "phase": "main"
+ },
+ {
+  "index": 17,
+  "at_s": 268.871,
+  "question_id": "q13",
+  "patience_s": 37.186,
+  "phase": "main"
+ },
+ {
+  "index": 18,
+  "at_s": 281.564,
+  "question_id": "q03",
+  "patience_s": 38.852,
+  "phase": "main"
+ },
+ {
+  "index": 19,
+  "at_s": 293.119,
+  "question_id": "q04",
+  "patience_s": 11.694,
+  "phase": "main"
+ }
+]

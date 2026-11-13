@@ -857,3 +857,65 @@
 - **Real Groq calls:** 58 (Day 2 total: 76 = 18 + 58). **Network:** Groq API during the live run only.
 - **Owner approval status:** pending owner review
 - **Next action:** Owner reviews the grades and decides the q21 × large_wide re-run, the verifier gap, and how grades enter canonical rows. Then P10 on approval. Nothing has been started.
+
+---
+
+### Execution Entry
+
+- **Date and time:** 2026-11-13 13:55 IST
+- **Phase identifier:** `p10` — Load Harness and Scenarios
+- **Task requested and objective:**
+  - Harness: client timing, patience-driven disconnects, client/server join.
+  - The five canonical stand-in scenarios, plus burst cache on/off and retry amplification budget on/off.
+  - One real steady run (about 10 calls, cap 12, `qwen/qwen3.8-27b`).
+  - Each run in its own evidence directory.
+- **Status:** completed. Patience and `deadline_ms` are [PROPOSED].
+- **Files created:**
+  - `src/relay/experiments/{patience,workloads,load_runner}.py`
+  - `scripts/run_load_tests.py`
+  - `eval/load_questions.json` (question ids only; source sha256 `ce4dfe41…`; no paraphrases)
+  - `tests/test_load_harness.py` (10 tests)
+  - 10 runs under `evidence/experiments/`
+  - `reports/phase-10-load-harness-and-scenarios.md`
+- **Files modified:** `ENGINEERING_LOG.md` (this entry). No earlier module, test or evidence file changed; `eval/questions.json` untouched.
+- **Engineering decisions (all [PROPOSED]):**
+  - Patience log-normal (median 20 s, σ 0.6, floor 1 s).
+  - `deadline_ms` 30,000.
+  - Load retrieval `small_fast`.
+  - Capacity by Little's law with tokens per answer of 1,513 (P07 real) for steady/real, and 809.1 (measured in stand-in steady) for the other stand-in runs.
+  - Guard: concurrency 2, TPM 8000, RPD 1000; daily-exhausted simulated with RPD 4.
+  - Single process, loopback HTTP.
+  - Abandoned rows get verdict `NOT_RUN`.
+  - Only `real_steady` may use real.
+- **Commands executed and observed outputs:**
+  - `pytest tests/test_load_harness.py` → 10 passed (×4).
+  - Scratch smoke → 10 ok, 8 provider calls = 8 stand-in requests; aggregation `checked`, 10 rows.
+  - steady `exp-20261113T074251Z-c26f18c` → 19/19 ok; first token p50/p95 698.1/835.7 ms; tokens per answer 809.1.
+  - burst cache on `…074759Z` → 29 ok / 1 `queue_full`; 6 provider calls; 16 coalesced, 7 exact hits.
+  - burst cache off `…074807Z` → 8 ok / 22 shed; 8 calls.
+  - overload `…074816Z` → 86 sent: 58 ok, 19 shed (11 `queue_full`, 8 predicted-wait), 9 gave up; first token p95/p99 24,079.3/29,817.4 ms; queue peak 3 = capacity 3.
+  - tpm_halved 4/min `…075226Z` → limit never bound (superseded).
+  - tpm_halved 8/min `…080532Z` → 31 ok, 4 shed, 5 gave up; 0 stand-in 429s; 0 retries; mean wait 2,510.8 ms.
+  - daily_exhausted `…075725Z` → 3 warm-up calls, then 4 cache hits served and 11 `daily_budget_exhausted` with 0 calls, 0 tokens, 4 pointers each.
+  - retry amplification budget on `…075917Z` → 28 attempts / 22 first (6 retries, 2 `upstream_error`).
+  - retry amplification budget off `…080155Z` → 31 / 22 (9 retries, 0 failures).
+  - Real dry run → only "would refuse: dry run".
+  - **LIVE**, executed once: `run_load_tests.py --scenario real_steady --source real --live --max-real-calls 12` → `exp-20261113T081218Z-c26f18c`, exit 0, real calls 10, 10/10 ok, first token p50/max 814.4/3,455.6 ms, tokens per answer 1,512.3.
+  - Secret scan of the 10 runs → 0 / 0 / 0.
+  - Aggregation `check_only` over the 10 runs → `checked`, 299 rows.
+  - Final: `pytest -q` → `461 passed in 16.57s`; `ruff check .` → `All checks passed!`
+- **Errors, root causes, fixes:**
+  1. Two heredoc edits failed on backslash continuations; nothing was written. Re-applied with the Edit tool.
+  2. Stale Pyright warning.
+  3. **tpm_halved mis-sized:** 4/min stayed under even the halved TPM. Rate raised to 8/min with the reason in a code comment; re-run into a new directory; the first run is kept and marked superseded.
+- **Remaining issues:**
+  - Patience and `deadline_ms` await the owner.
+  - The reactive 429 back-off was not exercised under load (the guard throttled from headers first).
+  - The retry-amplification sample is small.
+  - Paraphrases are left to the owner.
+  - The superseded run must not become canonical.
+  - `canonical_runs.json` not updated.
+- **Deviations from ARCHITECTURE.md:** none.
+- **Real Groq calls:** 10 (Day 2 total: 86 = 18 + 58 + 10). **Network:** Groq for the real run only; otherwise loopback.
+- **Owner approval status:** pending owner review
+- **Next action:** Owner reviews the report and decides patience/deadline, optional extra scenarios and canonical runs. P11 starts only on explicit approval.
