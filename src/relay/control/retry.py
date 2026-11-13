@@ -1,16 +1,4 @@
-"""Retry policy and retry budget (ARCHITECTURE.md section 9.5).
-
-- **Full jitter**: the n-th retry waits ``uniform(0, min(max_delay, base * 2**n))``. If
-  the provider sent ``retry-after``, the wait is at least that.
-- **No retry** when the error is not retryable (400/401/403/413, protocol errors), when
-  the scope is daily, when the attempt limit is reached, when the wait would use more than
-  ``deadline_share`` of the remaining deadline, or when the retry budget says no.
-- **Retry budget**: within a rolling window, retries may not exceed
-  ``ratio * first_attempts + min_retries``. It can be switched off for the
-  retry-amplification experiment (assignment heading 6); the decision then says so.
-
-All numbers here are [PROPOSED] defaults; nothing is a measurement.
-"""
+"""Retry policy and retry budget (ARCHITECTURE.md section 9.5)."""
 
 from __future__ import annotations
 

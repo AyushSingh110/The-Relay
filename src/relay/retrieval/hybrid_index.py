@@ -1,20 +1,4 @@
-"""Hybrid retrieval over one chunk preset: BM25 + exact dense cosine, fused with RRF.
-
-- **BM25** (``rank_bm25.BM25Okapi``) over a deterministic tokenizer that keeps technical
-  identifiers whole (``d_model``, ``10^20``, ``28.4``, ``h-net``) *and* indexes their
-  parts, so both "d_model" and "d model" match. Source text is never altered.
-- **Dense**: every chunk is embedded in windows of at most ``DENSE_WINDOW_WORDS`` words
-  (the 512-token model limit; nothing is truncated) and scored by its best window.
-  Exact NumPy cosine (vectors are L2-normalised, so cosine = dot product).
-- **Fusion**: Reciprocal Rank Fusion, ``sum 1 / (rrf_k + rank)`` over the enabled
-  rankers (Cormack et al., 2009; ``rrf_k = 60``).
-- **References**: chunks with ``is_reference`` are down-weighted (fused score x
-  ``reference_weight``; rerank score - ``reference_rerank_penalty``) unless the caller
-  says the question is about references (ARCHITECTURE.md section 6).
-- **Optional rerank**: the top ``rerank_candidates`` fused chunks are re-scored by a
-  cross-encoder.
-- Ties always break by corpus order, so identical inputs give identical rankings.
-"""
+"""Hybrid retrieval over one chunk preset: BM25 + exact dense cosine, fused with RRF."""
 
 from __future__ import annotations
 
@@ -135,8 +119,7 @@ class RetrievalSetting(BaseModel):
         return self
 
 
-# Finalised in P04 (see the phase report, section 5). Names are the `retrieval_setting`
-# values written to results.csv.
+# Finalised in P04 (see the phase report, section 5).
 RETRIEVAL_SETTINGS: Final[dict[str, RetrievalSetting]] = {
     s.name: s
     for s in (

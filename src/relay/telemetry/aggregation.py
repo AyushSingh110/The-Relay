@@ -1,16 +1,4 @@
-"""Deterministic aggregation of canonical runs into `results.csv`.
-
-This is the only code path that writes the canonical results file (CLAUDE.md 5.13).
-Rules:
-- Only runs listed in `canonical_runs.json` are read; listing a run twice is an error.
-- Every selected run must be `complete` and of a kind that records rows.
-- Every row is re-validated against `ResultRow`; rows must belong to their run and to a
-  scenario declared in that run's manifest.
-- Any duplicate `request_id` across all selected runs is an error (never de-duplicated
-  silently).
-- Output ordering is `(run_id, request_id)`, so identical inputs give byte-identical output.
-- An existing output file with different content is never replaced unless asked.
-"""
+"""Deterministic aggregation of canonical runs into `results.csv`."""
 
 from __future__ import annotations
 

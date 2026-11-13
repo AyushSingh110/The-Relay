@@ -1,13 +1,4 @@
-"""Response-header capture and rate-limit header parsing.
-
-Header *meanings* are hypotheses taken from Groq documentation (ARCHITECTURE.md section
-9.1) and are labelled ``documented_unverified`` until Phase 02-LIVE checks them against
-real behaviour. Field names therefore mirror the header names, not their assumed
-meaning (e.g. ``limit_requests``, documented as requests per *day*, not per minute).
-
-The complete response-header dict is always kept (sanitised) so any misreading can be
-re-checked later from evidence.
-"""
+"""Response-header capture and rate-limit header parsing."""
 
 from __future__ import annotations
 
@@ -48,11 +39,7 @@ _STRICT_FROZEN = ConfigDict(frozen=True, strict=True, extra="forbid")
 
 
 def parse_duration_s(value: str) -> float | None:
-    """Parse a reset duration such as ``"2m59.56s"``, ``"7.66s"``, ``"120ms"`` or ``"30"``.
-
-    Returns seconds, or ``None`` when the text is not a recognised duration. A bare
-    number is read as seconds.
-    """
+    """Parse a reset duration such as ``"2m59.56s"``, ``"7.66s"``, ``"120ms"`` or ``"30"``."""
     text = value.strip()
     if not text:
         return None
@@ -140,11 +127,7 @@ def _parse_seconds(headers: dict[str, str], name: str, issues: list[str]) -> flo
 def parse_rate_limits(
     headers: dict[str, str], received_at: datetime | None = None
 ) -> RateLimitSnapshot:
-    """Build a snapshot from captured (lower-cased) headers.
-
-    Unparseable values never raise: a malformed header must not discard an otherwise
-    valid answer. They are kept verbatim in ``raw`` and listed in ``parse_issues``.
-    """
+    """Build a snapshot from captured (lower-cased) headers."""
     issues: list[str] = []
     retry_after: float | None = None
     if RETRY_AFTER in headers:

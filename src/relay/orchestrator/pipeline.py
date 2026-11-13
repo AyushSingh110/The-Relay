@@ -1,23 +1,4 @@
-"""The request pipeline (ARCHITECTURE.md sections 5-7).
-
-    scope analysis -> retrieve_passages (tool) -> evidence gate
-        -> [one paper-scoped re-query, at most once] -> gate
-        -> one buffered LLM call -> verifier -> delivery | safe refusal
-
-Guarantees:
-
-- **At most one LLM call per request.** A verification failure produces a safe refusal;
-  there is no repair loop and no second call. Retries are not this module's job: the
-  pipeline talks to an :class:`AnswerGenerator`, and P06's ProviderGuard will provide one
-  that owns retries, reservations and the ``retrying`` span.
-- **Nothing unverified is delivered.** The stream is buffered; ``delivered_text`` is the
-  verified answer or one of the fixed refusal messages.
-- **Early refusals cost nothing.** No provider call, 0 tokens, ``usage_source="none"``.
-- The caller owns the :class:`ServerSpanTracker` (it starts in ``waiting`` while the
-  request queues) and calls ``finish()``; the pipeline switches it to ``working`` and
-  marks the provider's first content token.
-- ``asyncio.CancelledError`` (client disconnect) is never caught here.
-"""
+"""The request pipeline (ARCHITECTURE.md sections 5-7)."""
 
 from __future__ import annotations
 
@@ -182,12 +163,7 @@ class TokenTotals:
 
 @dataclass(frozen=True)
 class GenerationResult:
-    """Outcome of the LLM step. Exactly one of ``completion`` / ``error`` is set.
-
-    ``attempts`` counts provider calls actually sent (0 when a guard refused locally).
-    ``tokens`` carries totals across attempts; when ``None`` the pipeline derives them
-    from the single completion.
-    """
+    """Outcome of the LLM step."""
 
     completion: CompletionResult | None
     error: ProviderError | None

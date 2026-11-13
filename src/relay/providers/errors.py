@@ -1,15 +1,4 @@
-"""Typed provider failures.
-
-Every provider failure maps to one exception class carrying:
-
-- ``error_code`` from the shared ``relay.schemas.ErrorCode`` vocabulary, so a row's
-  ``status`` follows from ``ERROR_CODES_BY_STATUS`` without a second mapping table;
-- ``retryable``: a *hint* only. The client never retries; ProviderGuard (P06) decides;
-- ``meta``: status line and sanitised headers when a response was received.
-
-Exception messages never contain response bodies, request content or credentials. A
-redacted, truncated ``body_excerpt`` is kept as an attribute for evidence files.
-"""
+"""Typed provider failures."""
 
 from __future__ import annotations
 

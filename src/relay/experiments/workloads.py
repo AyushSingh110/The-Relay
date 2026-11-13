@@ -1,13 +1,4 @@
-"""Seeded load shapes and the canonical P10 scenarios.
-
-A workload is a list of :class:`Arrival` (when, which question, how patient), built
-deterministically from a seed so a run can be repeated exactly. Questions are referenced
-by id from ``eval/load_questions.json`` pools, whose text comes from the owner's
-``eval/questions.json``; nothing here writes question content.
-
-Scenario values marked [PROPOSED] / [ASSUMED] are design inputs, not measurements; every
-run records the spec it used.
-"""
+"""Seeded load shapes and the canonical P10 scenarios."""
 
 from __future__ import annotations
 
@@ -49,8 +40,7 @@ class Phase(BaseModel):
     window_s: Annotated[float, Field(ge=0.0)] = 2.0  # burst spread
     start_s: Annotated[float, Field(ge=0.0)] = 0.0
     sequential: bool = False  # wait for each request before sending the next
-    # "random": draw questions with replacement (duplicates happen, as in real traffic);
-    # "in_order": walk the pool in order (distinct questions while count <= pool size).
+    # "random": draw with replacement; "in_order": walk the pool in order.
     draw: Literal["random", "in_order"] = "random"
 
     @model_validator(mode="after")
@@ -154,9 +144,7 @@ SCENARIOS: Final[dict[str, ScenarioSpec]] = {s.name: s for s in (
     ),
     ScenarioSpec(
         name="tpm_halved", cache_mode="off",
-        # 8/min sits between the halved provider capacity (~4.9/min at ~809 tokens per
-        # answer) and what the guard believes (~9.9/min at 8000 TPM). The first run used
-        # 4/min, which never reached even the halved limit (exp-20261113T075226Z-c26f18c).
+        # 8/min sits between halved real capacity (~4.9/min) and the guard's belief (~9.9/min).
         description="Poisson 8/min for 5 min while the provider's TPM is halved to 4000 "
                     "and the Relay's guard still believes 8000.",
         phases=(Phase(shape="poisson", pool="all", rate_per_min=8.0, duration_s=300.0),),

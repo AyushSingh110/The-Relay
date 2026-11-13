@@ -1,28 +1,4 @@
-"""The stand-in model service: an OpenAI-compatible FastAPI app (ARCHITECTURE.md section 12).
-
-    POST /openai/v1/chat/completions   streamed (SSE + usage chunk) or plain JSON
-    GET  /openai/v1/models
-    GET  /admin/config     POST /admin/config   (partial override, validated)
-    POST /admin/reset      GET  /admin/stats
-
-Behaviour comes from a :class:`StandinProfile`: calibrated latency, a concurrency knee,
-seeded 5xx errors, slow stragglers and stalled streams, and token-bucket RPM / TPM / RPD /
-TPD limits. A limited request gets ``429`` with ``retry-after``, a Groq-style error body
-(documented format; never observed on Groq) and the same six ``x-ratelimit-*`` headers
-Groq sends, with the meanings the P02-LIVE evidence is consistent with:
-``*-requests`` = the daily request bucket, ``*-tokens`` = the per-minute token bucket,
-``reset-*`` = time until that bucket is full again.
-
-Answers are extractive: the passage sentences with the most words in common with the
-question, each tagged ``[Pi]``; ``INSUFFICIENT_EVIDENCE`` when nothing overlaps; ``OK``
-for prompts without passages. They test orchestration, timing and citation plumbing,
-**not** answer quality.
-
-Rate-limit windows run on the injected ``clock`` (seconds), so tests can move time.
-Latency uses the injected ``sleep``.
-
-Run as its own process:  python -m relay.standin.server --port 8001 [--profile FILE]
-"""
+"""The stand-in model service: an OpenAI-compatible FastAPI app (ARCHITECTURE.md section 12)."""
 
 from __future__ import annotations
 
@@ -242,8 +218,7 @@ class RateLimiter:
         return None
 
     def check(self, tokens: int) -> tuple[Metric, float, int, int] | None:
-        """The first limit this request would break: (metric, wait_s, used, requested).
-        Daily limits are checked first: their waits are the long ones."""
+        """The first limit this request would break: (metric, wait_s, used, requested)."""
         self._refill()
         for metric in ("RPD", "TPD", "RPM", "TPM"):
             bucket = self.buckets.get(metric)  # type: ignore[call-overload]
@@ -366,13 +341,7 @@ class _SlotStreamingResponse(StreamingResponse):
 
 
 class _Pacer:
-    """Paces a stream against cumulative deadlines on a high-resolution clock.
-
-    Sleeping a fixed ~1-2 ms per token is inaccurate wherever the event loop's clock is
-    coarse (15.6 ms on Windows): sleeps return early or late by up to one tick, and the
-    error adds up over a stream. Waiting for "start + tokens so far x gap" instead makes
-    each error self-correcting, so a whole stream is off by at most about one tick.
-    """
+    """Paces a stream against cumulative deadlines on a high-resolution clock."""
 
     def __init__(self, sleep: Sleep, clock: Callable[[], float] = time.perf_counter) -> None:
         self._sleep = sleep
@@ -633,8 +602,7 @@ def create_standin_app(profile: StandinProfile | None = None, *,
 
     @app.post("/admin/reset")
     async def reset(request: Request) -> Response:
-        """Full buckets, zero counters, restart the seeded sequence. Optional body:
-        {"exhaust": ["RPD", "TPD", ...], "restore_profile": true}."""
+        """Full buckets, zero counters, restart the seeded sequence."""
         try:
             body = json.loads(await request.body() or b"{}")
             exhaust = body.get("exhaust", []) if isinstance(body, dict) else None

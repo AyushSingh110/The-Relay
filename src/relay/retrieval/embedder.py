@@ -1,9 +1,4 @@
-"""Embedding and reranking models behind small Protocols (fakes are used in tests).
-
-Production models (ARCHITECTURE.md section 3) run locally through FastEmbed / ONNX
-Runtime and are loaded from ``data/models/`` with ``local_files_only=True`` by default,
-so nothing is downloaded after the one-time ``scripts/build_indexes.py --download-models``.
-"""
+"""Embedding and reranking models behind small Protocols (fakes are used in tests)."""
 
 from __future__ import annotations
 

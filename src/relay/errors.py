@@ -56,11 +56,7 @@ class ResultsOverwriteRefusedError(AggregationError):
 
 
 def sanitize_error(exc: BaseException) -> str:
-    """Summarise an exception without its message, which may contain secrets or payloads.
-
-    Returns the exception class name, plus the HTTP status code when the exception
-    carries an integer ``status_code`` attribute.
-    """
+    """Summarise an exception without its message, which may contain secrets or payloads."""
     name = type(exc).__name__
     status_code = getattr(exc, "status_code", None)
     if isinstance(status_code, int) and not isinstance(status_code, bool):

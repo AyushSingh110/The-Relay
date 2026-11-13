@@ -1,27 +1,4 @@
-"""ProviderGuard: the sole owner of provider quota state (ARCHITECTURE.md section 9).
-
-One guard protects one model on one provider. It owns:
-
-- a **concurrency semaphore**;
-- local sliding one-minute windows for **requests (RPM)** and **tokens (TPM)**;
-- **header sync**. Per the P02-LIVE evidence, ``x-ratelimit-*-requests`` describe the
-  per-**day** request limit and ``x-ratelimit-*-tokens`` the per-**minute** token limit.
-  Request headers therefore update *daily* state and never the RPM window; RPM and TPD are
-  not in any header and come only from configuration;
-- local **daily** request/token counters and the **daily safety stop** (default 0.75);
-- token **reservation** before a call and **settlement** to provider usage after it, with
-  an adaptive, conservative ``chars_per_token`` (section 9.3);
-- a minimal **circuit breaker** (N consecutive failures -> open for a fixed cooldown,
-  then one trial call).
-
-``GuardedGenerator`` implements the pipeline's ``AnswerGenerator``: it asks the guard for
-a permit before every attempt, makes exactly one provider call per attempt, settles, and
-applies the retry policy. Every retry is visible: counted in ``retries`` and timed in the
-``retrying`` span. Local refusals never touch the provider.
-
-All limits and thresholds are configuration; none is assumed. Unknown limits (``None``)
-are simply not enforced locally.
-"""
+"""ProviderGuard: the sole owner of provider quota state (ARCHITECTURE.md section 9)."""
 
 from __future__ import annotations
 
@@ -347,13 +324,7 @@ class ProviderGuard:
 
     def settle(self, permit: Permit, *, usage: TokenUsage | None, stream_opened: bool,
                received_chars: int = 0) -> Settlement:
-        """Replace the reservation with what the provider reported, and free the slot.
-
-        - usage reported: charge ``prompt + completion`` tokens (authoritative);
-        - stream opened but no usage (stall, cancel, error): the reservation **stays
-          charged** and the tokens are reported as ``estimated``;
-        - rejected before any response: nothing was consumed, the reservation is released.
-        """
+        """Replace the reservation with what the provider reported, and free the slot."""
         self._semaphore.release()
         self._trial_in_flight = False  # a half-open trial ends when its call is settled
         if usage is not None:
@@ -476,8 +447,7 @@ class GuardedGenerator:
             try:
                 result = await self._call.generate(request, spans)
             except BaseException:
-                # Cancelled mid-call (client gone): tokens may have been spent, so the
-                # reservation stays charged.
+                # Cancelled mid-call: tokens may have been spent, so the reservation stays charged.
                 self._guard.settle(permit, usage=None, stream_opened=True)
                 raise
             usage = None if result.completion is None else result.completion.usage

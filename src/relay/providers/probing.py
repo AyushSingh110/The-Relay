@@ -1,22 +1,4 @@
-"""Groq probe planning, safeguards, execution and evidence recording.
-
-Modes (IMPLEMENTATION_PLAN.md P02):
-
-- ``discover``      one ``GET /models`` call; no result rows (not inference).
-- ``baseline``      short streamed calls per candidate model (<= 3 models) plus a few
-                    representative prompt sizes; one ``probe_baseline`` row per call.
-- ``minute-limit``  tiny sequential calls that stop at the first 429. Refused unless the
-                    owner passes ``--owner-approved-rate-limit-probe``.
-
-Safeguards: a hard ``RealCallBudget`` (checked before every request), a pre-flight check
-that the whole plan fits the cap, a stop at the daily safety fraction of the
-``x-ratelimit-*-requests`` headers (documented as RPD; unverified), and a stop at any
-daily-scope 429, auth failure, or (outside minute-limit mode) any 429 at all.
-
-Evidence goes to ``evidence/groq_probes/<run_id>/``: ``manifest.json``, ``rows.csv``,
-``traces.jsonl`` (one sanitised record per call, raw headers included) and
-``summary.json``. Nothing here assumes a Groq limit, latency or header meaning.
-"""
+"""Groq probe planning, safeguards, execution and evidence recording."""
 
 from __future__ import annotations
 
@@ -65,8 +47,7 @@ SCENARIO_BY_MODE: Final[dict[str, str]] = {
     "minute-limit": "probe_minute_limit",
 }
 MAX_BASELINE_MODELS: Final = 3
-# [PROPOSED] conservative estimate used only when a call consumed tokens but reported no
-# usage (stream cut short). Low chars-per-token => high token estimate.
+# [PROPOSED] Token estimate used only when a cut-short stream reported no usage.
 CONSERVATIVE_CHARS_PER_TOKEN: Final = 3.0
 SUMMARY_FILE: Final = "summary.json"
 CONTENT_EXCERPT_CHARS: Final = 200
@@ -598,11 +579,7 @@ async def run_probe(
     clock: MonotonicClock = time.perf_counter_ns,
     wall_clock: Callable[[], datetime] = lambda: datetime.now(UTC),
 ) -> ProbeOutcome:
-    """Execute a probe plan into a new ``groq_probe`` run directory.
-
-    Callers must have checked ``live_preconditions`` first; the budget is enforced here
-    regardless.
-    """
+    """Execute a probe plan into a new ``groq_probe`` run directory."""
     plan = build_plan(options)
     single_model = options.models[0] if len(options.models) == 1 else None
     reasoning = None if options.reasoning_effort is None else {

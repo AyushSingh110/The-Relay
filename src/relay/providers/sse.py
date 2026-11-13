@@ -1,10 +1,4 @@
-"""Incremental Server-Sent Events decoder (WHATWG HTML "event stream" rules).
-
-Fed one line at a time (line terminators already removed), it returns a complete
-``SSEMessage`` when a blank line ends an event. Comment lines (``:...``) are ignored,
-multiple ``data:`` lines are joined with ``\\n``, and one leading space after the colon
-is stripped. ``id`` and ``retry`` fields are not needed by the provider and are ignored.
-"""
+"""Incremental Server-Sent Events decoder (WHATWG HTML "event stream" rules)."""
 
 from __future__ import annotations
 
@@ -37,11 +31,7 @@ class SSEDecoder:
         return None
 
     def flush(self) -> SSEMessage | None:
-        """Dispatch a pending event at end of stream.
-
-        The spec discards an unterminated final event; we keep it so a server that omits
-        the trailing blank line after ``[DONE]`` is still read correctly.
-        """
+        """Dispatch a pending event at end of stream."""
         return self._dispatch()
 
     def _dispatch(self) -> SSEMessage | None:

@@ -1,9 +1,4 @@
-"""Frozen, strict contracts for result rows and run manifests.
-
-`ResultRow` is the single source of truth for the `results.csv` schema. Columns 1-12
-are exactly the columns required by ASSIGNMENT.md (page 4), in that order; the
-appended columns follow ARCHITECTURE.md section 13.3.
-"""
+"""Frozen, strict contracts for result rows and run manifests."""
 
 from __future__ import annotations
 

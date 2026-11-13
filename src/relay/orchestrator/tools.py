@@ -1,10 +1,4 @@
-"""The pipeline's single tool, ``retrieve_passages``, behind a validated, timed gateway.
-
-Every call goes through :class:`ToolGateway`: arguments are validated with Pydantic, the
-retrieval runs in a worker thread (embedding and reranking are CPU-bound), a timeout
-bounds the wait, and the elapsed time is recorded whether the call succeeds or fails.
-Failures are typed (:class:`ToolError` subclasses); the pipeline decides what they mean.
-"""
+"""The pipeline's single tool, ``retrieve_passages``, behind a validated, timed gateway."""
 
 from __future__ import annotations
 

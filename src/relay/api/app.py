@@ -1,32 +1,4 @@
-"""The Relay HTTP service (ARCHITECTURE.md sections 5, 7 and 8). One worker process.
-
-    POST /ask {request_id, question, retrieval_setting, deadline_ms?}
-
-      exact cache hit      -> verified answer at once            (cache_status=exact_hit)
-      identical in flight  -> wait for the leader's result       (cache_status=coalesced)
-      otherwise (leader)   -> admission queue -> pipeline        (cache_status=miss | off)
-
-The answer is buffered and verified before anything is sent, so the response body is a
-short Server-Sent-Events document, written in one piece:
-
-    event: answer        {"text", "refused", "citations"}             status "ok" only
-    event: unavailable   {"message", "error_code", "passages"}        any other status
-    event: final         request metadata and server spans (ResultRow column names)
-
-An ``unavailable`` event is not an answer: a client must not count it as a delivered
-first token. It carries pointers to the retrieved passages when retrieval had already run
-(daily budget exhausted, circuit open, upstream failure), and no provider call is made
-for it by this module.
-
-Client disconnects are detected from the ASGI ``http.disconnect`` message. The waiting
-request is cancelled; the work it led is cancelled only if no coalesced follower is still
-waiting for it.
-
-Traces (never ``results.csv`` rows, which the load harness owns) go to the run directory:
-one ``request`` record per HTTP request and one ``flight`` record per piece of leader
-work. The ``flight`` record is the authority for provider spend, including work that was
-cancelled or whose leader gave up.
-"""
+"""The Relay HTTP service (ARCHITECTURE.md sections 5, 7 and 8)."""
 
 from __future__ import annotations
 
@@ -369,8 +341,7 @@ class RelayService:
         return None if self._run is None else self._run.run_id
 
     def start_run(self, run: RunHandle | None) -> None:
-        """Point traces at ``run`` and empty the cache, so runs cannot contaminate each
-        other. Call it between runs, when no request is in flight."""
+        """Point traces at ``run`` and empty the cache, so runs cannot contaminate each other."""
         self._run = run
         if self.cache is not None:
             self.cache.clear()
@@ -383,8 +354,7 @@ class RelayService:
         try:
             self._run.append_trace(record)
         except (RunStoreError, OSError) as exc:
-            # The answer is still correct without its trace, but lost evidence must be
-            # visible: it is counted (see /healthz) and logged.
+            # Trace loss is counted (see /healthz) and logged; the answer stays valid.
             self.trace_failures += 1
             logger.error("trace write failed: %s", sanitize_error(exc))
 
@@ -509,11 +479,7 @@ class RelayService:
 
     async def ask(self, ask: AskRequest, spans: ServerSpanTracker,
                   arrived_ns: int) -> AskReply:
-        """Serve one request. ``spans`` was started when the request arrived.
-
-        Cancelling this coroutine means the client gave up: the request stops waiting and
-        a ``client_gave_up`` trace is written before the cancellation propagates.
-        """
+        """Serve one request."""
         deadline_ns = (None if ask.deadline_ms is None
                        else arrived_ns + ask.deadline_ms * _NS_PER_MS)
         key: Hashable
@@ -653,11 +619,7 @@ def create_app(*, provider: ChatProvider, retrievers: Mapping[str, PassageRetrie
                vocabulary: frozenset[str] | None = None, run: RunHandle | None = None,
                tool_timeout_s: float = DEFAULT_TOOL_TIMEOUT_S, sleep: Sleep = asyncio.sleep,
                clock: MonotonicClock = time.perf_counter_ns) -> FastAPI:
-    """Wire pipeline + ProviderGuard + admission + exact cache + SingleFlight into an app.
-
-    The app is for a single worker process: cache, flights, queue and guard live in memory.
-    Every limit (``guard``, ``queue``) is supplied by the caller; none is assumed here.
-    """
+    """Wire pipeline + ProviderGuard + admission + exact cache + SingleFlight into an app."""
     gateway = ToolGateway(retrievers, timeout_s=tool_timeout_s, clock=clock)
     generator = GuardedGenerator(MeteredProvider(provider), guard, retry, sleep=sleep,
                                  clock=clock)

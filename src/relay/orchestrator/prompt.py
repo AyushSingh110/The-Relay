@@ -1,10 +1,4 @@
-"""Grounded-synthesis prompt (pipeline step 4, the only LLM call).
-
-Passages are numbered ``[P1]..[Pk]``, each with a metadata line (paper title, exact arXiv
-version, pages, section). The model must cite a tag in every sentence or reply with the
-refusal marker and nothing else. ``PROMPT_VERSION`` changes whenever the wording does,
-so cached answers and run manifests can tell prompt generations apart.
-"""
+"""Grounded-synthesis prompt (pipeline step 4, the only LLM call)."""
 
 from __future__ import annotations
 

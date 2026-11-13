@@ -1,22 +1,4 @@
-"""Evidence gate (pipeline step 3): a deterministic branch and one bounded loop.
-
-``decide`` returns one of three actions (ARCHITECTURE.md section 6):
-
-- ``EARLY_REFUSAL``: only when the question is *clearly* outside the corpus, so no LLM
-  tokens are spent. The triggers are deliberately narrow:
-    * nothing was retrieved;
-    * the question asks about a non-pinned arXiv version of a corpus paper;
-    * no paper cues at all and low corpus term coverage (the scope analyzer's signal);
-    * no strong paper cue and, in a reranked setting, the best cross-encoder score is
-      far below anything seen for on-topic questions.
-- ``LOOP_EXPAND``: a paper the question expects has no passage in the result. The
-  pipeline re-queries once, scoped to the missing paper(s). ``loop_count`` bounds this to
-  a single re-query: on the second visit the gate never asks again.
-- ``SUFFICIENT``: go to the single LLM call.
-
-Near-topic unanswerable questions pass this gate by design; the LLM's cite-or-refuse
-instruction and the verifier handle them.
-"""
+"""Evidence gate (pipeline step 3): a deterministic branch and one bounded loop."""
 
 from __future__ import annotations
 
@@ -30,8 +12,7 @@ from relay.ingestion.arxiv_fetcher import PAPERS
 from relay.retrieval.hybrid_index import RetrievedPassage
 from relay.retrieval.scope import ScopeDecision, analyze_scope
 
-# [PROPOSED] Calibrated on the P04B observations (n = 21 owner questions): off-topic
-# questions scored -8.5 or lower, every answerable or near-topic one +0.22 or higher.
+# [PROPOSED] Calibrated on P04B: off-topic scored <= -8.5, answerable >= +0.22.
 RERANK_REFUSAL_SCORE: Final = -5.0
 MAX_LOOPS: Final = 1
 
@@ -68,8 +49,7 @@ def expected_papers(scope: ScopeDecision) -> tuple[str, ...]:
 
 
 def requery_text(question: str, papers: Sequence[str]) -> str:
-    """The part of the question that names the missing paper(s); the whole question if
-    it cannot be narrowed. Deterministic: no model rewrites the query."""
+    """Deterministically narrow the question to the part naming the missing paper(s)."""
     wanted = set(papers)
     sentences = [s.strip() for s in _SENTENCE_END.split(question.strip()) if s.strip()]
     if len(sentences) < 2:
@@ -130,12 +110,7 @@ def expansion_size(top_k: int) -> int:
 def merge_expansion(original: Sequence[RetrievedPassage],
                     expansion: Sequence[RetrievedPassage], top_k: int) -> tuple[
                         RetrievedPassage, ...]:
-    """Append the best new passages of the paper-scoped re-query to the first result.
-
-    Nothing already retrieved is dropped (replacing half the first result was measured to
-    lose gold evidence); the prompt grows by at most ``expansion_size(top_k)`` passages,
-    and only on requests that loop. Passages are renumbered 1..n.
-    """
+    """Append the best new passages of the paper-scoped re-query to the first result."""
     merged = list(original)
     seen = {p.chunk_id for p in merged}
     limit = len(merged) + expansion_size(top_k)

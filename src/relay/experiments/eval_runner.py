@@ -1,28 +1,4 @@
-"""Answer-quality evaluation runs: model comparison and Table 3 (IMPLEMENTATION_PLAN P07).
-
-Isolated from caching and load testing by construction:
-
-- the pipeline is called in-process, one request at a time (no HTTP service, no cache,
-  no SingleFlight, no admission queue), so every row has ``cache_status=off``;
-- each model has its own :class:`ProviderGuard` (Groq keeps separate limits per model)
-  that paces calls by TPM / RPM and stops at the daily safety fraction;
-- the pipeline gets **no** prompt budget, so passages are never dropped to fit TPM
-  headroom (no degraded answers): the guard waits for quota instead.
-
-Per run directory (``evidence/experiments/<run_id>/``):
-
-    rows.csv            one ResultRow per request; answer_grade stays blank until the
-                        owner has reviewed the proposed grades
-    traces.jsonl        one record per request (pipeline trace, passages, guard state)
-    answers.jsonl       AnswerRecord per delivered answer (input to grade_answers.py)
-    grades.json         deterministic rubric proposals, all ``pending`` owner review
-    answers_audit.json  question, expected answer, gold pages, answer, citations,
-                        retrieved pages and the proposed grade with its reasons
-    summary.json        per (model, retrieval setting) comparison figures
-
-Timing: the "client" is this runner. Answers are buffered and verified before delivery,
-so ``first_token_ms`` (first delivered byte) equals ``total_ms`` for delivered rows.
-"""
+"""Answer-quality evaluation runs: model comparison and Table 3 (IMPLEMENTATION_PLAN P07)."""
 
 from __future__ import annotations
 
@@ -78,9 +54,7 @@ Scenario = Literal["model_comparison", "retrieval_eval"]
 SCENARIOS: Final[tuple[str, ...]] = ("model_comparison", "retrieval_eval")
 SHORTLIST: Final[tuple[str, ...]] = ("openai/gpt-oss-20b", "openai/gpt-oss-120b",
                                      "qwen/qwen3.8-27b")
-# Stratified selection (not authorship): one Transformer numeric trap, two Moshi, one
-# H-Net, one cross-paper trap, and the unanswerable question that reaches the model
-# (q16-q20 are refused before any model call).
+# Stratified subset: Transformer, Moshi, H-Net, cross-paper and unanswerable traps.
 COMPARISON_QUESTIONS: Final[tuple[str, ...]] = ("q03", "q07", "q10", "q12", "q13", "q21")
 # Header-observed per-model limits from P02-LIVE (x-ratelimit-limit-tokens / -requests).
 HEADER_TPM: Final = 8000
@@ -106,8 +80,7 @@ class EvalItem:
 
 def plan_items(questions: QuestionSet, *, question_ids: Sequence[str] | None,
                models: Sequence[str], settings: Sequence[str]) -> list[EvalItem]:
-    """Question-major order, models innermost: each model's TPM bucket recovers while the
-    other models are called."""
+    """Question-major order, models innermost, so each model's TPM bucket can recover."""
     by_id = questions.by_id()
     ids = list(question_ids) if question_ids else [q.id for q in questions.questions]
     unknown = [i for i in ids if i not in by_id]
@@ -231,8 +204,7 @@ class EvalRunner:
         try:
             outcome = await lane.pipeline.run(request, spans)
         except RealCallBudgetExceededError as exc:
-            # Refused locally on a retry: earlier attempts of this request may have been
-            # sent, so the request is recorded in the traces rather than as a row.
+            # Refused locally on a retry: earlier attempts may have been sent, so trace it.
             result.stopped_reason = "--max-real-calls reached during a retry"
             self._run.append_trace({
                 "record": "eval_stopped", "request_id": request_id,
@@ -492,8 +464,7 @@ def load_corpus_and_questions(papers_dir: Path, questions_file: Path) -> Corpus:
 
 def load_retrievers(settings: Iterable[str], *, papers_dir: Path, indexes_dir: Path,
                     models_dir: Path) -> tuple[dict[str, PassageRetriever], frozenset[str]]:
-    """Retrievers for the named settings, integrity-checked against the corpus manifest.
-    Returns them with the BM25 vocabulary (for the scope analyzer)."""
+    """Retrievers for the named settings, integrity-checked against the corpus manifest."""
     os.environ.setdefault("HF_HUB_OFFLINE", "1")
     from relay.retrieval.embedder import EMBEDDING_MODEL, FastEmbedEmbedder, FastEmbedReranker
     from relay.retrieval.hybrid_index import HybridIndex, HybridRetriever

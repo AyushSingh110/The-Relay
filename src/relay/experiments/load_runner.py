@@ -1,27 +1,4 @@
-"""Load harness: drive the Relay over HTTP, measure as a client, join with server traces.
-
-System under test: the P08 Relay app (``create_app``: admission queue, exact cache +
-SingleFlight, pipeline, ProviderGuard) served by uvicorn on 127.0.0.1, talking to the
-calibrated stand-in (or, for the owner-approved real run, to Groq).
-
-Client side, per arrival:
-
-- sends ``POST /ask`` at its scheduled time with the scenario's fixed ``deadline_ms``;
-- ``first_token_ms`` = first byte of a delivered ``answer`` event (answers are buffered
-  and verified, so this is also roughly the end of the response);
-- gives up at its sampled patience: the request is cancelled and the connection closed,
-  which the server sees as a disconnect.
-
-After the last client finishes, the harness waits for the server to drain, then joins each
-client result with the server's ``traces.jsonl`` by ``request_id``:
-
-- completed requests take server fields from the response's ``final`` event;
-- abandoned requests take spans from the server's ``request`` record; an abandoned
-  *leader* takes its provider spend from the ``flight`` record it led (so token sums stay
-  exact even when the work finished for coalesced followers);
-- an abandoned request is ``status=timeout``, ``error_code=client_gave_up``, verdict
-  ``NOT_RUN`` (nothing reached that client).
-"""
+"""Load harness: drive the Relay over HTTP, measure as a client, join with server traces."""
 
 from __future__ import annotations
 

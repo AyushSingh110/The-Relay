@@ -1,18 +1,4 @@
-"""Exact answer cache and SingleFlight (ARCHITECTURE.md section 8).
-
-``ExactCache`` is an in-memory cache keyed by the hash of the normalised question, scoped
-by ``(corpus_sha256, retrieval_setting, prompt_version, model_id)``. It admits only
-answers that passed verification (``VERIFIED`` or ``REFUSAL_VERIFIED``) and were not
-degraded, so a blocked or budget-trimmed answer can never be replayed. There is no
-semantic matching: two questions share an entry only if they are the same text up to
-Unicode form and whitespace. Letter case is kept, because identifiers such as ``N`` and
-``n`` can mean different things.
-
-``SingleFlight`` runs the work for a key once. The leader's work is a detached task;
-everyone asking for the same key while it runs awaits that task. A waiter that leaves
-(disconnect, own deadline) just stops waiting. The task is cancelled only when the last
-waiter has left.
-"""
+"""Exact answer cache and SingleFlight (ARCHITECTURE.md section 8)."""
 
 from __future__ import annotations
 
@@ -174,8 +160,7 @@ class SingleFlight(Generic[T]):
 
     async def do(self, key: Hashable, work: Callable[[Flight[T]], Awaitable[T]], *,
                  follower_timeout_s: float | None = None) -> FlightResult[T]:
-        """Run ``work`` once per key. A follower may bound its own wait; ``TimeoutError``
-        then means only that this follower stopped waiting."""
+        """Run ``work`` once per key."""
         flight = self._flights.get(key)
         role: Role = "follower"
         if flight is None:
@@ -199,8 +184,7 @@ class SingleFlight(Generic[T]):
         finally:
             flight.waiters -= 1
             if flight.waiters == 0 and not task.done():
-                # Nobody is waiting any more. Unregister first, so that a caller arriving
-                # while the task unwinds starts a fresh flight instead of joining this one.
+                # Nobody is waiting any more.
                 if self._flights.get(key) is flight:
                     del self._flights[key]
                 task.cancel()

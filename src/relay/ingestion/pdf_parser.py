@@ -1,26 +1,4 @@
-"""Column-aware, section-tagged text extraction with PyMuPDF.
-
-Per page:
-1. Read text blocks (``page.get_text("dict")``) with their bounding boxes.
-2. Drop non-content blocks, counting each reason: rotated text (the arXiv sidebar
-   stamp), running headers repeated in the top margin, page numbers in the bottom
-   margin, figure glyph text (letter-spaced labels, byte hex dumps, axis-tick runs) and
-   "figure word soup" (pages made mostly of one-word blocks, e.g. attention
-   visualisations).
-3. Order blocks. A page is two-column when substantial text sits wholly left and wholly
-   right of the centre line. Two-column pages are read band by band (full-width blocks
-   split bands); within each band the left column is read before the right. Otherwise
-   blocks are grouped into rows by vertical overlap and read top-to-bottom, left-to-right
-   (keeps equation fragments on one row).
-4. Rebuild line text, marking small raised/lowered spans as ``^`` / ``_`` (``10^20``,
-   ``d_model``) and repairing end-of-line hyphenation using the document's own vocabulary.
-5. NFKC-normalise (ligatures, math-alphanumeric letters) and collapse whitespace.
-
-Sections come from the PDF outline (TOC) matched to heading blocks on the listed page,
-plus text-detected ``Abstract`` / ``Acknowledgements`` / ``References`` and any
-per-paper extra headings. Everything after ``References`` up to the next heading is
-tagged ``is_reference``. Page flags mark text that is present but less reliable.
-"""
+"""Column-aware, section-tagged text extraction with PyMuPDF."""
 
 from __future__ import annotations
 
@@ -284,8 +262,7 @@ def _drop_figure_text(page: _Page) -> None:
 
 
 def _row_order(row: list[_RawBlock]) -> list[_RawBlock]:
-    """Within a row: horizontally overlapping blocks form a stack read top-down;
-    stacks are read left to right."""
+    """Order a row: overlapping blocks stack top-down, stacks read left to right."""
     stacks: list[list[_RawBlock]] = []
     for block in sorted(row, key=lambda b: b.x0):
         for stack in stacks:
@@ -526,8 +503,7 @@ _Heading = tuple[int, str | None, str, int, SectionKind]
 def _locate_headings(
     blocks: Sequence[_Assembled], toc: Sequence[_TocEntry], extra: set[str], issues: list[str]
 ) -> dict[int, _Heading]:
-    """Map block index -> heading. TOC entries are matched in order on their listed page or
-    the next; a numbered match beats an unnumbered one (figure labels often repeat titles)."""
+    """Map block index -> heading."""
     found: dict[int, _Heading] = {}
     cursor = 0
     for entry in toc:

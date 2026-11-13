@@ -1,19 +1,4 @@
-"""Deterministic first-pass grading plus owner review (ARCHITECTURE.md section 11).
-
-The rubric *proposes* one of the four labels with reasons; it never finalises a grade.
-Every grade starts ``pending`` and only becomes final when the owner confirms or
-overrides it. No LLM-as-judge.
-
-Rules:
-- answerable + refusal (including a verifier safe refusal) -> ``refused_wrongly``
-- unanswerable + refusal -> ``refused_correctly``; unanswerable + answer -> ``wrong``
-- answerable + answer -> ``correct`` only if every required fact is present, at least one
-  answer citation lands on a gold page, and no forbidden claim appears; otherwise
-  ``wrong``. A correct fact with a wrong or missing citation is ``wrong``.
-
-Fact matching is a normalised substring test (case-, width- and whitespace-insensitive).
-A required fact may list alternatives separated by ``|`` (e.g. ``"512|d_model = 512"``).
-"""
+"""Deterministic first-pass grading plus owner review (ARCHITECTURE.md section 11)."""
 
 from __future__ import annotations
 

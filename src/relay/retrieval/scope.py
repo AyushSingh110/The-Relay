@@ -1,18 +1,4 @@
-"""Deterministic scope analysis (pipeline step 1, ARCHITECTURE.md section 6).
-
-Lexicon/regex only, no model calls. It reports:
-
-- **paper cues**: *strong* cues are unique to one paper (title words, product names,
-  arXiv IDs); *weak* cues are topical words that the papers share ("Transformer",
-  "attention", "chunk", "speech"). Only strong cues produce a suggested paper filter,
-  because shared vocabulary is a known retriever trap.
-- **comparison intent** ("compare", "difference", "versus", ...): never narrows to one paper.
-- **technical identifiers** (``d_model``, ``12.5 Hz``, ``RVQ``, ``H-Net``) for later grounding.
-- **reference intent** ("cite", "references", "[12]"): lifts reference down-weighting.
-- **arXiv version mentions**, flagging a version other than the pinned one.
-- **corpus term coverage**: share of the question's content terms found in the index
-  vocabulary. This is a signal only; the evidence gate (P05) decides early refusal.
-"""
+"""Deterministic scope analysis (pipeline step 1, ARCHITECTURE.md section 6)."""
 
 from __future__ import annotations
 

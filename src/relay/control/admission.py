@@ -1,27 +1,4 @@
-"""Admission queue (application layer; ARCHITECTURE.md sections 9.2 and 15).
-
-Capacity is **derived, never assumed**:
-
-    service_rate = min(RPM / 60, TPM / (60 * tokens_per_answer), slots / service_time)
-    capacity     = max(1, floor(service_rate * patience_quantile))
-
-so a request that is allowed to wait has a realistic chance of being served before its
-client gives up. ``derive_capacity`` returns the inputs and the result together, so a run
-manifest can record exactly how the number was obtained. Unknown inputs are left out of
-the ``min``; at least one must be given.
-
-The queue itself knows nothing about provider headers or quota. It:
-
-- sheds immediately when the queue is full (``queue_full``);
-- sheds when the predicted wait ``position / service_rate`` exceeds the request's remaining
-  deadline (``predicted_wait_exceeds_deadline``);
-- serves waiters first-in first-out through ``max_active`` service slots;
-- re-checks, when a request reaches a slot, that its deadline has not passed
-  (``deadline_expired``) and its client is still connected (``client_gave_up``), so a
-  request nobody is waiting for never reaches the provider.
-
-Cancelling a waiting request (client disconnect) removes it from the queue cleanly.
-"""
+"""Admission queue (application layer; ARCHITECTURE.md sections 9.2 and 15)."""
 
 from __future__ import annotations
 

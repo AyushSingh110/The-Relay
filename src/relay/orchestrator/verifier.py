@@ -1,23 +1,4 @@
-"""Deterministic answer verifier (pipeline step 5; ARCHITECTURE.md section 7.3).
-
-An answer is **BLOCKED** when any of these hold:
-
-- (a) it has no ``[Pi]`` tag, or a sentence making a claim carries no tag;
-- (b) a tag names a passage that was not supplied;
-- (c) a paper name, arXiv ID/version or page in a sentence contradicts the metadata of
-      the passages that sentence cites;
-- (d) a number or technical identifier in a sentence does not appear in any passage the
-      sentence cites (passage text plus its metadata line);
-- (e) the refusal marker appears together with any other content.
-
-A reply that is exactly the refusal marker is **REFUSAL_VERIFIED**; anything else that
-passes is **VERIFIED**. Every ambiguous case resolves towards blocking, because a blocked
-answer becomes a safe refusal while a wrongly passed one reaches the user.
-
-Limits (stated, not hidden): this checks citation integrity and literal grounding, not
-semantic entailment. Spelled-out numbers ("eight") and bare acronyms are not checked;
-numbers the model derives by arithmetic are blocked even when correct.
-"""
+"""Deterministic answer verifier (pipeline step 5; ARCHITECTURE.md section 7.3)."""
 
 from __future__ import annotations
 
@@ -143,11 +124,7 @@ def _split_line(line: str) -> list[str]:
 
 
 def split_sentences(answer: str) -> list[str]:
-    """Sentence-like units: lines and list items, then sentences within each line.
-
-    A tag group that opens a unit belongs to the previous unit when that one has no tag
-    of its own (``"... layers. [P1] The decoder ..."``).
-    """
+    """Sentence-like units: lines and list items, then sentences within each line."""
     units: list[str] = []
     for raw_line in answer.splitlines():
         line = _BULLET.sub("", raw_line).replace("*", "").replace("`", "").strip()

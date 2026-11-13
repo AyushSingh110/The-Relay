@@ -1,14 +1,4 @@
-"""Client patience: how long a simulated user waits before giving up (ARCHITECTURE.md §16.4).
-
-The owner has not yet chosen the distribution. The default here is **[PROPOSED]**:
-log-normal with median 20 s and sigma 0.6 (so about 10 % of users give up before 9 s and
-about 10 % wait longer than 43 s), floored at 1 s. Every run records the model it used.
-
-Patience is private to the client. The server is told a fixed service-level
-``deadline_ms`` instead (ARCHITECTURE.md §16.10), so server-side shedding
-(``deadline_expired`` / ``predicted_wait_exceeds_deadline``) and client abandonment
-(``client_gave_up``) are measured separately.
-"""
+"""Client patience: how long a simulated user waits before giving up (ARCHITECTURE.md §16.4)."""
 
 from __future__ import annotations
 

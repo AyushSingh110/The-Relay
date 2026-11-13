@@ -1,9 +1,4 @@
-"""Explicit, non-coercing CSV encoding for `ResultRow`.
-
-Blank cells mean "not applicable / not measured" and map to ``None``; they are never
-written as ``0`` or ``-1``. Parsing is strict: e.g. ``"1.0"`` is not an integer and
-``"True"`` is not a boolean.
-"""
+"""Explicit, non-coercing CSV encoding for `ResultRow`."""
 
 from __future__ import annotations
 

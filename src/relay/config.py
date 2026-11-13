@@ -1,8 +1,4 @@
-"""Typed runtime configuration loaded from environment variables / `.env`.
-
-Only values that are decided or safely defaulted live here. Numbers that must come
-from measurement (queue capacity, Groq limits, prices) are deliberately absent.
-"""
+"""Typed runtime configuration loaded from environment variables / `.env`."""
 
 from __future__ import annotations
 

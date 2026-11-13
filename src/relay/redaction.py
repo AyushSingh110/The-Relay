@@ -38,12 +38,7 @@ def redact_text(text: str) -> str:
 
 
 def redact_secrets(value: Any) -> Any:
-    """Return a copy of ``value`` with secrets removed.
-
-    - Mapping entries whose key looks sensitive are replaced wholesale.
-    - Strings are scrubbed of Groq keys, bearer tokens and ``org_...`` identifiers.
-    - ``SecretStr`` values are never revealed.
-    """
+    """Return a copy of ``value`` with secrets removed."""
     if isinstance(value, SecretStr):
         return REDACTED
     if isinstance(value, str):

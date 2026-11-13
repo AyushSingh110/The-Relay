@@ -1,11 +1,4 @@
-"""Monotonic latency accounting.
-
-`ServerSpanTracker` attributes every nanosecond between start and finish to exactly one
-of waiting / working / retrying, so the three spans sum to the server total by
-construction. `ClientTimer` measures what the client (experiment harness) observes.
-
-Both are single-request, single-owner objects: one coroutine drives each instance.
-"""
+"""Monotonic latency accounting."""
 
 from __future__ import annotations
 
@@ -78,11 +71,7 @@ class ServerSpanTracker:
             self._provider_first_token_ns = self._clock() - self._start_ns
 
     def snapshot(self) -> SpanSummary:
-        """Totals as of now, without closing the tracker (the final summary if finished).
-
-        Lets a second party read the spans of work that is still running, e.g. a client
-        that gives up while its request keeps running for coalesced followers.
-        """
+        """Totals as of now, without closing the tracker (the final summary if finished)."""
         if self._summary is not None:
             return self._summary
         now = self._clock()

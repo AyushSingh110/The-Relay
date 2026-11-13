@@ -1,18 +1,4 @@
-"""Recomputable result tables (IMPLEMENTATION_PLAN P11).
-
-Everything is computed from the canonical ``results.csv`` (built by
-``scripts/build_results.py``) plus, per run, files in that run's evidence directory:
-``manifest.json`` (labels), ``summary.json`` (harness-measured duration, capacity,
-stand-in attempts), ``grades.json`` (rubric grades) and ``traces.jsonl`` (forensics).
-
-Conventions (P11): times in ms; **linear-interpolation percentiles** (the "linear" /
-type-7 definition) with N stated; percentages to one decimal; "not measured" when N = 0.
-Output is deterministic: the same inputs give byte-identical text.
-
-Grades: ``answer_grade`` in ``results.csv`` is blank until the owner has reviewed the
-proposed grades. Until then, quality columns use the rubric's *proposed* grades from
-``grades.json`` and say so.
-"""
+"""Recomputable result tables (IMPLEMENTATION_PLAN P11)."""
 
 from __future__ import annotations
 

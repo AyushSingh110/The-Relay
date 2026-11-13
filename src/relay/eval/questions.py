@@ -1,9 +1,4 @@
-"""Evaluation-question schema and validation (ARCHITECTURE.md section 11).
-
-The owner writes ``eval/questions.json``; this module only validates it. Validation never
-edits a question: problems are reported for the owner to fix. Quotes are checked against
-the PDFs separately in P04B.
-"""
+"""Evaluation-question schema and validation (ARCHITECTURE.md section 11)."""
 
 from __future__ import annotations
 

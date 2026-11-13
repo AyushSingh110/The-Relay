@@ -1,10 +1,4 @@
-"""Command-line driver shared by scripts/run_model_comparison.py and run_retrieval_eval.py.
-
-A real run is refused unless every safeguard holds: ``--source real --live``,
-``--max-real-calls N`` with N >= planned first attempts and N <= MAX_REAL_CALLS, and a
-configured GROQ_API_KEY. Without ``--live`` a real run is a dry run that prints the plan
-and creates nothing. Exit codes: 0 ok (or dry run), 1 failure, 2 refused by a safeguard.
-"""
+"""Command-line driver shared by scripts/run_model_comparison.py and run_retrieval_eval.py."""
 
 from __future__ import annotations
 

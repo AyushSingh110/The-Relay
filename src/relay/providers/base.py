@@ -1,14 +1,4 @@
-"""Provider-neutral request/response contracts, the provider protocol, the real-call cap
-and an offline ``ScriptedProvider``.
-
-A streamed call yields, in order:
-
-    ResponseOpened  ->  (ReasoningDelta | ContentDelta)*  ->  UsageReported?  ->  StreamCompleted
-
-or raises a ``ProviderError`` part-way. Every event carries ``at_ns`` from the
-provider's monotonic clock; ``ResponseOpened.sent_ns`` is taken just before the request
-was sent, so time-to-first-token can be computed without a second clock.
-"""
+"""Provider contracts, protocol, real-call cap and an offline ScriptedProvider."""
 
 from __future__ import annotations
 
@@ -270,10 +260,7 @@ class ChatProvider(Protocol):
 
 
 class RealCallBudget:
-    """Hard cap on outgoing provider HTTP requests. Consumed *before* each request is sent.
-
-    ``on_consume`` lets the caller persist the count (e.g. ``RunHandle.record_real_calls``).
-    """
+    """Hard cap on outgoing provider HTTP requests."""
 
     def __init__(self, max_calls: int, on_consume: Callable[[], None] | None = None) -> None:
         if max_calls < 0:
@@ -313,8 +300,7 @@ def _empty_meta() -> ResponseMeta:
 
 @dataclass(frozen=True)
 class ScriptedReply:
-    """One scripted answer. ``error`` is raised after ``fail_after_chunks`` content chunks
-    (``0`` = before the response opens)."""
+    """One scripted answer."""
 
     content_chunks: tuple[str, ...] = ()
     reasoning_chunks: tuple[str, ...] = ()

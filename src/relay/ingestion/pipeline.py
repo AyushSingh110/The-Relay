@@ -1,15 +1,4 @@
-"""End-to-end ingestion: fetch/validate -> parse -> chunk -> write artefacts + manifest.
-
-Outputs:
-- ``data/papers/<paper_id>.pdf`` (gitignored) and ``data/papers/manifest.json`` (tracked):
-  provenance (SHA-256, size, page count, version stamp) plus a deterministic extraction
-  summary (section list, flagged pages, drop counts, chunk counts and SHA-256 digests).
-- ``data/processed/`` (gitignored, regenerable): per paper ``blocks.jsonl``,
-  ``sections.json``, ``pages.json``; ``chunks/<preset>.jsonl`` across all papers.
-
-The manifest contains no timestamps except each paper's first ``fetched_at``, so a re-run
-on the same PDFs reproduces it byte for byte.
-"""
+"""End-to-end ingestion: fetch/validate -> parse -> chunk -> write artefacts + manifest."""
 
 from __future__ import annotations
 

@@ -1,16 +1,4 @@
-"""Deterministic word-window chunking (ARCHITECTURE.md section 6; sizes in words).
-
-Rules:
-- Chunks never cross a section boundary, so ``is_reference`` and section metadata are
-  exact for every chunk. Heading text is metadata, not chunk text.
-- Within a section the text is one word stream (it may cross pages); windows of
-  ``size_words`` advance by ``size_words - overlap_words``. The last window ends at the
-  section end.
-- ``chunk_id = {paper_id}_p{page_start}_c{idx}``: ``idx`` counts this preset's chunks of
-  the paper that start on ``page_start``, in reading order. Same PDF + same parser +
-  same preset => same IDs and text.
-- Preset sizes were finalised in P04 from measured token counts (see CHUNK_PRESETS).
-"""
+"""Deterministic word-window chunking (ARCHITECTURE.md section 6; sizes in words)."""
 
 from __future__ import annotations
 
@@ -42,11 +30,7 @@ class ChunkPreset(BaseModel):
         return self
 
 
-# Finalised in P04 from measured token counts (reports/phase-04-...md section 5):
-# BGE / MiniLM see at most 512 tokens and the corpus averages ~1.56 tokens/word (p90 2.2),
-# so the reranked preset must fit one model window (220 words ~ 484 tokens at p90); dense
-# retrieval embeds larger chunks in windows, so large_wide is sized by LLM prompt budget.
-# Overlap ~15% (>= one sentence) so facts on a boundary appear whole in some chunk.
+# Sizes finalised in P04 from measured token counts (reranked preset fits 512 tokens).
 CHUNK_PRESETS: Final[tuple[ChunkPreset, ...]] = (
     ChunkPreset(name="small_fast", size_words=160, overlap_words=25),
     ChunkPreset(name="balanced_rerank", size_words=220, overlap_words=35),

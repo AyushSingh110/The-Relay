@@ -1,29 +1,4 @@
-"""Stand-in behaviour profile, its defaults, and the fit from Phase 02-LIVE probe evidence.
-
-A :class:`StandinProfile` says how slow the stand-in is, which limits it enforces and how
-it fails. Every parameter carries a provenance note in ``provenance`` (keyed by its dotted
-path) with one of these bases:
-
-- ``measured``: computed directly from real Groq probe records;
-- ``derived``: computed from measured values by a stated rule;
-- ``header``: read from Groq response headers (meaning consistent with, not proven by,
-  the probe evidence);
-- ``documented_unverified``: taken from Groq documentation and never observed;
-- ``assumed``: chosen here because nothing was measured;
-- ``scenario``: set by an experiment through ``/admin/config``.
-
-A profile built without evidence is labelled ``uncalibrated_defaults`` and must never be
-presented as Groq-measured (ARCHITECTURE.md section 12).
-
-Latency model, per request (all times multiplied by ``time_scale``):
-
-    header_delay  = lognormal(header_median_ms, header_sigma)
-                    + prompt_ms_per_1k_tokens * prompt_tokens / 1000
-    then reasoning_tokens deltas, then the answer, each token after inter_token_ms,
-    with header_delay and inter_token_ms multiplied by the load factor
-    1 + slowdown_per_extra * max(0, active - knee_concurrency)
-    and, for a straggler, by straggler_multiplier.
-"""
+"""Stand-in behaviour profile, its defaults, and the fit from Phase 02-LIVE probe evidence."""
 
 from __future__ import annotations
 
@@ -444,11 +419,7 @@ def fit_profile(calls: Sequence[ProbeCall], *, seed: int = 0,
 
 def header_checks(calls: Sequence[ProbeCall], *, tolerance_s: float = 0.05,
                   ) -> dict[str, Any]:
-    """Test the token-bucket reading of Groq's headers against each probe call.
-
-    Requests: reset = (limit - remaining) * 86400 / limit (a daily bucket).
-    Tokens:   reset = (limit - remaining) * 60 / limit    (a per-minute bucket).
-    """
+    """Test the token-bucket reading of Groq's headers against each probe call."""
     rows: list[dict[str, Any]] = []
     for c in calls:
         row: dict[str, Any] = {"request_id": c.request_id, "model": c.model}

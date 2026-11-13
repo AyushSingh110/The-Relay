@@ -1,18 +1,4 @@
-"""``HttpOpenAIProvider``: one OpenAI-compatible HTTP/SSE client for Groq and the Stand-In.
-
-Design rules (ARCHITECTURE.md sections 7.1, 9.1, 9.2):
-
-- Plain ``httpx.AsyncClient``; the default transport is ``AsyncHTTPTransport(retries=0)``
-  and there is **no retry logic here**. Exactly one HTTP request is sent per call; any
-  retry is ProviderGuard's (P06) visible, counted decision.
-- Timeouts: httpx connect/read/write/pool, plus a per-event **stall** timeout (no SSE
-  data event for ``stall_s``) and a **total** timeout per call.
-- Every response's headers are captured verbatim (sanitised) and the ``x-ratelimit-*``
-  / ``retry-after`` headers parsed with "documented, unverified" semantics.
-- Failures become typed ``ProviderError`` subclasses (``relay.providers.errors``).
-- Groq-specific wire details (``x_groq.usage``, ``reasoning`` deltas, 498 capacity
-  errors, rate-limit message wording) are handled only in this module.
-"""
+"""``HttpOpenAIProvider``: one OpenAI-compatible HTTP/SSE client for Groq and the Stand-In."""
 
 from __future__ import annotations
 

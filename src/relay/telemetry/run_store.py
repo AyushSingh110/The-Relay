@@ -1,14 +1,4 @@
-"""Evidence run directories: exclusive creation, manifests, rows and traces.
-
-Layout (ARCHITECTURE.md section 13.1)::
-
-    evidence/groq_probes/<run_id>/          manifest.json, rows.csv, traces.jsonl
-    evidence/standin_calibration/<run_id>/  manifest.json (+ calibration outputs)
-    evidence/experiments/<run_id>/          manifest.json, rows.csv, traces.jsonl
-
-A run directory is never reused. Writes are serialised with a lock so concurrent
-callers in one process cannot interleave lines.
-"""
+"""Evidence run directories: exclusive creation, manifests, rows and traces."""
 
 from __future__ import annotations
 

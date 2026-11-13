@@ -1,11 +1,4 @@
-"""Fetch and validate the three pinned arXiv papers; maintain `data/papers/manifest.json`.
-
-Only the exact versions named in ASSIGNMENT.md are allowed, each from its
-version-specific URL (``https://arxiv.org/pdf/<id>v<version>``). A PDF is accepted only
-if it is a readable, unencrypted PDF whose first page carries arXiv's own version stamp
-(``arXiv:<id>v<version>``) and the expected title. arXiv versions are immutable, so a
-checksum change for an already-recorded paper is an error, never a silent update.
-"""
+"""Fetch and validate the three pinned arXiv papers; maintain `data/papers/manifest.json`."""
 
 from __future__ import annotations
 
