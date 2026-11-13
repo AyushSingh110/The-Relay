@@ -1,0 +1,380 @@
+{
+  "grades": [
+    {
+      "facts_found": [
+        "d_v|value dimension|dimension of the values"
+      ],
+      "facts_missing": [
+        "8 heads|h = 8|h=8|8 parallel attention|eight heads|eight parallel",
+        "= 64|d_k = d_v = 64|dimension of 64|64 dimensions",
+        "d_k|key dimension|dimension of the keys"
+      ],
+      "final": null,
+      "forbidden_found": [],
+      "gold_page_hits": [
+        "1706.03762v7 p.5"
+      ],
+      "owner_note": null,
+      "proposed": "wrong",
+      "question_id": "q03",
+      "reasons": [
+        "missing required facts: ['8 heads|h = 8|h=8|8 parallel attention|eight heads|eight parallel', '= 64|d_k = d_v = 64|dimension of 64|64 dimensions', 'd_k|key dimension|dimension of the keys']"
+      ],
+      "request_id": "exp-20261113T063331Z-e17e9c1-000001",
+      "review_status": "pending"
+    },
+    {
+      "facts_found": [
+        "8 heads|h = 8|h=8|8 parallel attention|eight heads|eight parallel",
+        "d_v|value dimension|dimension of the values"
+      ],
+      "facts_missing": [
+        "= 64|d_k = d_v = 64|dimension of 64|64 dimensions",
+        "d_k|key dimension|dimension of the keys"
+      ],
+      "final": null,
+      "forbidden_found": [],
+      "gold_page_hits": [
+        "1706.03762v7 p.5"
+      ],
+      "owner_note": null,
+      "proposed": "wrong",
+      "question_id": "q03",
+      "reasons": [
+        "missing required facts: ['= 64|d_k = d_v = 64|dimension of 64|64 dimensions', 'd_k|key dimension|dimension of the keys']"
+      ],
+      "request_id": "exp-20261113T063331Z-e17e9c1-000002",
+      "review_status": "pending"
+    },
+    {
+      "facts_found": [
+        "8 heads|h = 8|h=8|8 parallel attention|eight heads|eight parallel",
+        "= 64|d_k = d_v = 64|dimension of 64|64 dimensions",
+        "d_k|key dimension|dimension of the keys",
+        "d_v|value dimension|dimension of the values"
+      ],
+      "facts_missing": [],
+      "final": null,
+      "forbidden_found": [],
+      "gold_page_hits": [
+        "1706.03762v7 p.5"
+      ],
+      "owner_note": null,
+      "proposed": "correct",
+      "question_id": "q03",
+      "reasons": [
+        "all required facts present, gold page cited, no forbidden claims"
+      ],
+      "request_id": "exp-20261113T063331Z-e17e9c1-000003",
+      "review_status": "pending"
+    },
+    {
+      "facts_found": [],
+      "facts_missing": [
+        "Helium is a 7B|7B-parameter|7B parameter|7B text",
+        "neural audio codec|audio codec|audio tokenizer",
+        "Temporal Transformer|RQ-Transformer",
+        "Depth Transformer"
+      ],
+      "final": null,
+      "forbidden_found": [],
+      "gold_page_hits": [],
+      "owner_note": null,
+      "proposed": "refused_wrongly",
+      "question_id": "q07",
+      "reasons": [
+        "answer is a refusal; question is answerable"
+      ],
+      "request_id": "exp-20261113T063331Z-e17e9c1-000004",
+      "review_status": "pending"
+    },
+    {
+      "facts_found": [],
+      "facts_missing": [
+        "Helium is a 7B|7B-parameter|7B parameter|7B text",
+        "neural audio codec|audio codec|audio tokenizer",
+        "Temporal Transformer|RQ-Transformer",
+        "Depth Transformer"
+      ],
+      "final": null,
+      "forbidden_found": [],
+      "gold_page_hits": [],
+      "owner_note": null,
+      "proposed": "refused_wrongly",
+      "question_id": "q07",
+      "reasons": [
+        "answer is a refusal; question is answerable"
+      ],
+      "request_id": "exp-20261113T063331Z-e17e9c1-000005",
+      "review_status": "pending"
+    },
+    {
+      "facts_found": [
+        "neural audio codec|audio codec|audio tokenizer",
+        "Depth Transformer"
+      ],
+      "facts_missing": [
+        "Helium is a 7B|7B-parameter|7B parameter|7B text",
+        "Temporal Transformer|RQ-Transformer"
+      ],
+      "final": null,
+      "forbidden_found": [],
+      "gold_page_hits": [
+        "2410.00037v1 p.3",
+        "2410.00037v1 p.7"
+      ],
+      "owner_note": null,
+      "proposed": "wrong",
+      "question_id": "q07",
+      "reasons": [
+        "missing required facts: ['Helium is a 7B|7B-parameter|7B parameter|7B text', 'Temporal Transformer|RQ-Transformer']"
+      ],
+      "request_id": "exp-20261113T063331Z-e17e9c1-000006",
+      "review_status": "pending"
+    },
+    {
+      "facts_found": [
+        "160ms|160 ms",
+        "200ms|200 ms"
+      ],
+      "facts_missing": [
+        "230ms|230 ms",
+        "lower than|faster than|below the 230|under 230|less than 230"
+      ],
+      "final": null,
+      "forbidden_found": [],
+      "gold_page_hits": [
+        "2410.00037v1 p.1",
+        "2410.00037v1 p.2"
+      ],
+      "owner_note": null,
+      "proposed": "wrong",
+      "question_id": "q10",
+      "reasons": [
+        "missing required facts: ['230ms|230 ms', 'lower than|faster than|below the 230|under 230|less than 230']"
+      ],
+      "request_id": "exp-20261113T063331Z-e17e9c1-000007",
+      "review_status": "pending"
+    },
+    {
+      "facts_found": [
+        "160ms|160 ms",
+        "200ms|200 ms"
+      ],
+      "facts_missing": [
+        "230ms|230 ms",
+        "lower than|faster than|below the 230|under 230|less than 230"
+      ],
+      "final": null,
+      "forbidden_found": [],
+      "gold_page_hits": [
+        "2410.00037v1 p.1",
+        "2410.00037v1 p.2"
+      ],
+      "owner_note": null,
+      "proposed": "wrong",
+      "question_id": "q10",
+      "reasons": [
+        "missing required facts: ['230ms|230 ms', 'lower than|faster than|below the 230|under 230|less than 230']"
+      ],
+      "request_id": "exp-20261113T063331Z-e17e9c1-000008",
+      "review_status": "pending"
+    },
+    {
+      "facts_found": [
+        "160ms|160 ms",
+        "200ms|200 ms",
+        "lower than|faster than|below the 230|under 230|less than 230"
+      ],
+      "facts_missing": [
+        "230ms|230 ms"
+      ],
+      "final": null,
+      "forbidden_found": [],
+      "gold_page_hits": [
+        "2410.00037v1 p.1",
+        "2410.00037v1 p.2"
+      ],
+      "owner_note": null,
+      "proposed": "wrong",
+      "question_id": "q10",
+      "reasons": [
+        "missing required facts: ['230ms|230 ms']"
+      ],
+      "request_id": "exp-20261113T063331Z-e17e9c1-000009",
+      "review_status": "pending"
+    },
+    {
+      "facts_found": [],
+      "facts_missing": [
+        "Mamba-2|state space model|SSM",
+        "most capacity|majority of model capacity|bulk of parameters|compressed sequence",
+        "dechunk|upsampl",
+        "residual connection|encoder residual"
+      ],
+      "final": null,
+      "forbidden_found": [],
+      "gold_page_hits": [],
+      "owner_note": null,
+      "proposed": "refused_wrongly",
+      "question_id": "q12",
+      "reasons": [
+        "answer is a refusal; question is answerable"
+      ],
+      "request_id": "exp-20261113T063331Z-e17e9c1-000010",
+      "review_status": "pending"
+    },
+    {
+      "facts_found": [],
+      "facts_missing": [
+        "Mamba-2|state space model|SSM",
+        "most capacity|majority of model capacity|bulk of parameters|compressed sequence",
+        "dechunk|upsampl",
+        "residual connection|encoder residual"
+      ],
+      "final": null,
+      "forbidden_found": [],
+      "gold_page_hits": [],
+      "owner_note": null,
+      "proposed": "refused_wrongly",
+      "question_id": "q12",
+      "reasons": [
+        "answer is a refusal; question is answerable"
+      ],
+      "request_id": "exp-20261113T063331Z-e17e9c1-000011",
+      "review_status": "pending"
+    },
+    {
+      "facts_found": [
+        "most capacity|majority of model capacity|bulk of parameters|compressed sequence",
+        "residual connection|encoder residual"
+      ],
+      "facts_missing": [
+        "Mamba-2|state space model|SSM",
+        "dechunk|upsampl"
+      ],
+      "final": null,
+      "forbidden_found": [],
+      "gold_page_hits": [
+        "2507.07955v2 p.4",
+        "2507.07955v2 p.5"
+      ],
+      "owner_note": null,
+      "proposed": "wrong",
+      "question_id": "q12",
+      "reasons": [
+        "missing required facts: ['Mamba-2|state space model|SSM', 'dechunk|upsampl']"
+      ],
+      "request_id": "exp-20261113T063331Z-e17e9c1-000012",
+      "review_status": "pending"
+    },
+    {
+      "facts_found": [],
+      "facts_missing": [
+        "cosine similarity",
+        "boundary probabilities|boundary indicators|boundary probability|segmentation boundaries",
+        "exponential moving average|moving average",
+        "softmax over|weights on the values|adjacent representations|adjacent encoder outputs|t and t-1"
+      ],
+      "final": null,
+      "forbidden_found": [],
+      "gold_page_hits": [],
+      "owner_note": null,
+      "proposed": "refused_wrongly",
+      "question_id": "q13",
+      "reasons": [
+        "answer is a refusal; question is answerable"
+      ],
+      "request_id": "exp-20261113T063331Z-e17e9c1-000013",
+      "review_status": "pending"
+    },
+    {
+      "facts_found": [],
+      "facts_missing": [
+        "cosine similarity",
+        "boundary probabilities|boundary indicators|boundary probability|segmentation boundaries",
+        "exponential moving average|moving average",
+        "softmax over|weights on the values|adjacent representations|adjacent encoder outputs|t and t-1"
+      ],
+      "final": null,
+      "forbidden_found": [],
+      "gold_page_hits": [],
+      "owner_note": null,
+      "proposed": "refused_wrongly",
+      "question_id": "q13",
+      "reasons": [
+        "answer is a refusal; question is answerable"
+      ],
+      "request_id": "exp-20261113T063331Z-e17e9c1-000014",
+      "review_status": "pending"
+    },
+    {
+      "facts_found": [],
+      "facts_missing": [
+        "cosine similarity",
+        "boundary probabilities|boundary indicators|boundary probability|segmentation boundaries",
+        "exponential moving average|moving average",
+        "softmax over|weights on the values|adjacent representations|adjacent encoder outputs|t and t-1"
+      ],
+      "final": null,
+      "forbidden_found": [],
+      "gold_page_hits": [],
+      "owner_note": null,
+      "proposed": "wrong",
+      "question_id": "q13",
+      "reasons": [
+        "missing required facts: ['cosine similarity', 'boundary probabilities|boundary indicators|boundary probability|segmentation boundaries', 'exponential moving average|moving average', 'softmax over|weights on the values|adjacent representations|adjacent encoder outputs|t and t-1']",
+        "no citation lands on a gold page"
+      ],
+      "request_id": "exp-20261113T063331Z-e17e9c1-000015",
+      "review_status": "pending"
+    },
+    {
+      "facts_found": [],
+      "facts_missing": [],
+      "final": null,
+      "forbidden_found": [],
+      "gold_page_hits": [],
+      "owner_note": null,
+      "proposed": "refused_correctly",
+      "question_id": "q21",
+      "reasons": [
+        "answer is a refusal; question is unanswerable"
+      ],
+      "request_id": "exp-20261113T063331Z-e17e9c1-000016",
+      "review_status": "pending"
+    },
+    {
+      "facts_found": [],
+      "facts_missing": [],
+      "final": null,
+      "forbidden_found": [],
+      "gold_page_hits": [],
+      "owner_note": null,
+      "proposed": "refused_correctly",
+      "question_id": "q21",
+      "reasons": [
+        "answer is a refusal; question is unanswerable"
+      ],
+      "request_id": "exp-20261113T063331Z-e17e9c1-000017",
+      "review_status": "pending"
+    },
+    {
+      "facts_found": [],
+      "facts_missing": [],
+      "final": null,
+      "forbidden_found": [],
+      "gold_page_hits": [],
+      "owner_note": null,
+      "proposed": "wrong",
+      "question_id": "q21",
+      "reasons": [
+        "question is unanswerable but an answer was given"
+      ],
+      "request_id": "exp-20261113T063331Z-e17e9c1-000018",
+      "review_status": "pending"
+    }
+  ],
+  "run_id": "exp-20261113T063331Z-e17e9c1",
+  "schema_version": 1
+}

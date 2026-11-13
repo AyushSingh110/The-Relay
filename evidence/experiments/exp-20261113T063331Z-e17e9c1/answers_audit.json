@@ -1,0 +1,745 @@
+[
+  {
+    "answerable": true,
+    "category": "direct_factual",
+    "cited_pages": [
+      "1706.03762v7 pp.5-5 [P2]"
+    ],
+    "delivered_text": "The original Transformer base model uses 8 attention heads. [P2] Each head has key and value dimensions of 64. [P2]",
+    "error_code": null,
+    "expected_answer": "The original Transformer base model employs h = 8 parallel attention layers, or heads. For each head, the key and value dimensions are d_k = d_v = d_model / h = 64 (with d_model = 512), keeping the total computational cost similar to single-head attention with full dimensionality.",
+    "finish_reason": "stop",
+    "gold_pages": [
+      "1706.03762v7 p.5"
+    ],
+    "grade_reasons": [
+      "missing required facts: ['8 heads|h = 8|h=8|8 parallel attention|eight heads|eight parallel', '= 64|d_k = d_v = 64|dimension of 64|64 dimensions', 'd_k|key dimension|dimension of the keys']"
+    ],
+    "kind": "answer",
+    "model_id": "openai/gpt-oss-20b",
+    "proposed_grade": "wrong",
+    "question": "What is the number of attention heads used in the original Transformer base model, and what are the dimensions of the keys and values in each head?",
+    "question_id": "q03",
+    "raw_answer": "The original Transformer base model uses 8 attention heads. [P2] Each head has key and value dimensions of 64. [P2]",
+    "request_id": "exp-20261113T063331Z-e17e9c1-000001",
+    "retrieval_setting": "balanced_rerank",
+    "retrieved": [
+      "[P1] 1706.03762v7 pp.9-9 1706.03762v7_p9_c0",
+      "[P2] 1706.03762v7 pp.5-5 1706.03762v7_p5_c0",
+      "[P3] 1706.03762v7 pp.5-5 1706.03762v7_p5_c1",
+      "[P4] 1706.03762v7 pp.4-5 1706.03762v7_p4_c2"
+    ],
+    "review_status": "pending",
+    "status": "ok",
+    "tokens_in": 1468,
+    "tokens_out": 261,
+    "trap_type": "shared_vocabulary",
+    "verification_verdict": "VERIFIED",
+    "verifier_failures": []
+  },
+  {
+    "answerable": true,
+    "category": "direct_factual",
+    "cited_pages": [
+      "1706.03762v7 pp.5-5 [P2]"
+    ],
+    "delivered_text": "The original Transformer base model uses eight parallel attention heads, and each head has key and value dimensions of 64 [P2].",
+    "error_code": null,
+    "expected_answer": "The original Transformer base model employs h = 8 parallel attention layers, or heads. For each head, the key and value dimensions are d_k = d_v = d_model / h = 64 (with d_model = 512), keeping the total computational cost similar to single-head attention with full dimensionality.",
+    "finish_reason": "stop",
+    "gold_pages": [
+      "1706.03762v7 p.5"
+    ],
+    "grade_reasons": [
+      "missing required facts: ['= 64|d_k = d_v = 64|dimension of 64|64 dimensions', 'd_k|key dimension|dimension of the keys']"
+    ],
+    "kind": "answer",
+    "model_id": "openai/gpt-oss-120b",
+    "proposed_grade": "wrong",
+    "question": "What is the number of attention heads used in the original Transformer base model, and what are the dimensions of the keys and values in each head?",
+    "question_id": "q03",
+    "raw_answer": "The original Transformer base model uses eight parallel attention heads, and each head has key and value dimensions of 64 [P2].",
+    "request_id": "exp-20261113T063331Z-e17e9c1-000002",
+    "retrieval_setting": "balanced_rerank",
+    "retrieved": [
+      "[P1] 1706.03762v7 pp.9-9 1706.03762v7_p9_c0",
+      "[P2] 1706.03762v7 pp.5-5 1706.03762v7_p5_c0",
+      "[P3] 1706.03762v7 pp.5-5 1706.03762v7_p5_c1",
+      "[P4] 1706.03762v7 pp.4-5 1706.03762v7_p4_c2"
+    ],
+    "review_status": "pending",
+    "status": "ok",
+    "tokens_in": 1468,
+    "tokens_out": 253,
+    "trap_type": "shared_vocabulary",
+    "verification_verdict": "VERIFIED",
+    "verifier_failures": []
+  },
+  {
+    "answerable": true,
+    "category": "direct_factual",
+    "cited_pages": [
+      "1706.03762v7 pp.5-5 [P2]"
+    ],
+    "delivered_text": "The original Transformer base model employs h = 8 parallel attention layers, or heads [P2]. For each of these heads, the dimensions are set to d_k = d_v = d_model/h = 64 [P2].",
+    "error_code": null,
+    "expected_answer": "The original Transformer base model employs h = 8 parallel attention layers, or heads. For each head, the key and value dimensions are d_k = d_v = d_model / h = 64 (with d_model = 512), keeping the total computational cost similar to single-head attention with full dimensionality.",
+    "finish_reason": "stop",
+    "gold_pages": [
+      "1706.03762v7 p.5"
+    ],
+    "grade_reasons": [
+      "all required facts present, gold page cited, no forbidden claims"
+    ],
+    "kind": "answer",
+    "model_id": "qwen/qwen3.8-27b",
+    "proposed_grade": "correct",
+    "question": "What is the number of attention heads used in the original Transformer base model, and what are the dimensions of the keys and values in each head?",
+    "question_id": "q03",
+    "raw_answer": "The original Transformer base model employs h = 8 parallel attention layers, or heads [P2]. For each of these heads, the dimensions are set to d_k = d_v = d_model/h = 64 [P2].",
+    "request_id": "exp-20261113T063331Z-e17e9c1-000003",
+    "retrieval_setting": "balanced_rerank",
+    "retrieved": [
+      "[P1] 1706.03762v7 pp.9-9 1706.03762v7_p9_c0",
+      "[P2] 1706.03762v7 pp.5-5 1706.03762v7_p5_c0",
+      "[P3] 1706.03762v7 pp.5-5 1706.03762v7_p5_c1",
+      "[P4] 1706.03762v7 pp.4-5 1706.03762v7_p4_c2"
+    ],
+    "review_status": "pending",
+    "status": "ok",
+    "tokens_in": 1463,
+    "tokens_out": 49,
+    "trap_type": "shared_vocabulary",
+    "verification_verdict": "VERIFIED",
+    "verifier_failures": []
+  },
+  {
+    "answerable": true,
+    "category": "multi_hop",
+    "cited_pages": [],
+    "delivered_text": "I could not produce an answer that I can verify against the papers, so I am not answering rather than risk an unsupported claim.",
+    "error_code": "citation_verification_failed",
+    "expected_answer": "Helium is a 7B-parameter Transformer text LLM pretrained on 2.1T English tokens that provides reasoning and factual knowledge and initializes Moshi's Temporal Transformer. Mimi is a causal, streaming neural audio codec (SeaNet autoencoder with causal Transformer bottlenecks and split RVQ distilling WavLM semantic info) that encodes 24 kHz waveforms into discrete semantic-acoustic tokens at 12.5 Hz (8 codebooks) and decodes them back to audio. Moshi integrates them in a streaming hierarchical RQ-Transformer: the Helium-based Temporal Transformer produces a per-timestep context vector across dual streams (user and system audio plus Inner Monologue text), conditioning a smaller Depth Transformer to predict Mimi audio tokens and speech in real time.",
+    "finish_reason": "length",
+    "gold_pages": [
+      "2410.00037v1 p.3",
+      "2410.00037v1 p.7",
+      "2410.00037v1 p.13"
+    ],
+    "grade_reasons": [
+      "answer is a refusal; question is answerable"
+    ],
+    "kind": "safe_refusal",
+    "model_id": "openai/gpt-oss-20b",
+    "proposed_grade": "refused_wrongly",
+    "question": "Explain the individual roles of Helium, Mimi and Moshi in the overall architecture. How do these three components work together?",
+    "question_id": "q07",
+    "raw_answer": "",
+    "request_id": "exp-20261113T063331Z-e17e9c1-000004",
+    "retrieval_setting": "balanced_rerank",
+    "retrieved": [
+      "[P1] 2410.00037v1 pp.5-6 2410.00037v1_p5_c2",
+      "[P2] 2410.00037v1 pp.24-25 2410.00037v1_p24_c2",
+      "[P3] 2410.00037v1 pp.6-7 2410.00037v1_p6_c1",
+      "[P4] 2410.00037v1 pp.3-3 2410.00037v1_p3_c0"
+    ],
+    "review_status": "pending",
+    "status": "ok",
+    "tokens_in": 1717,
+    "tokens_out": 512,
+    "trap_type": null,
+    "verification_verdict": "BLOCKED",
+    "verifier_failures": [
+      {
+        "check": "a",
+        "code": "empty_answer",
+        "detail": "the answer has no content",
+        "sentence": null
+      }
+    ]
+  },
+  {
+    "answerable": true,
+    "category": "multi_hop",
+    "cited_pages": [],
+    "delivered_text": "I could not produce an answer that I can verify against the papers, so I am not answering rather than risk an unsupported claim.",
+    "error_code": "citation_verification_failed",
+    "expected_answer": "Helium is a 7B-parameter Transformer text LLM pretrained on 2.1T English tokens that provides reasoning and factual knowledge and initializes Moshi's Temporal Transformer. Mimi is a causal, streaming neural audio codec (SeaNet autoencoder with causal Transformer bottlenecks and split RVQ distilling WavLM semantic info) that encodes 24 kHz waveforms into discrete semantic-acoustic tokens at 12.5 Hz (8 codebooks) and decodes them back to audio. Moshi integrates them in a streaming hierarchical RQ-Transformer: the Helium-based Temporal Transformer produces a per-timestep context vector across dual streams (user and system audio plus Inner Monologue text), conditioning a smaller Depth Transformer to predict Mimi audio tokens and speech in real time.",
+    "finish_reason": "length",
+    "gold_pages": [
+      "2410.00037v1 p.3",
+      "2410.00037v1 p.7",
+      "2410.00037v1 p.13"
+    ],
+    "grade_reasons": [
+      "answer is a refusal; question is answerable"
+    ],
+    "kind": "safe_refusal",
+    "model_id": "openai/gpt-oss-120b",
+    "proposed_grade": "refused_wrongly",
+    "question": "Explain the individual roles of Helium, Mimi and Moshi in the overall architecture. How do these three components work together?",
+    "question_id": "q07",
+    "raw_answer": "",
+    "request_id": "exp-20261113T063331Z-e17e9c1-000005",
+    "retrieval_setting": "balanced_rerank",
+    "retrieved": [
+      "[P1] 2410.00037v1 pp.5-6 2410.00037v1_p5_c2",
+      "[P2] 2410.00037v1 pp.24-25 2410.00037v1_p24_c2",
+      "[P3] 2410.00037v1 pp.6-7 2410.00037v1_p6_c1",
+      "[P4] 2410.00037v1 pp.3-3 2410.00037v1_p3_c0"
+    ],
+    "review_status": "pending",
+    "status": "ok",
+    "tokens_in": 1717,
+    "tokens_out": 512,
+    "trap_type": null,
+    "verification_verdict": "BLOCKED",
+    "verifier_failures": [
+      {
+        "check": "a",
+        "code": "empty_answer",
+        "detail": "the answer has no content",
+        "sentence": null
+      }
+    ]
+  },
+  {
+    "answerable": true,
+    "category": "multi_hop",
+    "cited_pages": [
+      "2410.00037v1 pp.5-6 [P1]",
+      "2410.00037v1 pp.6-7 [P3]",
+      "2410.00037v1 pp.3-3 [P4]"
+    ],
+    "delivered_text": "Helium is a text language model backbone built from scratch to provide strong reasoning abilities to the system [P1][P3]. Mimi is a neural audio codec that uses residual vector quantization and distills semantic knowledge to convert audio into discrete tokens [P1][P3][P4]. Moshi is the overarching multi-stream speech-to-speech Transformer model that enables full-duplex spoken dialogue [P3]. The architecture combines Helium with a smaller Transformer to predict audio tokens in a hierarchical and streaming fashion [P4]. Moshi jointly models the audio streams from both the user and the system, along with Moshi’s text tokens, using a Depth Transformer [P3]. This multi-stream design allows the model to speak and listen simultaneously without explicitly modeling speaker turns [P3].",
+    "error_code": null,
+    "expected_answer": "Helium is a 7B-parameter Transformer text LLM pretrained on 2.1T English tokens that provides reasoning and factual knowledge and initializes Moshi's Temporal Transformer. Mimi is a causal, streaming neural audio codec (SeaNet autoencoder with causal Transformer bottlenecks and split RVQ distilling WavLM semantic info) that encodes 24 kHz waveforms into discrete semantic-acoustic tokens at 12.5 Hz (8 codebooks) and decodes them back to audio. Moshi integrates them in a streaming hierarchical RQ-Transformer: the Helium-based Temporal Transformer produces a per-timestep context vector across dual streams (user and system audio plus Inner Monologue text), conditioning a smaller Depth Transformer to predict Mimi audio tokens and speech in real time.",
+    "finish_reason": "stop",
+    "gold_pages": [
+      "2410.00037v1 p.3",
+      "2410.00037v1 p.7",
+      "2410.00037v1 p.13"
+    ],
+    "grade_reasons": [
+      "missing required facts: ['Helium is a 7B|7B-parameter|7B parameter|7B text', 'Temporal Transformer|RQ-Transformer']"
+    ],
+    "kind": "answer",
+    "model_id": "qwen/qwen3.8-27b",
+    "proposed_grade": "wrong",
+    "question": "Explain the individual roles of Helium, Mimi and Moshi in the overall architecture. How do these three components work together?",
+    "question_id": "q07",
+    "raw_answer": "Helium is a text language model backbone built from scratch to provide strong reasoning abilities to the system [P1][P3]. Mimi is a neural audio codec that uses residual vector quantization and distills semantic knowledge to convert audio into discrete tokens [P1][P3][P4]. Moshi is the overarching multi-stream speech-to-speech Transformer model that enables full-duplex spoken dialogue [P3]. The architecture combines Helium with a smaller Transformer to predict audio tokens in a hierarchical and streaming fashion [P4]. Moshi jointly models the audio streams from both the user and the system, along with Moshi’s text tokens, using a Depth Transformer [P3]. This multi-stream design allows the model to speak and listen simultaneously without explicitly modeling speaker turns [P3].",
+    "request_id": "exp-20261113T063331Z-e17e9c1-000006",
+    "retrieval_setting": "balanced_rerank",
+    "retrieved": [
+      "[P1] 2410.00037v1 pp.5-6 2410.00037v1_p5_c2",
+      "[P2] 2410.00037v1 pp.24-25 2410.00037v1_p24_c2",
+      "[P3] 2410.00037v1 pp.6-7 2410.00037v1_p6_c1",
+      "[P4] 2410.00037v1 pp.3-3 2410.00037v1_p3_c0"
+    ],
+    "review_status": "pending",
+    "status": "ok",
+    "tokens_in": 1722,
+    "tokens_out": 161,
+    "trap_type": null,
+    "verification_verdict": "VERIFIED",
+    "verifier_failures": []
+  },
+  {
+    "answerable": true,
+    "category": "numeric_technical",
+    "cited_pages": [
+      "2410.00037v1 pp.1-1 [P3]",
+      "2410.00037v1 pp.2-2 [P1]"
+    ],
+    "delivered_text": "The paper reports a theoretical latency of 160 ms for Moshi. [P3] In practice the latency is 200 ms. [P3] Natural human conversations typically have response times of a few hundred milliseconds. [P1] Thus Moshi’s practical latency falls within the same order of magnitude as natural human response times. [P1][P3]",
+    "error_code": null,
+    "expected_answer": "Moshi reports a theoretical latency of 160 ms (80 ms from Mimi's frame size/stride at 12.5 Hz plus one 80 ms acoustic delay step after finetuning with acoustic delay 1) and a practical latency of 200 ms. Both figures are lower than the 230 ms average response latency in natural human conversations measured over 10 languages (Stivers et al., 2009).",
+    "finish_reason": "stop",
+    "gold_pages": [
+      "2410.00037v1 p.1",
+      "2410.00037v1 p.2",
+      "2410.00037v1 p.26"
+    ],
+    "grade_reasons": [
+      "missing required facts: ['230ms|230 ms', 'lower than|faster than|below the 230|under 230|less than 230']"
+    ],
+    "kind": "answer",
+    "model_id": "openai/gpt-oss-20b",
+    "proposed_grade": "wrong",
+    "question": "What are the theoretical latency and practical latency reported for Moshi? How do these figures compare with the average response time of natural human conversations mentioned in the paper?",
+    "question_id": "q10",
+    "raw_answer": "The paper reports a theoretical latency of 160 ms for Moshi. [P3] In practice the latency is 200 ms. [P3] Natural human conversations typically have response times of a few hundred milliseconds. [P1] Thus Moshi’s practical latency falls within the same order of magnitude as natural human response times. [P1][P3]",
+    "request_id": "exp-20261113T063331Z-e17e9c1-000007",
+    "retrieval_setting": "balanced_rerank",
+    "retrieved": [
+      "[P1] 2410.00037v1 pp.2-2 2410.00037v1_p2_c1",
+      "[P2] 2410.00037v1 pp.41-41 2410.00037v1_p41_c1",
+      "[P3] 2410.00037v1 pp.1-1 2410.00037v1_p1_c2",
+      "[P4] 2410.00037v1 pp.24-25 2410.00037v1_p24_c2"
+    ],
+    "review_status": "pending",
+    "status": "ok",
+    "tokens_in": 1302,
+    "tokens_out": 378,
+    "trap_type": null,
+    "verification_verdict": "VERIFIED",
+    "verifier_failures": []
+  },
+  {
+    "answerable": true,
+    "category": "numeric_technical",
+    "cited_pages": [
+      "2410.00037v1 pp.1-1 [P3]",
+      "2410.00037v1 pp.2-2 [P1]"
+    ],
+    "delivered_text": "Moshi has a theoretical latency of 160 ms and a practical latency of about 200 ms [P3]. The paper notes that natural conversations exhibit response times of a few hundred milliseconds [P1]. Thus Moshi’s latencies are within the same order of magnitude as the typical human response time [P3][P1].",
+    "error_code": null,
+    "expected_answer": "Moshi reports a theoretical latency of 160 ms (80 ms from Mimi's frame size/stride at 12.5 Hz plus one 80 ms acoustic delay step after finetuning with acoustic delay 1) and a practical latency of 200 ms. Both figures are lower than the 230 ms average response latency in natural human conversations measured over 10 languages (Stivers et al., 2009).",
+    "finish_reason": "stop",
+    "gold_pages": [
+      "2410.00037v1 p.1",
+      "2410.00037v1 p.2",
+      "2410.00037v1 p.26"
+    ],
+    "grade_reasons": [
+      "missing required facts: ['230ms|230 ms', 'lower than|faster than|below the 230|under 230|less than 230']"
+    ],
+    "kind": "answer",
+    "model_id": "openai/gpt-oss-120b",
+    "proposed_grade": "wrong",
+    "question": "What are the theoretical latency and practical latency reported for Moshi? How do these figures compare with the average response time of natural human conversations mentioned in the paper?",
+    "question_id": "q10",
+    "raw_answer": "Moshi has a theoretical latency of 160 ms and a practical latency of about 200 ms [P3]. The paper notes that natural conversations exhibit response times of a few hundred milliseconds [P1]. Thus Moshi’s latencies are within the same order of magnitude as the typical human response time [P3][P1].",
+    "request_id": "exp-20261113T063331Z-e17e9c1-000008",
+    "retrieval_setting": "balanced_rerank",
+    "retrieved": [
+      "[P1] 2410.00037v1 pp.2-2 2410.00037v1_p2_c1",
+      "[P2] 2410.00037v1 pp.41-41 2410.00037v1_p41_c1",
+      "[P3] 2410.00037v1 pp.1-1 2410.00037v1_p1_c2",
+      "[P4] 2410.00037v1 pp.24-25 2410.00037v1_p24_c2"
+    ],
+    "review_status": "pending",
+    "status": "ok",
+    "tokens_in": 1302,
+    "tokens_out": 380,
+    "trap_type": null,
+    "verification_verdict": "VERIFIED",
+    "verifier_failures": []
+  },
+  {
+    "answerable": true,
+    "category": "numeric_technical",
+    "cited_pages": [
+      "2410.00037v1 pp.1-1 [P3]",
+      "2410.00037v1 pp.2-2 [P1]"
+    ],
+    "delivered_text": "Moshi has a theoretical latency of 160ms and a practical latency of 200ms [P3]. The paper states that natural conversations demonstrate response times of a few hundred milliseconds [P1]. Therefore, Moshi's reported latencies are comparable to or faster than the response times of natural human conversations [P1][P3].",
+    "error_code": null,
+    "expected_answer": "Moshi reports a theoretical latency of 160 ms (80 ms from Mimi's frame size/stride at 12.5 Hz plus one 80 ms acoustic delay step after finetuning with acoustic delay 1) and a practical latency of 200 ms. Both figures are lower than the 230 ms average response latency in natural human conversations measured over 10 languages (Stivers et al., 2009).",
+    "finish_reason": "stop",
+    "gold_pages": [
+      "2410.00037v1 p.1",
+      "2410.00037v1 p.2",
+      "2410.00037v1 p.26"
+    ],
+    "grade_reasons": [
+      "missing required facts: ['230ms|230 ms']"
+    ],
+    "kind": "answer",
+    "model_id": "qwen/qwen3.8-27b",
+    "proposed_grade": "wrong",
+    "question": "What are the theoretical latency and practical latency reported for Moshi? How do these figures compare with the average response time of natural human conversations mentioned in the paper?",
+    "question_id": "q10",
+    "raw_answer": "Moshi has a theoretical latency of 160ms and a practical latency of 200ms [P3]. The paper states that natural conversations demonstrate response times of a few hundred milliseconds [P1]. Therefore, Moshi's reported latencies are comparable to or faster than the response times of natural human conversations [P1][P3].",
+    "request_id": "exp-20261113T063331Z-e17e9c1-000009",
+    "retrieval_setting": "balanced_rerank",
+    "retrieved": [
+      "[P1] 2410.00037v1 pp.2-2 2410.00037v1_p2_c1",
+      "[P2] 2410.00037v1 pp.41-41 2410.00037v1_p41_c1",
+      "[P3] 2410.00037v1 pp.1-1 2410.00037v1_p1_c2",
+      "[P4] 2410.00037v1 pp.24-25 2410.00037v1_p24_c2"
+    ],
+    "review_status": "pending",
+    "status": "ok",
+    "tokens_in": 1295,
+    "tokens_out": 73,
+    "trap_type": null,
+    "verification_verdict": "VERIFIED",
+    "verifier_failures": []
+  },
+  {
+    "answerable": true,
+    "category": "direct_factual",
+    "cited_pages": [],
+    "delivered_text": "I could not produce an answer that I can verify against the papers, so I am not answering rather than risk an unsupported claim.",
+    "error_code": "citation_verification_failed",
+    "expected_answer": "Inspired by an autoregressive U-Net, H-Net consists of encoder networks (E), a main network (M), and decoder networks (D): (1) An encoder E^s (using Mamba-2 SSM layers) processes the uncompressed fine-grained sequence to produce x_hat^s; (2) the chunking layer dynamically downsamples x_hat^s into compressed representations x^{s+1} (plus router confidences p^s), passing them into the main network M (which holds most capacity, uses Transformer layers or recursively another H-Net, and operates on the compressed length L^S << L^0) to yield z_hat^S; and (3) a dechunking layer upsamples and smooths M's output and adds a projected encoder residual connection (z^s = Dechunk(z_hat^{s+1}, p^s) + Linear(x_hat^s)), which feeds into decoder D^s (Mamba-2 layers) to combine coarse main-network semantics with fine-grained encoder details.",
+    "finish_reason": "length",
+    "gold_pages": [
+      "2507.07955v2 p.4",
+      "2507.07955v2 p.5"
+    ],
+    "grade_reasons": [
+      "answer is a refusal; question is answerable"
+    ],
+    "kind": "safe_refusal",
+    "model_id": "openai/gpt-oss-20b",
+    "proposed_grade": "refused_wrongly",
+    "question": "Explain the three main architectural components of H-Net: the encoder, main network and decoder. How does information flow through these components?",
+    "question_id": "q12",
+    "raw_answer": "",
+    "request_id": "exp-20261113T063331Z-e17e9c1-000010",
+    "retrieval_setting": "balanced_rerank",
+    "retrieved": [
+      "[P1] 2507.07955v2 pp.4-5 2507.07955v2_p4_c2",
+      "[P2] 2507.07955v2 pp.5-5 2507.07955v2_p5_c1",
+      "[P3] 2507.07955v2 pp.5-5 2507.07955v2_p5_c2",
+      "[P4] 2507.07955v2 pp.17-18 2507.07955v2_p17_c2"
+    ],
+    "review_status": "pending",
+    "status": "ok",
+    "tokens_in": 1854,
+    "tokens_out": 512,
+    "trap_type": null,
+    "verification_verdict": "BLOCKED",
+    "verifier_failures": [
+      {
+        "check": "a",
+        "code": "empty_answer",
+        "detail": "the answer has no content",
+        "sentence": null
+      }
+    ]
+  },
+  {
+    "answerable": true,
+    "category": "direct_factual",
+    "cited_pages": [],
+    "delivered_text": "I could not produce an answer that I can verify against the papers, so I am not answering rather than risk an unsupported claim.",
+    "error_code": "citation_verification_failed",
+    "expected_answer": "Inspired by an autoregressive U-Net, H-Net consists of encoder networks (E), a main network (M), and decoder networks (D): (1) An encoder E^s (using Mamba-2 SSM layers) processes the uncompressed fine-grained sequence to produce x_hat^s; (2) the chunking layer dynamically downsamples x_hat^s into compressed representations x^{s+1} (plus router confidences p^s), passing them into the main network M (which holds most capacity, uses Transformer layers or recursively another H-Net, and operates on the compressed length L^S << L^0) to yield z_hat^S; and (3) a dechunking layer upsamples and smooths M's output and adds a projected encoder residual connection (z^s = Dechunk(z_hat^{s+1}, p^s) + Linear(x_hat^s)), which feeds into decoder D^s (Mamba-2 layers) to combine coarse main-network semantics with fine-grained encoder details.",
+    "finish_reason": "length",
+    "gold_pages": [
+      "2507.07955v2 p.4",
+      "2507.07955v2 p.5"
+    ],
+    "grade_reasons": [
+      "answer is a refusal; question is answerable"
+    ],
+    "kind": "safe_refusal",
+    "model_id": "openai/gpt-oss-120b",
+    "proposed_grade": "refused_wrongly",
+    "question": "Explain the three main architectural components of H-Net: the encoder, main network and decoder. How does information flow through these components?",
+    "question_id": "q12",
+    "raw_answer": "",
+    "request_id": "exp-20261113T063331Z-e17e9c1-000011",
+    "retrieval_setting": "balanced_rerank",
+    "retrieved": [
+      "[P1] 2507.07955v2 pp.4-5 2507.07955v2_p4_c2",
+      "[P2] 2507.07955v2 pp.5-5 2507.07955v2_p5_c1",
+      "[P3] 2507.07955v2 pp.5-5 2507.07955v2_p5_c2",
+      "[P4] 2507.07955v2 pp.17-18 2507.07955v2_p17_c2"
+    ],
+    "review_status": "pending",
+    "status": "ok",
+    "tokens_in": 1854,
+    "tokens_out": 512,
+    "trap_type": null,
+    "verification_verdict": "BLOCKED",
+    "verifier_failures": [
+      {
+        "check": "a",
+        "code": "empty_answer",
+        "detail": "the answer has no content",
+        "sentence": null
+      }
+    ]
+  },
+  {
+    "answerable": true,
+    "category": "direct_factual",
+    "cited_pages": [
+      "2507.07955v2 pp.4-5 [P1]",
+      "2507.07955v2 pp.5-5 [P2]",
+      "2507.07955v2 pp.5-5 [P3]"
+    ],
+    "delivered_text": "H-Net employs a hierarchical architecture comprising three primary components: encoder networks (E), a main network (M), and decoder networks (D) [P1]. In a single-stage model, the architecture consists of one encoder network, one main network, and one decoder network [P1]. The encoder networks must simultaneously preserve fine-grained information for transmission to their corresponding decoders via residual connections and compress inputs into chunks of richer representations for the main network [P2]. The main network operates on these progressively compressed sequences, allowing for larger networks within the same computational budget [P3]. The decoder networks effectively combine the coarse-grained representations from the main network with the fine-grained details from the encoder residuals [P2]. Both the encoder and decoder networks operate on uncompressed sequences, which makes computational efficiency a significant design constraint [P2].",
+    "error_code": null,
+    "expected_answer": "Inspired by an autoregressive U-Net, H-Net consists of encoder networks (E), a main network (M), and decoder networks (D): (1) An encoder E^s (using Mamba-2 SSM layers) processes the uncompressed fine-grained sequence to produce x_hat^s; (2) the chunking layer dynamically downsamples x_hat^s into compressed representations x^{s+1} (plus router confidences p^s), passing them into the main network M (which holds most capacity, uses Transformer layers or recursively another H-Net, and operates on the compressed length L^S << L^0) to yield z_hat^S; and (3) a dechunking layer upsamples and smooths M's output and adds a projected encoder residual connection (z^s = Dechunk(z_hat^{s+1}, p^s) + Linear(x_hat^s)), which feeds into decoder D^s (Mamba-2 layers) to combine coarse main-network semantics with fine-grained encoder details.",
+    "finish_reason": "stop",
+    "gold_pages": [
+      "2507.07955v2 p.4",
+      "2507.07955v2 p.5"
+    ],
+    "grade_reasons": [
+      "missing required facts: ['Mamba-2|state space model|SSM', 'dechunk|upsampl']"
+    ],
+    "kind": "answer",
+    "model_id": "qwen/qwen3.8-27b",
+    "proposed_grade": "wrong",
+    "question": "Explain the three main architectural components of H-Net: the encoder, main network and decoder. How does information flow through these components?",
+    "question_id": "q12",
+    "raw_answer": "H-Net employs a hierarchical architecture comprising three primary components: encoder networks (E), a main network (M), and decoder networks (D) [P1]. In a single-stage model, the architecture consists of one encoder network, one main network, and one decoder network [P1]. The encoder networks must simultaneously preserve fine-grained information for transmission to their corresponding decoders via residual connections and compress inputs into chunks of richer representations for the main network [P2]. The main network operates on these progressively compressed sequences, allowing for larger networks within the same computational budget [P3]. The decoder networks effectively combine the coarse-grained representations from the main network with the fine-grained details from the encoder residuals [P2]. Both the encoder and decoder networks operate on uncompressed sequences, which makes computational efficiency a significant design constraint [P2].",
+    "request_id": "exp-20261113T063331Z-e17e9c1-000012",
+    "retrieval_setting": "balanced_rerank",
+    "retrieved": [
+      "[P1] 2507.07955v2 pp.4-5 2507.07955v2_p4_c2",
+      "[P2] 2507.07955v2 pp.5-5 2507.07955v2_p5_c1",
+      "[P3] 2507.07955v2 pp.5-5 2507.07955v2_p5_c2",
+      "[P4] 2507.07955v2 pp.17-18 2507.07955v2_p17_c2"
+    ],
+    "review_status": "pending",
+    "status": "ok",
+    "tokens_in": 1872,
+    "tokens_out": 170,
+    "trap_type": null,
+    "verification_verdict": "VERIFIED",
+    "verifier_failures": []
+  },
+  {
+    "answerable": true,
+    "category": "cross_paper",
+    "cited_pages": [],
+    "delivered_text": "I could not produce an answer that I can verify against the papers, so I am not answering rather than risk an unsupported claim.",
+    "error_code": "citation_verification_failed",
+    "expected_answer": "In H-Net's Dynamic Chunking, the routing module predicts segmentation boundaries via cosine similarity between projected adjacent encoder outputs (q_t and k_{t-1}), outputting boundary probabilities p_t in [0, 1] and binary indicators b_t so the downsampler selects boundary-marked vectors for compression. The smoothing module applies an exponential moving average (EMA) weighted by the boundary confidence P_t (P_t = p_t where b_t = 1 and 1 − p_t otherwise) in the dechunking layer to turn discrete chunks into differentiable interpolations that attenuate uncertain boundaries. Unlike Transformer attention weights—which apply softmax to scaled query-key dot products across sequence positions to produce mixing weights over value vectors—H-Net's routing module compares only adjacent representations (t and t-1) via cosine similarity to produce discrete chunk-selection/compression boundaries rather than weighted averages over values.",
+    "finish_reason": "length",
+    "gold_pages": [
+      "2507.07955v2 p.6",
+      "2507.07955v2 p.7",
+      "1706.03762v7 p.4"
+    ],
+    "grade_reasons": [
+      "answer is a refusal; question is answerable"
+    ],
+    "kind": "safe_refusal",
+    "model_id": "openai/gpt-oss-20b",
+    "proposed_grade": "refused_wrongly",
+    "question": "In H-Net's Dynamic Chunking mechanism, what is the purpose of the routing module and the smoothing module? How does the routing module's boundary information differ from the attention weights used in the Transformer architecture?",
+    "question_id": "q13",
+    "raw_answer": "",
+    "request_id": "exp-20261113T063331Z-e17e9c1-000013",
+    "retrieval_setting": "balanced_rerank",
+    "retrieved": [
+      "[P1] 2507.07955v2 pp.3-4 2507.07955v2_p3_c0",
+      "[P2] 2507.07955v2 pp.8-8 2507.07955v2_p8_c2",
+      "[P3] 2507.07955v2 pp.2-3 2507.07955v2_p2_c2",
+      "[P4] 2507.07955v2 pp.6-7 2507.07955v2_p6_c4",
+      "[P5] 1706.03762v7 pp.2-2 1706.03762v7_p2_c1",
+      "[P6] 1706.03762v7 pp.5-5 1706.03762v7_p5_c1"
+    ],
+    "review_status": "pending",
+    "status": "ok",
+    "tokens_in": 2199,
+    "tokens_out": 512,
+    "trap_type": "shared_vocabulary",
+    "verification_verdict": "BLOCKED",
+    "verifier_failures": [
+      {
+        "check": "a",
+        "code": "empty_answer",
+        "detail": "the answer has no content",
+        "sentence": null
+      }
+    ]
+  },
+  {
+    "answerable": true,
+    "category": "cross_paper",
+    "cited_pages": [],
+    "delivered_text": "I could not produce an answer that I can verify against the papers, so I am not answering rather than risk an unsupported claim.",
+    "error_code": "citation_verification_failed",
+    "expected_answer": "In H-Net's Dynamic Chunking, the routing module predicts segmentation boundaries via cosine similarity between projected adjacent encoder outputs (q_t and k_{t-1}), outputting boundary probabilities p_t in [0, 1] and binary indicators b_t so the downsampler selects boundary-marked vectors for compression. The smoothing module applies an exponential moving average (EMA) weighted by the boundary confidence P_t (P_t = p_t where b_t = 1 and 1 − p_t otherwise) in the dechunking layer to turn discrete chunks into differentiable interpolations that attenuate uncertain boundaries. Unlike Transformer attention weights—which apply softmax to scaled query-key dot products across sequence positions to produce mixing weights over value vectors—H-Net's routing module compares only adjacent representations (t and t-1) via cosine similarity to produce discrete chunk-selection/compression boundaries rather than weighted averages over values.",
+    "finish_reason": "length",
+    "gold_pages": [
+      "2507.07955v2 p.6",
+      "2507.07955v2 p.7",
+      "1706.03762v7 p.4"
+    ],
+    "grade_reasons": [
+      "answer is a refusal; question is answerable"
+    ],
+    "kind": "safe_refusal",
+    "model_id": "openai/gpt-oss-120b",
+    "proposed_grade": "refused_wrongly",
+    "question": "In H-Net's Dynamic Chunking mechanism, what is the purpose of the routing module and the smoothing module? How does the routing module's boundary information differ from the attention weights used in the Transformer architecture?",
+    "question_id": "q13",
+    "raw_answer": "",
+    "request_id": "exp-20261113T063331Z-e17e9c1-000014",
+    "retrieval_setting": "balanced_rerank",
+    "retrieved": [
+      "[P1] 2507.07955v2 pp.3-4 2507.07955v2_p3_c0",
+      "[P2] 2507.07955v2 pp.8-8 2507.07955v2_p8_c2",
+      "[P3] 2507.07955v2 pp.2-3 2507.07955v2_p2_c2",
+      "[P4] 2507.07955v2 pp.6-7 2507.07955v2_p6_c4",
+      "[P5] 1706.03762v7 pp.2-2 1706.03762v7_p2_c1",
+      "[P6] 1706.03762v7 pp.5-5 1706.03762v7_p5_c1"
+    ],
+    "review_status": "pending",
+    "status": "ok",
+    "tokens_in": 2199,
+    "tokens_out": 512,
+    "trap_type": "shared_vocabulary",
+    "verification_verdict": "BLOCKED",
+    "verifier_failures": [
+      {
+        "check": "a",
+        "code": "empty_answer",
+        "detail": "the answer has no content",
+        "sentence": null
+      }
+    ]
+  },
+  {
+    "answerable": true,
+    "category": "cross_paper",
+    "cited_pages": [
+      "2507.07955v2 pp.3-4 [P1]",
+      "2507.07955v2 pp.2-3 [P3]",
+      "2507.07955v2 pp.8-8 [P2]",
+      "1706.03762v7 pp.2-2 [P5]",
+      "1706.03762v7 pp.5-5 [P6]"
+    ],
+    "delivered_text": "The routing module in H-Net is responsible for dynamically drawing chunk boundaries [P1]. The smoothing module converts discrete chunks into interpolated representations to improve learnability [P1]. This smoothing process specifically attenuates the effect of uncertain boundaries [P3]. The routing module guides the model to retain vectors based on semantic importance rather than following predetermined patterns [P2]. The provided passages do not contain information comparing the routing module's boundary information to the attention weights used in the Transformer architecture [P5][P6].",
+    "error_code": null,
+    "expected_answer": "In H-Net's Dynamic Chunking, the routing module predicts segmentation boundaries via cosine similarity between projected adjacent encoder outputs (q_t and k_{t-1}), outputting boundary probabilities p_t in [0, 1] and binary indicators b_t so the downsampler selects boundary-marked vectors for compression. The smoothing module applies an exponential moving average (EMA) weighted by the boundary confidence P_t (P_t = p_t where b_t = 1 and 1 − p_t otherwise) in the dechunking layer to turn discrete chunks into differentiable interpolations that attenuate uncertain boundaries. Unlike Transformer attention weights—which apply softmax to scaled query-key dot products across sequence positions to produce mixing weights over value vectors—H-Net's routing module compares only adjacent representations (t and t-1) via cosine similarity to produce discrete chunk-selection/compression boundaries rather than weighted averages over values.",
+    "finish_reason": "stop",
+    "gold_pages": [
+      "2507.07955v2 p.6",
+      "2507.07955v2 p.7",
+      "1706.03762v7 p.4"
+    ],
+    "grade_reasons": [
+      "missing required facts: ['cosine similarity', 'boundary probabilities|boundary indicators|boundary probability|segmentation boundaries', 'exponential moving average|moving average', 'softmax over|weights on the values|adjacent representations|adjacent encoder outputs|t and t-1']",
+      "no citation lands on a gold page"
+    ],
+    "kind": "answer",
+    "model_id": "qwen/qwen3.8-27b",
+    "proposed_grade": "wrong",
+    "question": "In H-Net's Dynamic Chunking mechanism, what is the purpose of the routing module and the smoothing module? How does the routing module's boundary information differ from the attention weights used in the Transformer architecture?",
+    "question_id": "q13",
+    "raw_answer": "The routing module in H-Net is responsible for dynamically drawing chunk boundaries [P1]. The smoothing module converts discrete chunks into interpolated representations to improve learnability [P1]. This smoothing process specifically attenuates the effect of uncertain boundaries [P3]. The routing module guides the model to retain vectors based on semantic importance rather than following predetermined patterns [P2]. The provided passages do not contain information comparing the routing module's boundary information to the attention weights used in the Transformer architecture [P5][P6].",
+    "request_id": "exp-20261113T063331Z-e17e9c1-000015",
+    "retrieval_setting": "balanced_rerank",
+    "retrieved": [
+      "[P1] 2507.07955v2 pp.3-4 2507.07955v2_p3_c0",
+      "[P2] 2507.07955v2 pp.8-8 2507.07955v2_p8_c2",
+      "[P3] 2507.07955v2 pp.2-3 2507.07955v2_p2_c2",
+      "[P4] 2507.07955v2 pp.6-7 2507.07955v2_p6_c4",
+      "[P5] 1706.03762v7 pp.2-2 1706.03762v7_p2_c1",
+      "[P6] 1706.03762v7 pp.5-5 1706.03762v7_p5_c1"
+    ],
+    "review_status": "pending",
+    "status": "ok",
+    "tokens_in": 2205,
+    "tokens_out": 103,
+    "trap_type": "shared_vocabulary",
+    "verification_verdict": "VERIFIED",
+    "verifier_failures": []
+  },
+  {
+    "answerable": false,
+    "category": "unanswerable",
+    "cited_pages": [],
+    "delivered_text": "I can't answer this from the three papers in the library: the passages I found do not contain the information needed.",
+    "error_code": null,
+    "expected_answer": null,
+    "finish_reason": "stop",
+    "gold_pages": [],
+    "grade_reasons": [
+      "answer is a refusal; question is unanswerable"
+    ],
+    "kind": "llm_refusal",
+    "model_id": "openai/gpt-oss-20b",
+    "proposed_grade": "refused_correctly",
+    "question": "How does WavLM (Chen et al., 2022) perform masked speech prediction and utterance mixing during pretraining?",
+    "question_id": "q21",
+    "raw_answer": "INSUFFICIENT_EVIDENCE",
+    "request_id": "exp-20261113T063331Z-e17e9c1-000016",
+    "retrieval_setting": "balanced_rerank",
+    "retrieved": [
+      "[P1] 2410.00037v1 pp.11-12 2410.00037v1_p11_c2",
+      "[P2] 2410.00037v1 pp.5-5 2410.00037v1_p5_c0",
+      "[P3] 2410.00037v1 pp.4-5 2410.00037v1_p4_c2",
+      "[P4] 2410.00037v1 pp.4-4 2410.00037v1_p4_c0"
+    ],
+    "review_status": "pending",
+    "status": "ok",
+    "tokens_in": 1845,
+    "tokens_out": 207,
+    "trap_type": "bibliography_match",
+    "verification_verdict": "REFUSAL_VERIFIED",
+    "verifier_failures": []
+  },
+  {
+    "answerable": false,
+    "category": "unanswerable",
+    "cited_pages": [],
+    "delivered_text": "I can't answer this from the three papers in the library: the passages I found do not contain the information needed.",
+    "error_code": null,
+    "expected_answer": null,
+    "finish_reason": "stop",
+    "gold_pages": [],
+    "grade_reasons": [
+      "answer is a refusal; question is unanswerable"
+    ],
+    "kind": "llm_refusal",
+    "model_id": "openai/gpt-oss-120b",
+    "proposed_grade": "refused_correctly",
+    "question": "How does WavLM (Chen et al., 2022) perform masked speech prediction and utterance mixing during pretraining?",
+    "question_id": "q21",
+    "raw_answer": "INSUFFICIENT_EVIDENCE",
+    "request_id": "exp-20261113T063331Z-e17e9c1-000017",
+    "retrieval_setting": "balanced_rerank",
+    "retrieved": [
+      "[P1] 2410.00037v1 pp.11-12 2410.00037v1_p11_c2",
+      "[P2] 2410.00037v1 pp.5-5 2410.00037v1_p5_c0",
+      "[P3] 2410.00037v1 pp.4-5 2410.00037v1_p4_c2",
+      "[P4] 2410.00037v1 pp.4-4 2410.00037v1_p4_c0"
+    ],
+    "review_status": "pending",
+    "status": "ok",
+    "tokens_in": 1845,
+    "tokens_out": 204,
+    "trap_type": "bibliography_match",
+    "verification_verdict": "REFUSAL_VERIFIED",
+    "verifier_failures": []
+  },
+  {
+    "answerable": false,
+    "category": "unanswerable",
+    "cited_pages": [
+      "2410.00037v1 pp.11-12 [P1]"
+    ],
+    "delivered_text": "The provided passages do not state how Wav LM performs masked prediction or utterance mixing during pretraining. [P1]",
+    "error_code": null,
+    "expected_answer": null,
+    "finish_reason": "stop",
+    "gold_pages": [],
+    "grade_reasons": [
+      "question is unanswerable but an answer was given"
+    ],
+    "kind": "answer",
+    "model_id": "qwen/qwen3.8-27b",
+    "proposed_grade": "wrong",
+    "question": "How does WavLM (Chen et al., 2022) perform masked speech prediction and utterance mixing during pretraining?",
+    "question_id": "q21",
+    "raw_answer": "The provided passages do not state how Wav LM performs masked prediction or utterance mixing during pretraining. [P1]",
+    "request_id": "exp-20261113T063331Z-e17e9c1-000018",
+    "retrieval_setting": "balanced_rerank",
+    "retrieved": [
+      "[P1] 2410.00037v1 pp.11-12 2410.00037v1_p11_c2",
+      "[P2] 2410.00037v1 pp.5-5 2410.00037v1_p5_c0",
+      "[P3] 2410.00037v1 pp.4-5 2410.00037v1_p4_c2",
+      "[P4] 2410.00037v1 pp.4-4 2410.00037v1_p4_c0"
+    ],
+    "review_status": "pending",
+    "status": "ok",
+    "tokens_in": 1899,
+    "tokens_out": 26,
+    "trap_type": "bibliography_match",
+    "verification_verdict": "VERIFIED",
+    "verifier_failures": []
+  }
+]

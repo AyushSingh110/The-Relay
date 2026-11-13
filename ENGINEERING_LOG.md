@@ -747,3 +747,59 @@
 - **Real Groq calls:** 0. **Network:** loopback `127.0.0.1` only.
 - **Owner approval status:** pending owner review
 - **Next action:** Owner reviews `reports/phase-09-standin-service-and-calibration.md`, decides the §5 items and the scenario values, and whether to keep the superseded run. Recommended next phase: P10. The next phase starts only on explicit approval.
+
+---
+
+### Execution Entry
+
+- **Date and time:** 2026-11-13 12:20 IST
+- **Phase identifier:** `p07` — Model Comparison and Retrieval-Quality Evaluation (steps 1–4)
+- **Task requested and objective:**
+  - Evaluation runner and scripts (cache off, sequential, ProviderGuard pacing, `--source`, `--max-real-calls`, daily fraction 0.75).
+  - Offline tests.
+  - Live model comparison (6 questions × 3 models, `balanced_rerank`).
+  - Then wait for the owner's model selection before Table 3.
+- **Status:** in progress. Steps 1–4 completed; steps 5–6 await the owner's model selection.
+- **Files created:**
+  - `src/relay/experiments/{__init__,eval_runner,eval_cli}.py`
+  - `scripts/run_model_comparison.py`, `scripts/run_retrieval_eval.py`
+  - `tests/test_eval_runner.py` (16 tests)
+  - `evidence/experiments/exp-20261113T063331Z-e17e9c1/`
+  - `reports/phase-07-model-and-retrieval-eval.md`
+- **Files modified:** `ENGINEERING_LOG.md` (this entry). No earlier module, evidence or `eval/questions.json` was changed.
+- **Engineering decisions (all [PROPOSED]):**
+  - Comparison subset by a stated rule: q03, q07, q10, q12, q13, q21.
+  - One guard per model: TPM 8000 / RPD 1000 (headers), RPM pacing 10 (assumed), TPD unknown, concurrency 1.
+  - No prompt budget, so no degraded answers.
+  - Interleaved order across models.
+  - TTFT reported without the guard's quota wait.
+  - Rows keep `answer_grade` blank until the owner reviews.
+- **Commands executed and observed outputs:**
+  - Settings check (non-secret values only): key configured True, `MAX_REAL_CALLS` 40, fraction 0.75; `.env` is gitignored.
+  - `pytest tests/test_eval_runner.py`: 1 failed / 2 passed → 2 failed / 14 passed → 1 failed / 15 passed → 16 passed (fixes in the report §9–§10).
+  - Offline stand-in smoke (scratch/): 18 rows, 0 real calls, exit 0. It showed TTFT max of 45–52 s, which was quota wait; fixed with `provider_ttft_excl_wait_ms`.
+  - Dry run: `run_model_comparison.py --source real --max-real-calls 24` → only "would refuse: dry run"; no run created.
+  - **LIVE**, executed once: `run_model_comparison.py --source real --live --max-real-calls 24` → `exp-20261113T063331Z-e17e9c1`, exit 0, real calls 18, rows 18, all `ok`, 0 retries, no stops.
+  - Secret scan of the run dir: 0 `gsk_`, no bearer/authorization, no `org_` IDs.
+  - Final: `pytest -q` → `451 passed in 17.77s`; `ruff check .` → `All checks passed!`
+- **Results (proposed grades, pending owner review):**
+  - gpt-oss-20b and gpt-oss-120b: 3 of 6 calls each truncated at `max_completion_tokens=512`, all spent on reasoning, empty content, so safe refusals (q07, q12, q13). Citation pass 0.4; proposed correct 0/5; q21 refused correctly. TTFT excl. wait p50 2,350.6 / 2,567.4 ms; tokens out mean 397.0 / 395.5.
+  - qwen3.8-27b: 0 truncated; 6/6 verified; citation pass 1.0; proposed correct 1/5; q21 answered with a cited "the passages do not state…" sentence (verifier gap), proposed `wrong`. TTFT excl. wait p50 2,217.4 ms; tokens out mean 97.0.
+  - Retrieval took 607–2,790 ms per request, most of the TTFT.
+  - Many "wrong" proposals come from the rubric's literal fact matching.
+- **Errors, root causes, fixes:** see report §9–§10:
+  - test `Path` bug;
+  - dry-run exit code (real CLI bug);
+  - over-strict round-trip and first-byte assertions;
+  - TTFT including quota wait;
+  - a failed edit-script assertion.
+- **Remaining issues:**
+  - Model choice is confounded by truncation: choose qwen, or re-run gpt-oss at 1024 tokens / `reasoning_effort` low (about 12 calls).
+  - Verifier gap on refusal-like cited sentences (P05; owner decision).
+  - Grades do not yet flow into rows (aggregation).
+  - Table 3 cap: about 63+ calls against a proposed Day-2 envelope of 80 with 18 used; `MAX_REAL_CALLS` is 40.
+  - TPD unknown.
+- **Deviations from ARCHITECTURE.md:** none to binding decisions. `eval_cli.py` is an extra file not named in the plan.
+- **Real Groq calls:** 18 (Day 2 total so far: 18). **Network:** Groq API for the live run only; otherwise loopback.
+- **Owner approval status:** pending owner review
+- **Next action:** Owner decides the model, the Table 3 cap and token settings, the verifier gap, and reviews the 18 proposed grades. Step 5 starts only on explicit approval.

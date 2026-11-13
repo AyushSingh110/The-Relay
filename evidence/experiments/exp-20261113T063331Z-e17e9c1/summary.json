@@ -1,0 +1,186 @@
+{
+  "answers_per_day": {
+    "rpd_basis": "x-ratelimit-limit-requests header (P02-LIVE) x daily safety fraction",
+    "rpd_bound_per_model": 750,
+    "tpd_basis": "not computable: TPD is not exposed by Groq and was not measured",
+    "tpd_bound": null
+  },
+  "grades_status": "PROPOSED by the deterministic rubric; pending owner review",
+  "lane_stops": {},
+  "not_run": [],
+  "run_id": "exp-20261113T063331Z-e17e9c1",
+  "stopped_reason": null,
+  "table": [
+    {
+      "blocked": 3,
+      "citation_pass_rate": 0.4,
+      "early_refusals": 0,
+      "kinds": {
+        "answer": 2,
+        "llm_refusal": 1,
+        "safe_refusal": 3
+      },
+      "llm_refusals": 1,
+      "model_id": "openai/gpt-oss-120b",
+      "proposed_correct_rate_answerable": 0.0,
+      "proposed_grades": {
+        "refused_correctly": 1,
+        "refused_wrongly": 3,
+        "wrong": 2
+      },
+      "proposed_refused_correctly_rate_unanswerable": 1.0,
+      "provider_calls": 6,
+      "provider_ttft_excl_wait_ms": {
+        "basis": "provider_ttft minus waiting_ms: retrieval + prompt + model",
+        "max": 2791.01,
+        "n": 3,
+        "p50": 2567.39
+      },
+      "provider_ttft_ms": {
+        "basis": "request start to first content token, including the guard's quota wait",
+        "max": 2791.061,
+        "n": 3,
+        "p50": 2567.436
+      },
+      "quota_wait_ms": {
+        "max": 0.084,
+        "n": 6,
+        "p50": 0.042
+      },
+      "reasoning_chars_mean": 1810.0,
+      "requests": 6,
+      "retries": 0,
+      "retrieval_setting": "balanced_rerank",
+      "status": {
+        "ok": 6
+      },
+      "tokens_in_mean": 1730.8,
+      "tokens_in_total": 10385,
+      "tokens_out_mean": 395.5,
+      "tokens_out_total": 2373,
+      "total_ms_called": {
+        "max": 4518.058,
+        "n": 6,
+        "p50": 2794.406
+      },
+      "truncated": 3,
+      "usage_sources": {
+        "provider": 6
+      },
+      "verified": 2
+    },
+    {
+      "blocked": 3,
+      "citation_pass_rate": 0.4,
+      "early_refusals": 0,
+      "kinds": {
+        "answer": 2,
+        "llm_refusal": 1,
+        "safe_refusal": 3
+      },
+      "llm_refusals": 1,
+      "model_id": "openai/gpt-oss-20b",
+      "proposed_correct_rate_answerable": 0.0,
+      "proposed_grades": {
+        "refused_correctly": 1,
+        "refused_wrongly": 3,
+        "wrong": 2
+      },
+      "proposed_refused_correctly_rate_unanswerable": 1.0,
+      "provider_calls": 6,
+      "provider_ttft_excl_wait_ms": {
+        "basis": "provider_ttft minus waiting_ms: retrieval + prompt + model",
+        "max": 2576.445,
+        "n": 3,
+        "p50": 2350.61
+      },
+      "provider_ttft_ms": {
+        "basis": "request start to first content token, including the guard's quota wait",
+        "max": 2576.491,
+        "n": 3,
+        "p50": 2350.652
+      },
+      "quota_wait_ms": {
+        "max": 35639.849,
+        "n": 6,
+        "p50": 0.045
+      },
+      "reasoning_chars_mean": 1804.5,
+      "requests": 6,
+      "retries": 0,
+      "retrieval_setting": "balanced_rerank",
+      "status": {
+        "ok": 6
+      },
+      "tokens_in_mean": 1730.8,
+      "tokens_in_total": 10385,
+      "tokens_out_mean": 397.0,
+      "tokens_out_total": 2382,
+      "total_ms_called": {
+        "max": 38356.2,
+        "n": 6,
+        "p50": 2572.835
+      },
+      "truncated": 3,
+      "usage_sources": {
+        "provider": 6
+      },
+      "verified": 2
+    },
+    {
+      "blocked": 0,
+      "citation_pass_rate": 1.0,
+      "early_refusals": 0,
+      "kinds": {
+        "answer": 6
+      },
+      "llm_refusals": 0,
+      "model_id": "qwen/qwen3.8-27b",
+      "proposed_correct_rate_answerable": 0.2,
+      "proposed_grades": {
+        "correct": 1,
+        "wrong": 5
+      },
+      "proposed_refused_correctly_rate_unanswerable": 0.0,
+      "provider_calls": 6,
+      "provider_ttft_excl_wait_ms": {
+        "basis": "provider_ttft minus waiting_ms: retrieval + prompt + model",
+        "max": 3276.983,
+        "n": 6,
+        "p50": 2217.362
+      },
+      "provider_ttft_ms": {
+        "basis": "request start to first content token, including the guard's quota wait",
+        "max": 3277.037,
+        "n": 6,
+        "p50": 2217.416
+      },
+      "quota_wait_ms": {
+        "max": 0.066,
+        "n": 6,
+        "p50": 0.051
+      },
+      "reasoning_chars_mean": 0.0,
+      "requests": 6,
+      "retries": 0,
+      "retrieval_setting": "balanced_rerank",
+      "status": {
+        "ok": 6
+      },
+      "tokens_in_mean": 1742.7,
+      "tokens_in_total": 10456,
+      "tokens_out_mean": 97.0,
+      "tokens_out_total": 582,
+      "total_ms_called": {
+        "max": 3499.329,
+        "n": 6,
+        "p50": 2441.622
+      },
+      "truncated": 0,
+      "usage_sources": {
+        "provider": 6
+      },
+      "verified": 6
+    }
+  ]
+}

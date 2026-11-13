@@ -1,0 +1,87 @@
+{
+  "cache_mode": "off",
+  "config_snapshot": {
+    "corpus_sha256": "296bb2b6d23ed6c56775b105e38e9006548784864836b06eb44c042119687775",
+    "guard": {
+      "adapt_safety_margin": 0.9,
+      "adapt_weight": 0.2,
+      "circuit_cooldown_s": 30.0,
+      "circuit_failure_threshold": 5,
+      "daily_safety_fraction": 0.75,
+      "initial_chars_per_token": 3.0,
+      "max_chars_per_token": 6.0,
+      "max_concurrency": 1,
+      "min_chars_per_token": 1.0,
+      "rpd_limit": 1000,
+      "rpm_limit": 10,
+      "tpd_limit": null,
+      "tpm_limit": 8000
+    },
+    "guard_limit_basis": {
+      "rpd_limit": "x-ratelimit-limit-requests header (P02-LIVE), per model",
+      "rpm_limit": "local pacing cap, assumed (RPM not measured)",
+      "tpd_limit": "unknown (not exposed by Groq, not measured)",
+      "tpm_limit": "x-ratelimit-limit-tokens header (P02-LIVE), per model"
+    },
+    "max_completion_tokens": 512,
+    "max_real_calls": 24,
+    "models": [
+      "openai/gpt-oss-20b",
+      "openai/gpt-oss-120b",
+      "qwen/qwen3.8-27b"
+    ],
+    "prompt_budget": "none (no degraded answers)",
+    "prompt_version": "p05-1",
+    "question_ids": [
+      "q03",
+      "q07",
+      "q10",
+      "q12",
+      "q13",
+      "q21"
+    ],
+    "questions_file_sha256": "ce4dfe418b92a22b4b88ed6667a1f0d4e4470bc89cb1eb9ee7d18d07f05b3903",
+    "retry": {
+      "base_delay_s": 0.5,
+      "deadline_share": 0.5,
+      "max_attempts": 3,
+      "max_delay_s": 8.0
+    },
+    "scenario": "model_comparison",
+    "settings": {
+      "cache_mode": "exact",
+      "daily_safety_fraction": 0.75,
+      "evidence_dir": "evidence",
+      "groq_base_url": "https://api.groq.com/openai/v1",
+      "groq_credential_configured": true,
+      "groq_model": "openai/gpt-oss-20b",
+      "max_real_calls": 40,
+      "provider_mode": "scripted",
+      "results_path": "results.csv",
+      "scratch_dir": "scratch",
+      "standin_url": "http://127.0.0.1:8001/openai/v1"
+    }
+  },
+  "ended_at": "2026-11-13T06:34:59.746214Z",
+  "git_commit": "e17e9c1",
+  "git_dirty": true,
+  "kind": "experiment",
+  "model_id": null,
+  "notes": "model_comparison; requests 18 of 18; stopped: no; lane stops: none",
+  "real_call_count": 18,
+  "reasoning_settings": {
+    "reasoning_effort": null
+  },
+  "retrieval_settings": [
+    "balanced_rerank"
+  ],
+  "run_id": "exp-20261113T063331Z-e17e9c1",
+  "scenarios": [
+    "model_comparison"
+  ],
+  "schema_version": 1,
+  "seed": null,
+  "source": "real",
+  "started_at": "2026-11-13T06:33:31.195065Z",
+  "status": "complete"
+}
