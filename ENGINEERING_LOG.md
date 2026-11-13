@@ -517,3 +517,48 @@
 - **Files modified:** `eval/questions.json`, `reports/phase-04b-eval-verification.md` (approval, 45→37, addendum), `ENGINEERING_LOG.md`. Groq calls: 0.
 - **Owner approval status:** P04B approved; the corrections await owner review.
 - **Next action:** wait for the owner's go-ahead before starting P05.
+
+---
+
+### Execution Entry
+
+- **Date and time:** 2026-11-13 06:33 IST
+- **Phase identifier:** `p05` (Pipeline, Evidence Gate, Verifier, Safe Refusal)
+- **Task requested:** Execute P05 per CLAUDE.md: the single tool behind a validated, timed gateway; an evidence gate with at most one paper-scoped re-query; the prompt; buffered generation with `provider_first_token_ms`; verifier checks (a)–(e); safe refusal with no second LLM call; server spans. Real Groq calls: none.
+- **Status:** completed, pending owner review
+- **Preconditions read:** CLAUDE.md, ARCHITECTURE.md (§5–§7, §13), IMPLEMENTATION_PLAN.md P05, the P04B report §8.4, and the latest log entries. The repo was clean at HEAD `c51aaca` (the owner committed the P04 approvals, `eval/questions.json` and P04B). A brief plan was presented before any file was written.
+- **Files created:** `src/relay/orchestrator/{__init__,tools,evidence_gate,prompt,verifier,pipeline}.py`, `tests/test_pipeline_and_verifier.py` (64 tests), `reports/phase-05-pipeline-and-verifier.md`.
+- **Files modified:** `ENGINEERING_LOG.md` only. `git diff --stat` is empty: no P01–P04 source changed, and nothing was installed.
+- **Decisions** (all [PROPOSED], for owner review; detail in report §5):
+  - **Early refusal** only for: no passages; a non-pinned arXiv version; the scope out-of-corpus signal; or, in the reranked setting with no strong paper cue, a best rerank score below −5.0.
+  - **Loop:** one re-query scoped to the missing expected paper(s), using the cue sentence. Up to `top_k // 2` passages are **appended**.
+  - **Refusal** must be exactly `INSUFFICIENT_EVIDENCE`.
+  - **Defaults:** `max_completion_tokens` 512; tool timeout 10 s.
+  - **Failure mapping:** a first-retrieval tool failure → `error` / `internal_error`; a provider error → its own code, with no retry (retries are P06, via the `AnswerGenerator` interface).
+- **Commands and observed outputs:**
+  - Design measurements on the real indexes (offline): top rerank scores are +0.22…+7.82 for answerable and near-topic questions against −8.48…−10.28 for off-topic ones. The q13 Attention-scoped re-query never returns gold page 4 with the whole question; with the cue sentence it is rank 3 in `small_fast` and rank 5 in `large_wide`.
+  - `pytest tests/test_pipeline_and_verifier.py`, run 1 → `1 failed, 63 passed` (a test fixture error).
+  - After the merge-policy change → `1 failed, 63 passed` (a fixture with a duplicated passage) → fixed → `64 passed`.
+  - **Final:** `pytest -q -rs` → **338 passed**, 0 failed, 0 skipped (4.58 s); `ruff check .` → All checks passed!
+- **Smoke run** (offline; a scripted model that always refuses; 21 owner questions × 3 settings = 63 runs; **0 Groq calls**):
+  - **Early refusals:** `small_fast` {q18}; `balanced_rerank` {q16–q20}; `large_wide` {q18}. No answerable question was refused early.
+  - **q21** passes the gate in every setting. **q13** loops once in every setting.
+  - **Answerable questions with ≥ 1 gold page in the prompt:** 15/15, 14/15, 15/15. Gold pages: 20, 19, 22 of 36, the same as the P04B post-correction figures.
+  - **`retrieval_ms`** median/max: 29/40, 1121/1502, 26/68.
+  - **Prompt chars** median/max: 5,790/8,293; 7,086/9,165; 13,577/20,796.
+  - **Verifier false-block check:** 64/64 verbatim gold-quote sentences verified.
+- **Errors, root causes, fixes:**
+  1. The replace-half merge dropped q13's gold pages (2/3 → 0/3 in two settings). Changed to append; re-measured at 2/3, 2/3, 1/3.
+  2. My smoke check tagged only the last sentence of multi-sentence quotes, producing 28 apparent blocks. The check was fixed; the verifier was correct.
+  3. Two test fixture errors, fixed.
+  4. Loosely typed draft pipeline code and an unknown-setting path, rewritten before the first test run.
+  5. Ruff: 3 findings, fixed.
+- **Remaining issues:**
+  - thresholds and policies awaiting approval;
+  - 4 of 5 off-topic questions still reach the model in the non-reranked settings;
+  - q13's Attention gold page is still absent;
+  - looped `large_wide` prompts approach the 8,000 TPM budget;
+  - real-model compliance with the prompt is unmeasured until P07.
+- **Deviations from ARCHITECTURE.md:** none to binding decisions. One LLM call per request, no repair loop, verify-before-delivery, and safe refusal as `ok` + `citation_verification_failed` are all preserved.
+- **Owner approval status:** pending owner review
+- **Next action:** Owner reviews `reports/phase-05-pipeline-and-verifier.md` and decides the §11.1 items. P06 starts only on explicit approval.
