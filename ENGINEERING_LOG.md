@@ -803,3 +803,57 @@
 - **Real Groq calls:** 18 (Day 2 total so far: 18). **Network:** Groq API for the live run only; otherwise loopback.
 - **Owner approval status:** pending owner review
 - **Next action:** Owner decides the model, the Table 3 cap and token settings, the verifier gap, and reviews the 18 proposed grades. Step 5 starts only on explicit approval.
+
+---
+
+### Execution Entry
+
+- **Date and time:** 2026-11-13 12:38 IST
+- **Phase identifier:** `p07` — steps 5–6 (Table 3 retrieval evaluation and grading)
+- **Owner decision recorded:** model selected: **`qwen/qwen3.8-27b`** (owner, 2026-11-13, after reviewing `exp-20261113T063331Z-e17e9c1`).
+- **Task requested and objective:**
+  - Raise `MAX_REAL_CALLS` to at least 85.
+  - Run Table 3 live (21 questions × small_fast / balanced_rerank / large_wide, cap 70, cache off, ProviderGuard-paced).
+  - Verify completion, settlement and artifacts.
+  - Propose grades.
+  - Summarise by preset.
+- **Status:** completed. 62 of 63 requests succeeded; 1 failed with a transport error. Owner grade review is pending.
+- **Files created:** `evidence/experiments/exp-20261113T064542Z-c482696/` (manifest, rows, traces, answers, grades, audit, summary).
+- **Files modified:**
+  - `.env` (gitignored): only `MAX_REAL_CALLS` 40 → 85, edited in place without printing the file.
+  - `reports/phase-07-model-and-retrieval-eval.md` (final status).
+  - `ENGINEERING_LOG.md` (this entry).
+  - No code changed.
+- **Decision:** the command's `--model qwen3.8-27b` was corrected to the selected ID `qwen/qwen3.8-27b` (the ID in the P02-LIVE discovery evidence; the bare form appears 0 times there). Every other argument was used as given.
+- **Commands executed and observed outputs:**
+  - `.env` edit → `MAX_REAL_CALLS lines found: 1`, `MAX_REAL_CALLS: 40 -> 85`.
+  - `load_settings` → `key_configured True | MAX_REAL_CALLS 85 | daily_safety_fraction 0.75`; `.env still gitignored`.
+  - Dry run → `plan: 63 requests …`, only "would refuse: dry run", exit 0, no run created.
+  - **LIVE**, executed once: `run_retrieval_eval.py --model qwen/qwen3.8-27b --source real --live --max-real-calls 70 --settings small_fast,balanced_rerank,large_wide` → `exp-20261113T064542Z-c482696`, exit 0, `real calls recorded: 58`, `rows: 63; not run: 0; stopped: no`.
+  - Analysis (read-only):
+    - 63 rows, all `cache_status=off`, 62 `ok` + 1 `error`;
+    - 55 provider-settled calls; 2 retries;
+    - tokens 113,422 in / 6,581 out (= guard day total 120,003);
+    - 63 traces, 62 answers, 62 grades (pending), 63 audit entries.
+  - Failed row `-000063` (large_wide × q21): 3 attempts, all `ProviderConnectionError`; 0 tokens; guard daily stop none, circuit closed.
+  - `grade_answers.py propose` into `scratch/` → **IDENTICAL** to the run's `grades.json`. Summary: proposed correct 19, refused_correctly 17, refused_wrongly 1, wrong 25, pending 62.
+  - Secret scan: 0 `gsk_`, no bearer/authorization, no `org_` IDs.
+  - Final: `pytest -q` → `451 passed in 14.35s`; `ruff check .` → `All checks passed!`
+- **Results by preset (proposed, pending owner review):**
+  - small_fast: citation pass 14/15; correct 6/15; unanswerable 6/6; TTFT excl. wait p50/p90/max 495.4 / 1035.1 / 1613.2 ms.
+  - balanced_rerank: citation pass 15/15; correct 7/15; unanswerable 6/6 (q16–q20 refused early, before any call); TTFT 1924.5 / 3056.1 / 3058.2 ms (rerank p50 1,260 ms); model-only TTFT p50 439.8 ms.
+  - large_wide: citation pass 15/15; correct 6/15; unanswerable 5/6 (q21 failed); TTFT 683.2 / 1003.4 / 1016.8 ms; prompt tokens mean 2,915.5; quota waits up to 59.2 s.
+  - Of the 25 proposed `wrong`, 22 are flagged only for a missing required fact (literal matching); 41 of 44 delivered answers cite a gold page.
+- **Errors, root causes, fixes:**
+  - large_wide × q21 transport failure. The cause is not recorded: sanitised traces store only the type. **Not re-run**; it needs owner approval.
+  - Model-ID typo in the command, prevented before any call.
+- **Remaining issues:**
+  - Owner review of 80 proposed grades.
+  - Optional re-run of one cell (at most 3 calls).
+  - Verifier gap (P05).
+  - Grades do not yet flow into rows.
+  - TPD unknown.
+- **Deviations from ARCHITECTURE.md:** none.
+- **Real Groq calls:** 58 (Day 2 total: 76 = 18 + 58). **Network:** Groq API during the live run only.
+- **Owner approval status:** pending owner review
+- **Next action:** Owner reviews the grades and decides the q21 × large_wide re-run, the verifier gap, and how grades enter canonical rows. Then P10 on approval. Nothing has been started.

@@ -1,0 +1,2507 @@
+[
+  {
+    "answerable": true,
+    "category": "direct_factual",
+    "cited_pages": [
+      "1706.03762v7 pp.2-2 [P1]",
+      "1706.03762v7 pp.2-2 [P3]"
+    ],
+    "delivered_text": "The authors introduced the Transformer to eschew recurrence and rely entirely on an attention mechanism to draw global dependencies between input and output [P1]. Recurrent neural networks factor computation along symbol positions, generating hidden states sequentially based on previous states [P3]. This inherently sequential nature precludes parallelization within training examples, which becomes critical at longer sequence lengths [P3]. Memory constraints limit batching across examples due to this sequential computation [P3]. The Transformer allows for significantly more parallelization compared to recurrent models [P1]. It was designed to overcome the fundamental constraint of sequential computation that limits the efficiency of recurrent architectures [P1][P3].",
+    "error_code": null,
+    "expected_answer": "Recurrent models factor computation sequentially along input and output positions, generating hidden states h_t as a function of h_{t-1} and input t. This sequential nature precludes parallelization within training examples, which becomes critical at longer sequence lengths because memory constraints limit batching across examples, and requires O(n) sequential operations to connect distant positions. The authors introduced the Transformer to eschew recurrence entirely and rely instead on self-attention to draw global dependencies between input and output, allowing significantly more parallelization and reducing path length to O(1).",
+    "finish_reason": "stop",
+    "gold_pages": [
+      "1706.03762v7 p.2",
+      "1706.03762v7 p.2",
+      "1706.03762v7 p.6"
+    ],
+    "grade_reasons": [
+      "all required facts present, gold page cited, no forbidden claims"
+    ],
+    "kind": "answer",
+    "model_id": "qwen/qwen3.8-27b",
+    "proposed_grade": "correct",
+    "question": "Why did the authors introduce the Transformer architecture, and what fundamental limitations of recurrent neural networks were they trying to overcome?",
+    "question_id": "q01",
+    "raw_answer": "The authors introduced the Transformer to eschew recurrence and rely entirely on an attention mechanism to draw global dependencies between input and output [P1]. Recurrent neural networks factor computation along symbol positions, generating hidden states sequentially based on previous states [P3]. This inherently sequential nature precludes parallelization within training examples, which becomes critical at longer sequence lengths [P3]. Memory constraints limit batching across examples due to this sequential computation [P3]. The Transformer allows for significantly more parallelization compared to recurrent models [P1]. It was designed to overcome the fundamental constraint of sequential computation that limits the efficiency of recurrent architectures [P1][P3].",
+    "request_id": "exp-20261113T064542Z-c482696-000001",
+    "retrieval_setting": "small_fast",
+    "retrieved": [
+      "[P1] 1706.03762v7 pp.2-2 1706.03762v7_p2_c1",
+      "[P2] 1706.03762v7 pp.1-1 1706.03762v7_p1_c1",
+      "[P3] 1706.03762v7 pp.2-2 1706.03762v7_p2_c0",
+      "[P4] 1706.03762v7 pp.2-2 1706.03762v7_p2_c3"
+    ],
+    "review_status": "pending",
+    "status": "ok",
+    "tokens_in": 1242,
+    "tokens_out": 131,
+    "trap_type": null,
+    "verification_verdict": "VERIFIED",
+    "verifier_failures": []
+  },
+  {
+    "answerable": true,
+    "category": "direct_factual",
+    "cited_pages": [
+      "1706.03762v7 pp.2-2 [P1]",
+      "1706.03762v7 pp.2-2 [P3]",
+      "1706.03762v7 pp.1-1 [P2]"
+    ],
+    "delivered_text": "The authors introduced the Transformer to eschew recurrence and rely entirely on an attention mechanism to draw global dependencies between input and output [P1]. Recurrent neural networks factor computation along symbol positions, generating hidden states sequentially based on previous states [P3]. This inherently sequential nature precludes parallelization within training examples, which becomes critical at longer sequence lengths [P3]. Memory constraints limit batching across examples due to this sequential computation [P3]. The Transformer allows for significantly more parallelization and can reach a new state of the art in translation quality [P1]. It is designed to be superior in quality while being more parallelizable and requiring significantly less time to train [P2].",
+    "error_code": null,
+    "expected_answer": "Recurrent models factor computation sequentially along input and output positions, generating hidden states h_t as a function of h_{t-1} and input t. This sequential nature precludes parallelization within training examples, which becomes critical at longer sequence lengths because memory constraints limit batching across examples, and requires O(n) sequential operations to connect distant positions. The authors introduced the Transformer to eschew recurrence entirely and rely instead on self-attention to draw global dependencies between input and output, allowing significantly more parallelization and reducing path length to O(1).",
+    "finish_reason": "stop",
+    "gold_pages": [
+      "1706.03762v7 p.2",
+      "1706.03762v7 p.2",
+      "1706.03762v7 p.6"
+    ],
+    "grade_reasons": [
+      "all required facts present, gold page cited, no forbidden claims"
+    ],
+    "kind": "answer",
+    "model_id": "qwen/qwen3.8-27b",
+    "proposed_grade": "correct",
+    "question": "Why did the authors introduce the Transformer architecture, and what fundamental limitations of recurrent neural networks were they trying to overcome?",
+    "question_id": "q01",
+    "raw_answer": "The authors introduced the Transformer to eschew recurrence and rely entirely on an attention mechanism to draw global dependencies between input and output [P1]. Recurrent neural networks factor computation along symbol positions, generating hidden states sequentially based on previous states [P3]. This inherently sequential nature precludes parallelization within training examples, which becomes critical at longer sequence lengths [P3]. Memory constraints limit batching across examples due to this sequential computation [P3]. The Transformer allows for significantly more parallelization and can reach a new state of the art in translation quality [P1]. It is designed to be superior in quality while being more parallelizable and requiring significantly less time to train [P2].",
+    "request_id": "exp-20261113T064542Z-c482696-000002",
+    "retrieval_setting": "balanced_rerank",
+    "retrieved": [
+      "[P1] 1706.03762v7 pp.2-2 1706.03762v7_p2_c1",
+      "[P2] 1706.03762v7 pp.1-1 1706.03762v7_p1_c1",
+      "[P3] 1706.03762v7 pp.2-2 1706.03762v7_p2_c0",
+      "[P4] 1706.03762v7 pp.10-10 1706.03762v7_p10_c1"
+    ],
+    "review_status": "pending",
+    "status": "ok",
+    "tokens_in": 1370,
+    "tokens_out": 138,
+    "trap_type": null,
+    "verification_verdict": "VERIFIED",
+    "verifier_failures": []
+  },
+  {
+    "answerable": true,
+    "category": "direct_factual",
+    "cited_pages": [
+      "1706.03762v7 pp.2-2 [P1]",
+      "1706.03762v7 pp.2-2 [P2]"
+    ],
+    "delivered_text": "The authors introduced the Transformer to eschew recurrence and rely entirely on an attention mechanism to draw global dependencies between input and output [P1]. Recurrent models factor computation along symbol positions, which inherently precludes parallelization within training examples [P1]. This sequential nature becomes critical at longer sequence lengths because memory constraints limit batching across examples [P1]. The Transformer allows for significantly more parallelization and can reach a new state of the art in translation quality [P1]. It is the first transduction model relying entirely on self-attention to compute representations without using sequence-aligned RNNs or convolution [P2]. The architecture was designed to reduce the number of operations required to relate signals from arbitrary positions to a constant number [P2].",
+    "error_code": null,
+    "expected_answer": "Recurrent models factor computation sequentially along input and output positions, generating hidden states h_t as a function of h_{t-1} and input t. This sequential nature precludes parallelization within training examples, which becomes critical at longer sequence lengths because memory constraints limit batching across examples, and requires O(n) sequential operations to connect distant positions. The authors introduced the Transformer to eschew recurrence entirely and rely instead on self-attention to draw global dependencies between input and output, allowing significantly more parallelization and reducing path length to O(1).",
+    "finish_reason": "stop",
+    "gold_pages": [
+      "1706.03762v7 p.2",
+      "1706.03762v7 p.2",
+      "1706.03762v7 p.6"
+    ],
+    "grade_reasons": [
+      "all required facts present, gold page cited, no forbidden claims"
+    ],
+    "kind": "answer",
+    "model_id": "qwen/qwen3.8-27b",
+    "proposed_grade": "correct",
+    "question": "Why did the authors introduce the Transformer architecture, and what fundamental limitations of recurrent neural networks were they trying to overcome?",
+    "question_id": "q01",
+    "raw_answer": "The authors introduced the Transformer to eschew recurrence and rely entirely on an attention mechanism to draw global dependencies between input and output [P1]. Recurrent models factor computation along symbol positions, which inherently precludes parallelization within training examples [P1]. This sequential nature becomes critical at longer sequence lengths because memory constraints limit batching across examples [P1]. The Transformer allows for significantly more parallelization and can reach a new state of the art in translation quality [P1]. It is the first transduction model relying entirely on self-attention to compute representations without using sequence-aligned RNNs or convolution [P2]. The architecture was designed to reduce the number of operations required to relate signals from arbitrary positions to a constant number [P2].",
+    "request_id": "exp-20261113T064542Z-c482696-000003",
+    "retrieval_setting": "large_wide",
+    "retrieved": [
+      "[P1] 1706.03762v7 pp.2-2 1706.03762v7_p2_c0",
+      "[P2] 1706.03762v7 pp.2-2 1706.03762v7_p2_c1",
+      "[P3] 1706.03762v7 pp.1-1 1706.03762v7_p1_c1",
+      "[P4] 2507.07955v2 pp.8-9 2507.07955v2_p8_c2",
+      "[P5] 1706.03762v7 pp.10-10 1706.03762v7_p10_c0"
+    ],
+    "review_status": "pending",
+    "status": "ok",
+    "tokens_in": 2416,
+    "tokens_out": 150,
+    "trap_type": null,
+    "verification_verdict": "VERIFIED",
+    "verifier_failures": []
+  },
+  {
+    "answerable": true,
+    "category": "direct_factual",
+    "cited_pages": [],
+    "delivered_text": "I could not produce an answer that I can verify against the papers, so I am not answering rather than risk an unsupported claim.",
+    "error_code": "citation_verification_failed",
+    "expected_answer": "Scaled Dot-Product Attention takes queries and keys of dimension d_k and values of dimension d_v, computes the dot products of the query with all keys, divides each by sqrt(d_k), and applies a softmax function to obtain weights on the values (Attention(Q, K, V) = softmax(QK^T / sqrt(d_k))V). The authors divide by sqrt(d_k) because for large d_k, the dot products grow large in magnitude (since independent unit-variance components yield a dot product with mean 0 and variance d_k), pushing the softmax function into regions where it has extremely small gradients.",
+    "finish_reason": "stop",
+    "gold_pages": [
+      "1706.03762v7 p.4",
+      "1706.03762v7 p.4"
+    ],
+    "grade_reasons": [
+      "answer is a refusal; question is answerable"
+    ],
+    "kind": "safe_refusal",
+    "model_id": "qwen/qwen3.8-27b",
+    "proposed_grade": "refused_wrongly",
+    "question": "Explain how Scaled Dot-Product Attention works. Why do the authors divide the query-key dot product by the square root of the key dimension d_k?",
+    "question_id": "q02",
+    "raw_answer": "Scaled Dot-Product Attention computes the dot products of the query with all keys, divides each by √d_k, and applies a softmax function to obtain weights on the values [P1]. The input consists of queries and keys of dimension d_k, and values of dimension d_v [P1]. The authors divide by √d_k because for large values of d_k, dot products grow large in magnitude, pushing the softmax function into regions with extremely small gradients [P3]. This scaling counteracts the effect of large dot products that occur when the components of q and k are independent random variables with mean 0 and variance 1 [P3]. The dot product q · k has a mean of 0 and a variance of d_k, which explains why the magnitude grows with the dimension [P3]. [P3]",
+    "request_id": "exp-20261113T064542Z-c482696-000004",
+    "retrieval_setting": "small_fast",
+    "retrieved": [
+      "[P1] 1706.03762v7 pp.4-4 1706.03762v7_p4_c0",
+      "[P2] 1706.03762v7 pp.3-4 1706.03762v7_p3_c2",
+      "[P3] 1706.03762v7 pp.4-4 1706.03762v7_p4_c1",
+      "[P4] 1706.03762v7 pp.4-5 1706.03762v7_p4_c2"
+    ],
+    "review_status": "pending",
+    "status": "ok",
+    "tokens_in": 1175,
+    "tokens_out": 170,
+    "trap_type": "garbled_extraction",
+    "verification_verdict": "BLOCKED",
+    "verifier_failures": [
+      {
+        "check": "d",
+        "code": "ungrounded_number",
+        "detail": "numbers not in the cited passages: ['0']",
+        "sentence": 4
+      },
+      {
+        "check": "d",
+        "code": "ungrounded_number",
+        "detail": "numbers not in the cited passages: ['0']",
+        "sentence": 5
+      }
+    ]
+  },
+  {
+    "answerable": true,
+    "category": "direct_factual",
+    "cited_pages": [
+      "1706.03762v7 pp.4-4 [P1]",
+      "1706.03762v7 pp.4-4 [P2]",
+      "1706.03762v7 pp.3-4 [P3]"
+    ],
+    "delivered_text": "Scaled Dot-Product Attention computes the dot products of the query with all keys, divides each by √d_k, and applies a softmax function to obtain weights on the values [P1]. The input consists of queries and keys of dimension d_k, and values of dimension d_v [P1]. The authors divide by √d_k to counteract the effect of dot products growing large in magnitude for large values of d_k [P2]. This growth pushes the softmax function into regions where it has extremely small gradients [P2]. The scaling factor distinguishes their algorithm from standard dot-product attention [P1]. The final output is computed as the weighted sum of the values using these attention weights [P3].",
+    "error_code": null,
+    "expected_answer": "Scaled Dot-Product Attention takes queries and keys of dimension d_k and values of dimension d_v, computes the dot products of the query with all keys, divides each by sqrt(d_k), and applies a softmax function to obtain weights on the values (Attention(Q, K, V) = softmax(QK^T / sqrt(d_k))V). The authors divide by sqrt(d_k) because for large d_k, the dot products grow large in magnitude (since independent unit-variance components yield a dot product with mean 0 and variance d_k), pushing the softmax function into regions where it has extremely small gradients.",
+    "finish_reason": "stop",
+    "gold_pages": [
+      "1706.03762v7 p.4",
+      "1706.03762v7 p.4"
+    ],
+    "grade_reasons": [
+      "all required facts present, gold page cited, no forbidden claims"
+    ],
+    "kind": "answer",
+    "model_id": "qwen/qwen3.8-27b",
+    "proposed_grade": "correct",
+    "question": "Explain how Scaled Dot-Product Attention works. Why do the authors divide the query-key dot product by the square root of the key dimension d_k?",
+    "question_id": "q02",
+    "raw_answer": "Scaled Dot-Product Attention computes the dot products of the query with all keys, divides each by √d_k, and applies a softmax function to obtain weights on the values [P1]. The input consists of queries and keys of dimension d_k, and values of dimension d_v [P1]. The authors divide by √d_k to counteract the effect of dot products growing large in magnitude for large values of d_k [P2]. This growth pushes the softmax function into regions where it has extremely small gradients [P2]. The scaling factor distinguishes their algorithm from standard dot-product attention [P1]. The final output is computed as the weighted sum of the values using these attention weights [P3].",
+    "request_id": "exp-20261113T064542Z-c482696-000005",
+    "retrieval_setting": "balanced_rerank",
+    "retrieved": [
+      "[P1] 1706.03762v7 pp.4-4 1706.03762v7_p4_c0",
+      "[P2] 1706.03762v7 pp.4-4 1706.03762v7_p4_c1",
+      "[P3] 1706.03762v7 pp.3-4 1706.03762v7_p3_c1",
+      "[P4] 1706.03762v7 pp.4-5 1706.03762v7_p4_c2"
+    ],
+    "review_status": "pending",
+    "status": "ok",
+    "tokens_in": 1287,
+    "tokens_out": 146,
+    "trap_type": "garbled_extraction",
+    "verification_verdict": "VERIFIED",
+    "verifier_failures": []
+  },
+  {
+    "answerable": true,
+    "category": "direct_factual",
+    "cited_pages": [
+      "1706.03762v7 pp.4-4 [P1]",
+      "1706.03762v7 pp.3-4 [P2]"
+    ],
+    "delivered_text": "Scaled Dot-Product Attention computes the dot products of the query with all keys, divides each by √d_k, and applies a softmax function to obtain weights on the values [P1]. The authors divide by √d_k to counteract the effect of dot products growing large in magnitude for large values of d_k [P1]. This growth pushes the softmax function into regions where it has extremely small gradients [P1]. The scaling factor is necessary because, without it, additive attention outperforms dot-product attention for larger values of d_k [P1]. The input consists of queries and keys of dimension d_k, and values of dimension d_v [P1]. The final output is computed as a weighted sum of the values [P2].",
+    "error_code": null,
+    "expected_answer": "Scaled Dot-Product Attention takes queries and keys of dimension d_k and values of dimension d_v, computes the dot products of the query with all keys, divides each by sqrt(d_k), and applies a softmax function to obtain weights on the values (Attention(Q, K, V) = softmax(QK^T / sqrt(d_k))V). The authors divide by sqrt(d_k) because for large d_k, the dot products grow large in magnitude (since independent unit-variance components yield a dot product with mean 0 and variance d_k), pushing the softmax function into regions where it has extremely small gradients.",
+    "finish_reason": "stop",
+    "gold_pages": [
+      "1706.03762v7 p.4",
+      "1706.03762v7 p.4"
+    ],
+    "grade_reasons": [
+      "all required facts present, gold page cited, no forbidden claims"
+    ],
+    "kind": "answer",
+    "model_id": "qwen/qwen3.8-27b",
+    "proposed_grade": "correct",
+    "question": "Explain how Scaled Dot-Product Attention works. Why do the authors divide the query-key dot product by the square root of the key dimension d_k?",
+    "question_id": "q02",
+    "raw_answer": "Scaled Dot-Product Attention computes the dot products of the query with all keys, divides each by √d_k, and applies a softmax function to obtain weights on the values [P1]. The authors divide by √d_k to counteract the effect of dot products growing large in magnitude for large values of d_k [P1]. This growth pushes the softmax function into regions where it has extremely small gradients [P1]. The scaling factor is necessary because, without it, additive attention outperforms dot-product attention for larger values of d_k [P1]. The input consists of queries and keys of dimension d_k, and values of dimension d_v [P1]. The final output is computed as a weighted sum of the values [P2].",
+    "request_id": "exp-20261113T064542Z-c482696-000006",
+    "retrieval_setting": "large_wide",
+    "retrieved": [
+      "[P1] 1706.03762v7 pp.4-4 1706.03762v7_p4_c0",
+      "[P2] 1706.03762v7 pp.3-4 1706.03762v7_p3_c1",
+      "[P3] 1706.03762v7 pp.4-5 1706.03762v7_p4_c1",
+      "[P4] 1706.03762v7 pp.5-5 1706.03762v7_p5_c0",
+      "[P5] 1706.03762v7 pp.8-9 1706.03762v7_p8_c1"
+    ],
+    "review_status": "pending",
+    "status": "ok",
+    "tokens_in": 2366,
+    "tokens_out": 154,
+    "trap_type": "garbled_extraction",
+    "verification_verdict": "VERIFIED",
+    "verifier_failures": []
+  },
+  {
+    "answerable": true,
+    "category": "direct_factual",
+    "cited_pages": [
+      "1706.03762v7 pp.5-5 [P4]"
+    ],
+    "delivered_text": "The original Transformer model employs h = 8 parallel attention layers, or heads [P4]. For each of these heads, the dimensions of the keys and values are d_k = d_v = d_model/h = 64 [P4].",
+    "error_code": null,
+    "expected_answer": "The original Transformer base model employs h = 8 parallel attention layers, or heads. For each head, the key and value dimensions are d_k = d_v = d_model / h = 64 (with d_model = 512), keeping the total computational cost similar to single-head attention with full dimensionality.",
+    "finish_reason": "stop",
+    "gold_pages": [
+      "1706.03762v7 p.5"
+    ],
+    "grade_reasons": [
+      "all required facts present, gold page cited, no forbidden claims"
+    ],
+    "kind": "answer",
+    "model_id": "qwen/qwen3.8-27b",
+    "proposed_grade": "correct",
+    "question": "What is the number of attention heads used in the original Transformer base model, and what are the dimensions of the keys and values in each head?",
+    "question_id": "q03",
+    "raw_answer": "The original Transformer model employs h = 8 parallel attention layers, or heads [P4]. For each of these heads, the dimensions of the keys and values are d_k = d_v = d_model/h = 64 [P4].",
+    "request_id": "exp-20261113T064542Z-c482696-000007",
+    "retrieval_setting": "small_fast",
+    "retrieved": [
+      "[P1] 1706.03762v7 pp.4-5 1706.03762v7_p4_c2",
+      "[P2] 1706.03762v7 pp.5-5 1706.03762v7_p5_c1",
+      "[P3] 1706.03762v7 pp.3-4 1706.03762v7_p3_c2",
+      "[P4] 1706.03762v7 pp.5-5 1706.03762v7_p5_c0"
+    ],
+    "review_status": "pending",
+    "status": "ok",
+    "tokens_in": 1200,
+    "tokens_out": 51,
+    "trap_type": "shared_vocabulary",
+    "verification_verdict": "VERIFIED",
+    "verifier_failures": []
+  },
+  {
+    "answerable": true,
+    "category": "direct_factual",
+    "cited_pages": [
+      "1706.03762v7 pp.5-5 [P2]"
+    ],
+    "delivered_text": "The original Transformer base model employs h = 8 parallel attention layers, or heads [P2]. For each of these heads, the dimensions of the keys and values are d_k = d_v = d_model/h = 64 [P2].",
+    "error_code": null,
+    "expected_answer": "The original Transformer base model employs h = 8 parallel attention layers, or heads. For each head, the key and value dimensions are d_k = d_v = d_model / h = 64 (with d_model = 512), keeping the total computational cost similar to single-head attention with full dimensionality.",
+    "finish_reason": "stop",
+    "gold_pages": [
+      "1706.03762v7 p.5"
+    ],
+    "grade_reasons": [
+      "all required facts present, gold page cited, no forbidden claims"
+    ],
+    "kind": "answer",
+    "model_id": "qwen/qwen3.8-27b",
+    "proposed_grade": "correct",
+    "question": "What is the number of attention heads used in the original Transformer base model, and what are the dimensions of the keys and values in each head?",
+    "question_id": "q03",
+    "raw_answer": "The original Transformer base model employs h = 8 parallel attention layers, or heads [P2]. For each of these heads, the dimensions of the keys and values are d_k = d_v = d_model/h = 64 [P2].",
+    "request_id": "exp-20261113T064542Z-c482696-000008",
+    "retrieval_setting": "balanced_rerank",
+    "retrieved": [
+      "[P1] 1706.03762v7 pp.9-9 1706.03762v7_p9_c0",
+      "[P2] 1706.03762v7 pp.5-5 1706.03762v7_p5_c0",
+      "[P3] 1706.03762v7 pp.5-5 1706.03762v7_p5_c1",
+      "[P4] 1706.03762v7 pp.4-5 1706.03762v7_p4_c2"
+    ],
+    "review_status": "pending",
+    "status": "ok",
+    "tokens_in": 1463,
+    "tokens_out": 52,
+    "trap_type": "shared_vocabulary",
+    "verification_verdict": "VERIFIED",
+    "verifier_failures": []
+  },
+  {
+    "answerable": true,
+    "category": "direct_factual",
+    "cited_pages": [
+      "1706.03762v7 pp.4-5 [P1]",
+      "1706.03762v7 pp.8-9 [P3]"
+    ],
+    "delivered_text": "The original Transformer base model employs h = 8 parallel attention layers, or heads [P1]. For each of these heads, the dimensions are set to d_k = d_v = d_model/h = 64 [P1]. This configuration is confirmed in Table 3, where the base model row lists h = 8, d_k = 64, and d_v = 64 [P3].",
+    "error_code": null,
+    "expected_answer": "The original Transformer base model employs h = 8 parallel attention layers, or heads. For each head, the key and value dimensions are d_k = d_v = d_model / h = 64 (with d_model = 512), keeping the total computational cost similar to single-head attention with full dimensionality.",
+    "finish_reason": "stop",
+    "gold_pages": [
+      "1706.03762v7 p.5"
+    ],
+    "grade_reasons": [
+      "all required facts present, gold page cited, no forbidden claims"
+    ],
+    "kind": "answer",
+    "model_id": "qwen/qwen3.8-27b",
+    "proposed_grade": "correct",
+    "question": "What is the number of attention heads used in the original Transformer base model, and what are the dimensions of the keys and values in each head?",
+    "question_id": "q03",
+    "raw_answer": "The original Transformer base model employs h = 8 parallel attention layers, or heads [P1]. For each of these heads, the dimensions are set to d_k = d_v = d_model/h = 64 [P1]. This configuration is confirmed in Table 3, where the base model row lists h = 8, d_k = 64, and d_v = 64 [P3].",
+    "request_id": "exp-20261113T064542Z-c482696-000009",
+    "retrieval_setting": "large_wide",
+    "retrieved": [
+      "[P1] 1706.03762v7 pp.4-5 1706.03762v7_p4_c1",
+      "[P2] 1706.03762v7 pp.5-5 1706.03762v7_p5_c0",
+      "[P3] 1706.03762v7 pp.8-9 1706.03762v7_p8_c1",
+      "[P4] 1706.03762v7 pp.3-4 1706.03762v7_p3_c1",
+      "[P5] 1706.03762v7 pp.1-1 1706.03762v7_p1_c1"
+    ],
+    "review_status": "pending",
+    "status": "ok",
+    "tokens_in": 2474,
+    "tokens_out": 87,
+    "trap_type": "shared_vocabulary",
+    "verification_verdict": "VERIFIED",
+    "verifier_failures": []
+  },
+  {
+    "answerable": true,
+    "category": "direct_factual",
+    "cited_pages": [
+      "1706.03762v7 pp.5-5 [P1]",
+      "1706.03762v7 pp.4-5 [P4]"
+    ],
+    "delivered_text": "The Transformer uses multi-head attention in three different ways: encoder-decoder attention, encoder self-attention, and decoder self-attention [P1]. In encoder-decoder attention layers, queries come from the previous decoder layer while memory keys and values come from the encoder output, allowing every decoder position to attend to all input positions [P1]. The encoder contains self-attention layers where keys, values, and queries all originate from the output of the previous encoder layer, enabling each position to attend to all positions in that previous layer [P1]. Similarly, decoder self-attention layers allow each position to attend to all positions in the decoder up to and including that position [P1]. This specific arrangement in the decoder is necessary to prevent leftward information flow and preserve the auto-regressive property [P1]. Multi-head attention generally allows the model to jointly attend to information from different representation subspaces at different positions [P4].",
+    "error_code": null,
+    "expected_answer": "The Transformer uses multi-head attention in three ways: (1) Encoder-decoder attention layers, where queries come from the previous decoder layer and memory keys and values come from the encoder output, allowing every decoder position to attend over all input sequence positions; (2) Encoder self-attention layers, where queries, keys, and values all come from the output of the previous encoder layer so every position can attend to all positions in the previous layer; and (3) Decoder self-attention layers, where each decoder position attends to all positions up to and including itself, with leftward-only flow enforced by masking illegal subsequent connections to -infinity before softmax to preserve the auto-regressive property.",
+    "finish_reason": "stop",
+    "gold_pages": [
+      "1706.03762v7 p.5",
+      "1706.03762v7 p.5",
+      "1706.03762v7 p.5"
+    ],
+    "grade_reasons": [
+      "all required facts present, gold page cited, no forbidden claims"
+    ],
+    "kind": "answer",
+    "model_id": "qwen/qwen3.8-27b",
+    "proposed_grade": "correct",
+    "question": "What are the three different ways multi-head attention is used in the Transformer architecture? Explain the role of each.",
+    "question_id": "q04",
+    "raw_answer": "The Transformer uses multi-head attention in three different ways: encoder-decoder attention, encoder self-attention, and decoder self-attention [P1]. In encoder-decoder attention layers, queries come from the previous decoder layer while memory keys and values come from the encoder output, allowing every decoder position to attend to all input positions [P1]. The encoder contains self-attention layers where keys, values, and queries all originate from the output of the previous encoder layer, enabling each position to attend to all positions in that previous layer [P1]. Similarly, decoder self-attention layers allow each position to attend to all positions in the decoder up to and including that position [P1]. This specific arrangement in the decoder is necessary to prevent leftward information flow and preserve the auto-regressive property [P1]. Multi-head attention generally allows the model to jointly attend to information from different representation subspaces at different positions [P4].",
+    "request_id": "exp-20261113T064542Z-c482696-000010",
+    "retrieval_setting": "small_fast",
+    "retrieved": [
+      "[P1] 1706.03762v7 pp.5-5 1706.03762v7_p5_c1",
+      "[P2] 1706.03762v7 pp.3-4 1706.03762v7_p3_c2",
+      "[P3] 1706.03762v7 pp.2-2 1706.03762v7_p2_c2",
+      "[P4] 1706.03762v7 pp.4-5 1706.03762v7_p4_c2"
+    ],
+    "review_status": "pending",
+    "status": "ok",
+    "tokens_in": 1222,
+    "tokens_out": 188,
+    "trap_type": null,
+    "verification_verdict": "VERIFIED",
+    "verifier_failures": []
+  },
+  {
+    "answerable": true,
+    "category": "direct_factual",
+    "cited_pages": [
+      "1706.03762v7 pp.5-5 [P1]"
+    ],
+    "delivered_text": "The Transformer uses multi-head attention in three different ways: encoder-decoder attention, encoder self-attention, and decoder self-attention [P1]. In encoder-decoder attention layers, queries come from the previous decoder layer while memory keys and values come from the encoder output, allowing every decoder position to attend to all input positions [P1]. The encoder contains self-attention layers where keys, values, and queries all originate from the output of the previous encoder layer, enabling each position to attend to all positions in that previous layer [P1]. Similarly, decoder self-attention layers allow each position to attend to all positions in the decoder up to and including that position [P1]. To preserve the auto-regressive property, the decoder implementation masks out illegal connections by setting their values to −∞ in the softmax input [P1]. This masking prevents leftward information flow within the decoder [P1].",
+    "error_code": null,
+    "expected_answer": "The Transformer uses multi-head attention in three ways: (1) Encoder-decoder attention layers, where queries come from the previous decoder layer and memory keys and values come from the encoder output, allowing every decoder position to attend over all input sequence positions; (2) Encoder self-attention layers, where queries, keys, and values all come from the output of the previous encoder layer so every position can attend to all positions in the previous layer; and (3) Decoder self-attention layers, where each decoder position attends to all positions up to and including itself, with leftward-only flow enforced by masking illegal subsequent connections to -infinity before softmax to preserve the auto-regressive property.",
+    "finish_reason": "stop",
+    "gold_pages": [
+      "1706.03762v7 p.5",
+      "1706.03762v7 p.5",
+      "1706.03762v7 p.5"
+    ],
+    "grade_reasons": [
+      "all required facts present, gold page cited, no forbidden claims"
+    ],
+    "kind": "answer",
+    "model_id": "qwen/qwen3.8-27b",
+    "proposed_grade": "correct",
+    "question": "What are the three different ways multi-head attention is used in the Transformer architecture? Explain the role of each.",
+    "question_id": "q04",
+    "raw_answer": "The Transformer uses multi-head attention in three different ways: encoder-decoder attention, encoder self-attention, and decoder self-attention [P1]. In encoder-decoder attention layers, queries come from the previous decoder layer while memory keys and values come from the encoder output, allowing every decoder position to attend to all input positions [P1]. The encoder contains self-attention layers where keys, values, and queries all originate from the output of the previous encoder layer, enabling each position to attend to all positions in that previous layer [P1]. Similarly, decoder self-attention layers allow each position to attend to all positions in the decoder up to and including that position [P1]. To preserve the auto-regressive property, the decoder implementation masks out illegal connections by setting their values to −∞ in the softmax input [P1]. This masking prevents leftward information flow within the decoder [P1].",
+    "request_id": "exp-20261113T064542Z-c482696-000011",
+    "retrieval_setting": "balanced_rerank",
+    "retrieved": [
+      "[P1] 1706.03762v7 pp.5-5 1706.03762v7_p5_c1",
+      "[P2] 1706.03762v7 pp.10-10 1706.03762v7_p10_c1",
+      "[P3] 1706.03762v7 pp.2-2 1706.03762v7_p2_c2",
+      "[P4] 1706.03762v7 pp.2-2 1706.03762v7_p2_c1"
+    ],
+    "review_status": "pending",
+    "status": "ok",
+    "tokens_in": 1329,
+    "tokens_out": 184,
+    "trap_type": null,
+    "verification_verdict": "VERIFIED",
+    "verifier_failures": []
+  },
+  {
+    "answerable": true,
+    "category": "direct_factual",
+    "cited_pages": [
+      "1706.03762v7 pp.5-5 [P1]",
+      "1706.03762v7 pp.4-5 [P4]"
+    ],
+    "delivered_text": "The Transformer uses multi-head attention in three different ways: encoder-decoder attention, encoder self-attention, and decoder self-attention [P1]. In encoder-decoder attention layers, queries come from the previous decoder layer while memory keys and values come from the encoder output, allowing every decoder position to attend to all input positions [P1]. The encoder contains self-attention layers where keys, values, and queries all originate from the output of the previous encoder layer, enabling each position to attend to all positions in that previous layer [P1]. Similarly, decoder self-attention layers allow each position to attend to all positions in the decoder up to and including that position [P1]. To preserve the auto-regressive property in the decoder, leftward information flow is prevented by masking out illegal connections in the softmax input [P1]. Multi-head attention generally allows the model to jointly attend to information from different representation subspaces at different positions [P4].",
+    "error_code": null,
+    "expected_answer": "The Transformer uses multi-head attention in three ways: (1) Encoder-decoder attention layers, where queries come from the previous decoder layer and memory keys and values come from the encoder output, allowing every decoder position to attend over all input sequence positions; (2) Encoder self-attention layers, where queries, keys, and values all come from the output of the previous encoder layer so every position can attend to all positions in the previous layer; and (3) Decoder self-attention layers, where each decoder position attends to all positions up to and including itself, with leftward-only flow enforced by masking illegal subsequent connections to -infinity before softmax to preserve the auto-regressive property.",
+    "finish_reason": "stop",
+    "gold_pages": [
+      "1706.03762v7 p.5",
+      "1706.03762v7 p.5",
+      "1706.03762v7 p.5"
+    ],
+    "grade_reasons": [
+      "all required facts present, gold page cited, no forbidden claims"
+    ],
+    "kind": "answer",
+    "model_id": "qwen/qwen3.8-27b",
+    "proposed_grade": "correct",
+    "question": "What are the three different ways multi-head attention is used in the Transformer architecture? Explain the role of each.",
+    "question_id": "q04",
+    "raw_answer": "The Transformer uses multi-head attention in three different ways: encoder-decoder attention, encoder self-attention, and decoder self-attention [P1]. In encoder-decoder attention layers, queries come from the previous decoder layer while memory keys and values come from the encoder output, allowing every decoder position to attend to all input positions [P1]. The encoder contains self-attention layers where keys, values, and queries all originate from the output of the previous encoder layer, enabling each position to attend to all positions in that previous layer [P1]. Similarly, decoder self-attention layers allow each position to attend to all positions in the decoder up to and including that position [P1]. To preserve the auto-regressive property in the decoder, leftward information flow is prevented by masking out illegal connections in the softmax input [P1]. Multi-head attention generally allows the model to jointly attend to information from different representation subspaces at different positions [P4].",
+    "request_id": "exp-20261113T064542Z-c482696-000012",
+    "retrieval_setting": "large_wide",
+    "retrieved": [
+      "[P1] 1706.03762v7 pp.5-5 1706.03762v7_p5_c0",
+      "[P2] 1706.03762v7 pp.3-4 1706.03762v7_p3_c1",
+      "[P3] 1706.03762v7 pp.1-1 1706.03762v7_p1_c1",
+      "[P4] 1706.03762v7 pp.4-5 1706.03762v7_p4_c1",
+      "[P5] 1706.03762v7 pp.2-2 1706.03762v7_p2_c1"
+    ],
+    "review_status": "pending",
+    "status": "ok",
+    "tokens_in": 2006,
+    "tokens_out": 193,
+    "trap_type": null,
+    "verification_verdict": "VERIFIED",
+    "verifier_failures": []
+  },
+  {
+    "answerable": true,
+    "category": "multi_hop",
+    "cited_pages": [
+      "1706.03762v7 pp.6-6 [P1]",
+      "1706.03762v7 pp.6-6 [P2]",
+      "1706.03762v7 pp.9-9 [P3]"
+    ],
+    "delivered_text": "The Transformer requires positional encoding because the model contains no recurrence and no convolution, necessitating the injection of information about the relative or absolute position of tokens [P1]. The authors chose sinusoidal positional encodings because they hypothesized this function would allow the model to easily learn to attend by relative positions [P1]. Additionally, the sinusoidal version was selected because it may allow the model to extrapolate to sequence lengths longer than those encountered during training [P2]. The authors noted that learned positional embeddings produced nearly identical results to the sinusoidal version [P2]. This finding is supported by experiments where replacing sinusoidal positional encoding with learned positional embeddings yielded nearly identical results to the base model [P3].",
+    "error_code": null,
+    "expected_answer": "Because the Transformer contains no recurrence and no convolution, it must inject information about the relative or absolute position of tokens so the model can make use of sequence order. Although learned and sinusoidal positional embeddings produced nearly identical results, the authors chose sinusoidal encodings (sine and cosine functions of different frequencies) because: (1) they hypothesized it allows easily learning to attend by relative positions since PE_{pos+k} is a linear function of PE_{pos}, and (2) it may allow the model to extrapolate to sequence lengths longer than those encountered during training.",
+    "finish_reason": "stop",
+    "gold_pages": [
+      "1706.03762v7 p.6",
+      "1706.03762v7 p.6"
+    ],
+    "grade_reasons": [
+      "all required facts present, gold page cited, no forbidden claims"
+    ],
+    "kind": "answer",
+    "model_id": "qwen/qwen3.8-27b",
+    "proposed_grade": "correct",
+    "question": "Why does the Transformer require positional encoding, and why did the authors choose sinusoidal positional encodings instead of learned positional embeddings?",
+    "question_id": "q05",
+    "raw_answer": "The Transformer requires positional encoding because the model contains no recurrence and no convolution, necessitating the injection of information about the relative or absolute position of tokens [P1]. The authors chose sinusoidal positional encodings because they hypothesized this function would allow the model to easily learn to attend by relative positions [P1]. Additionally, the sinusoidal version was selected because it may allow the model to extrapolate to sequence lengths longer than those encountered during training [P2]. The authors noted that learned positional embeddings produced nearly identical results to the sinusoidal version [P2]. This finding is supported by experiments where replacing sinusoidal positional encoding with learned positional embeddings yielded nearly identical results to the base model [P3].",
+    "request_id": "exp-20261113T064542Z-c482696-000013",
+    "retrieval_setting": "small_fast",
+    "retrieved": [
+      "[P1] 1706.03762v7 pp.6-6 1706.03762v7_p6_c0",
+      "[P2] 1706.03762v7 pp.6-6 1706.03762v7_p6_c1",
+      "[P3] 1706.03762v7 pp.9-9 1706.03762v7_p9_c1",
+      "[P4] 2410.00037v1 pp.14-14 2410.00037v1_p14_c0"
+    ],
+    "review_status": "pending",
+    "status": "ok",
+    "tokens_in": 1161,
+    "tokens_out": 142,
+    "trap_type": null,
+    "verification_verdict": "VERIFIED",
+    "verifier_failures": []
+  },
+  {
+    "answerable": true,
+    "category": "multi_hop",
+    "cited_pages": [
+      "1706.03762v7 pp.6-6 [P1]",
+      "1706.03762v7 pp.9-9 [P2]"
+    ],
+    "delivered_text": "The Transformer requires positional encoding because the model contains no recurrence and no convolution, necessitating the injection of information about the relative or absolute position of tokens [P1]. The authors chose sinusoidal positional encodings because they hypothesized this function would allow the model to easily learn to attend by relative positions [P1]. Specifically, for any fixed offset k, PE_pos_+_k can be represented as a linear function of PEpos [P1]. The authors also noted that the sinusoidal version may allow the model to extrapolate to sequence lengths longer than those seen during training [P1]. Although they experimented with learned positional embeddings and found the two versions produced nearly identical results, they selected the sinusoidal version for its extrapolation potential [P1]. [P2]",
+    "error_code": null,
+    "expected_answer": "Because the Transformer contains no recurrence and no convolution, it must inject information about the relative or absolute position of tokens so the model can make use of sequence order. Although learned and sinusoidal positional embeddings produced nearly identical results, the authors chose sinusoidal encodings (sine and cosine functions of different frequencies) because: (1) they hypothesized it allows easily learning to attend by relative positions since PE_{pos+k} is a linear function of PE_{pos}, and (2) it may allow the model to extrapolate to sequence lengths longer than those encountered during training.",
+    "finish_reason": "stop",
+    "gold_pages": [
+      "1706.03762v7 p.6",
+      "1706.03762v7 p.6"
+    ],
+    "grade_reasons": [
+      "all required facts present, gold page cited, no forbidden claims"
+    ],
+    "kind": "answer",
+    "model_id": "qwen/qwen3.8-27b",
+    "proposed_grade": "correct",
+    "question": "Why does the Transformer require positional encoding, and why did the authors choose sinusoidal positional encodings instead of learned positional embeddings?",
+    "question_id": "q05",
+    "raw_answer": "The Transformer requires positional encoding because the model contains no recurrence and no convolution, necessitating the injection of information about the relative or absolute position of tokens [P1]. The authors chose sinusoidal positional encodings because they hypothesized this function would allow the model to easily learn to attend by relative positions [P1]. Specifically, for any fixed offset k, PE_pos_+_k can be represented as a linear function of PEpos [P1]. The authors also noted that the sinusoidal version may allow the model to extrapolate to sequence lengths longer than those seen during training [P1]. Although they experimented with learned positional embeddings and found the two versions produced nearly identical results, they selected the sinusoidal version for its extrapolation potential [P1]. [P2]",
+    "request_id": "exp-20261113T064542Z-c482696-000014",
+    "retrieval_setting": "balanced_rerank",
+    "retrieved": [
+      "[P1] 1706.03762v7 pp.6-6 1706.03762v7_p6_c0",
+      "[P2] 1706.03762v7 pp.9-9 1706.03762v7_p9_c0",
+      "[P3] 1706.03762v7 pp.8-9 1706.03762v7_p8_c3",
+      "[P4] 1706.03762v7 pp.7-8 1706.03762v7_p7_c5"
+    ],
+    "review_status": "pending",
+    "status": "ok",
+    "tokens_in": 2247,
+    "tokens_out": 156,
+    "trap_type": null,
+    "verification_verdict": "VERIFIED",
+    "verifier_failures": []
+  },
+  {
+    "answerable": true,
+    "category": "multi_hop",
+    "cited_pages": [
+      "1706.03762v7 pp.6-6 [P1]",
+      "1706.03762v7 pp.8-9 [P2]"
+    ],
+    "delivered_text": "The Transformer requires positional encoding because the model contains no recurrence or convolution, necessitating the injection of information about the relative or absolute position of tokens [P1]. The authors chose sinusoidal positional encodings because they hypothesized this function would allow the model to easily learn to attend by relative positions [P1]. Additionally, the sinusoidal version was selected because it may allow the model to extrapolate to sequence lengths longer than those encountered during training [P1]. The authors noted that learned positional embeddings produced nearly identical results to the sinusoidal version [P1]. [P2] confirms that replacing sinusoidal positional encoding with learned positional embeddings resulted in nearly identical performance to the base model.",
+    "error_code": null,
+    "expected_answer": "Because the Transformer contains no recurrence and no convolution, it must inject information about the relative or absolute position of tokens so the model can make use of sequence order. Although learned and sinusoidal positional embeddings produced nearly identical results, the authors chose sinusoidal encodings (sine and cosine functions of different frequencies) because: (1) they hypothesized it allows easily learning to attend by relative positions since PE_{pos+k} is a linear function of PE_{pos}, and (2) it may allow the model to extrapolate to sequence lengths longer than those encountered during training.",
+    "finish_reason": "stop",
+    "gold_pages": [
+      "1706.03762v7 p.6",
+      "1706.03762v7 p.6"
+    ],
+    "grade_reasons": [
+      "missing required facts: ['no recurrence and no convolution']"
+    ],
+    "kind": "answer",
+    "model_id": "qwen/qwen3.8-27b",
+    "proposed_grade": "wrong",
+    "question": "Why does the Transformer require positional encoding, and why did the authors choose sinusoidal positional encodings instead of learned positional embeddings?",
+    "question_id": "q05",
+    "raw_answer": "The Transformer requires positional encoding because the model contains no recurrence or convolution, necessitating the injection of information about the relative or absolute position of tokens [P1]. The authors chose sinusoidal positional encodings because they hypothesized this function would allow the model to easily learn to attend by relative positions [P1]. Additionally, the sinusoidal version was selected because it may allow the model to extrapolate to sequence lengths longer than those encountered during training [P1]. The authors noted that learned positional embeddings produced nearly identical results to the sinusoidal version [P1]. [P2] confirms that replacing sinusoidal positional encoding with learned positional embeddings resulted in nearly identical performance to the base model.",
+    "request_id": "exp-20261113T064542Z-c482696-000015",
+    "retrieval_setting": "large_wide",
+    "retrieved": [
+      "[P1] 1706.03762v7 pp.6-6 1706.03762v7_p6_c0",
+      "[P2] 1706.03762v7 pp.8-9 1706.03762v7_p8_c1",
+      "[P3] 2410.00037v1 pp.10-11 2410.00037v1_p10_c0",
+      "[P4] 1706.03762v7 pp.7-8 1706.03762v7_p7_c5",
+      "[P5] 2410.00037v1 pp.14-14 2410.00037v1_p14_c0"
+    ],
+    "review_status": "pending",
+    "status": "ok",
+    "tokens_in": 3005,
+    "tokens_out": 138,
+    "trap_type": null,
+    "verification_verdict": "VERIFIED",
+    "verifier_failures": []
+  },
+  {
+    "answerable": true,
+    "category": "direct_factual",
+    "cited_pages": [
+      "2410.00037v1 pp.2-2 [P2]",
+      "2410.00037v1 pp.5-5 [P3]"
+    ],
+    "delivered_text": "Moshi aims to solve the limitations of latency, the textual information bottleneck, and turn-based modeling [P2]. Conventional turn-based paradigms fall short in modeling interruptions, overlapping speech, and backchanneling [P2]. The model addresses the need to run in real time and allow for long conversations in full-duplex [P3]. It is designed to be speech-to-speech to handle paralinguistic communication [P3]. Moshi also aims to display knowledge and reasoning abilities for helpful and enjoyable conversations [P3].",
+    "error_code": null,
+    "expected_answer": "Conventional cascaded spoken dialogue pipelines (voice activity detection, ASR, text dialogue, and TTS) suffer from three major limitations that Moshi addresses: (1) high latency of several seconds caused by compounding independent pipeline components; (2) a textual information bottleneck, where using text as the intermediate modality loses paralinguistic information (emotion, accent) and non-speech audio events; and (3) turn-based modeling, which segments dialogue into discrete speaker turns and cannot handle overlapping speech, interruptions, or backchanneling/interjections.",
+    "finish_reason": "stop",
+    "gold_pages": [
+      "2410.00037v1 p.1",
+      "2410.00037v1 p.2"
+    ],
+    "grade_reasons": [
+      "missing required facts: ['latency of several seconds|several seconds|high latency']"
+    ],
+    "kind": "answer",
+    "model_id": "qwen/qwen3.8-27b",
+    "proposed_grade": "wrong",
+    "question": "What are the three major limitations of conventional spoken dialogue systems that Moshi attempts to address?",
+    "question_id": "q06",
+    "raw_answer": "Moshi aims to solve the limitations of latency, the textual information bottleneck, and turn-based modeling [P2]. Conventional turn-based paradigms fall short in modeling interruptions, overlapping speech, and backchanneling [P2]. The model addresses the need to run in real time and allow for long conversations in full-duplex [P3]. It is designed to be speech-to-speech to handle paralinguistic communication [P3]. Moshi also aims to display knowledge and reasoning abilities for helpful and enjoyable conversations [P3].",
+    "request_id": "exp-20261113T064542Z-c482696-000016",
+    "retrieval_setting": "small_fast",
+    "retrieved": [
+      "[P1] 2410.00037v1 pp.6-6 2410.00037v1_p6_c1",
+      "[P2] 2410.00037v1 pp.2-2 2410.00037v1_p2_c2",
+      "[P3] 2410.00037v1 pp.5-5 2410.00037v1_p5_c2",
+      "[P4] 2410.00037v1 pp.28-28 2410.00037v1_p28_c3"
+    ],
+    "review_status": "pending",
+    "status": "ok",
+    "tokens_in": 1309,
+    "tokens_out": 111,
+    "trap_type": null,
+    "verification_verdict": "VERIFIED",
+    "verifier_failures": []
+  },
+  {
+    "answerable": true,
+    "category": "direct_factual",
+    "cited_pages": [
+      "2410.00037v1 pp.1-1 [P2]"
+    ],
+    "delivered_text": "Current systems for spoken dialogue rely on pipelines of independent components, which induces a latency of several seconds between interactions [P2]. Because text serves as the intermediate modality in these frameworks, non-linguistic information such as emotion or non-speech sounds is lost during the interaction [P2]. These systems also rely on a segmentation into speaker turns, which fails to account for overlapping speech, interruptions, and interjections [P2].",
+    "error_code": null,
+    "expected_answer": "Conventional cascaded spoken dialogue pipelines (voice activity detection, ASR, text dialogue, and TTS) suffer from three major limitations that Moshi addresses: (1) high latency of several seconds caused by compounding independent pipeline components; (2) a textual information bottleneck, where using text as the intermediate modality loses paralinguistic information (emotion, accent) and non-speech audio events; and (3) turn-based modeling, which segments dialogue into discrete speaker turns and cannot handle overlapping speech, interruptions, or backchanneling/interjections.",
+    "finish_reason": "stop",
+    "gold_pages": [
+      "2410.00037v1 p.1",
+      "2410.00037v1 p.2"
+    ],
+    "grade_reasons": [
+      "all required facts present, gold page cited, no forbidden claims"
+    ],
+    "kind": "answer",
+    "model_id": "qwen/qwen3.8-27b",
+    "proposed_grade": "correct",
+    "question": "What are the three major limitations of conventional spoken dialogue systems that Moshi attempts to address?",
+    "question_id": "q06",
+    "raw_answer": "Current systems for spoken dialogue rely on pipelines of independent components, which induces a latency of several seconds between interactions [P2]. Because text serves as the intermediate modality in these frameworks, non-linguistic information such as emotion or non-speech sounds is lost during the interaction [P2]. These systems also rely on a segmentation into speaker turns, which fails to account for overlapping speech, interruptions, and interjections [P2].",
+    "request_id": "exp-20261113T064542Z-c482696-000017",
+    "retrieval_setting": "balanced_rerank",
+    "retrieved": [
+      "[P1] 2410.00037v1 pp.6-6 2410.00037v1_p6_c0",
+      "[P2] 2410.00037v1 pp.1-1 2410.00037v1_p1_c1",
+      "[P3] 2410.00037v1 pp.5-6 2410.00037v1_p5_c2",
+      "[P4] 2410.00037v1 pp.5-5 2410.00037v1_p5_c1"
+    ],
+    "review_status": "pending",
+    "status": "ok",
+    "tokens_in": 1626,
+    "tokens_out": 89,
+    "trap_type": null,
+    "verification_verdict": "VERIFIED",
+    "verifier_failures": []
+  },
+  {
+    "answerable": true,
+    "category": "direct_factual",
+    "cited_pages": [
+      "2410.00037v1 pp.2-2 [P2]"
+    ],
+    "delivered_text": "Conventional spoken dialogue systems suffer from high latency, often reaching several seconds, which contrasts with the few hundred milliseconds typical of natural conversations [P2]. These systems rely on text as an intermediate modality, causing them to ignore non-linguistic information such as emotion, accent, and non-speech audio [P2]. Finally, they are fundamentally turn-based, which prevents them from effectively modeling conversational dynamics like interruptions, overlapping speech, and backchanneling [P2].",
+    "error_code": null,
+    "expected_answer": "Conventional cascaded spoken dialogue pipelines (voice activity detection, ASR, text dialogue, and TTS) suffer from three major limitations that Moshi addresses: (1) high latency of several seconds caused by compounding independent pipeline components; (2) a textual information bottleneck, where using text as the intermediate modality loses paralinguistic information (emotion, accent) and non-speech audio events; and (3) turn-based modeling, which segments dialogue into discrete speaker turns and cannot handle overlapping speech, interruptions, or backchanneling/interjections.",
+    "finish_reason": "stop",
+    "gold_pages": [
+      "2410.00037v1 p.1",
+      "2410.00037v1 p.2"
+    ],
+    "grade_reasons": [
+      "missing required facts: ['turn-based modeling|speaker turns']"
+    ],
+    "kind": "answer",
+    "model_id": "qwen/qwen3.8-27b",
+    "proposed_grade": "wrong",
+    "question": "What are the three major limitations of conventional spoken dialogue systems that Moshi attempts to address?",
+    "question_id": "q06",
+    "raw_answer": "Conventional spoken dialogue systems suffer from high latency, often reaching several seconds, which contrasts with the few hundred milliseconds typical of natural conversations [P2]. These systems rely on text as an intermediate modality, causing them to ignore non-linguistic information such as emotion, accent, and non-speech audio [P2]. Finally, they are fundamentally turn-based, which prevents them from effectively modeling conversational dynamics like interruptions, overlapping speech, and backchanneling [P2].",
+    "request_id": "exp-20261113T064542Z-c482696-000018",
+    "retrieval_setting": "large_wide",
+    "retrieved": [
+      "[P1] 2410.00037v1 pp.6-6 2410.00037v1_p6_c0",
+      "[P2] 2410.00037v1 pp.2-2 2410.00037v1_p2_c0",
+      "[P3] 2410.00037v1 pp.5-6 2410.00037v1_p5_c1",
+      "[P4] 2410.00037v1 pp.1-1 2410.00037v1_p1_c1",
+      "[P5] 2410.00037v1 pp.28-29 2410.00037v1_p28_c1"
+    ],
+    "review_status": "pending",
+    "status": "ok",
+    "tokens_in": 2665,
+    "tokens_out": 98,
+    "trap_type": null,
+    "verification_verdict": "VERIFIED",
+    "verifier_failures": []
+  },
+  {
+    "answerable": true,
+    "category": "multi_hop",
+    "cited_pages": [
+      "2410.00037v1 pp.5-6 [P1]",
+      "2410.00037v1 pp.6-7 [P4]",
+      "2410.00037v1 pp.24-24 [P2]"
+    ],
+    "delivered_text": "Helium is a bespoke text language model backbone built from scratch to provide strong reasoning abilities to the system [P1][P4]. Mimi is a neural audio codec that uses residual vector quantization and distills semantic knowledge from a self-supervised speech model [P1]. Mimi operates as a fully causal tokenizer at a low framerate and bitrate, which is crucial for achieving the low latency required for real-time dialogue [P2]. Moshi is the overarching multi-stream speech-to-speech Transformer model that enables full-duplex spoken dialogue [P4]. The architecture allows Moshi to speak and listen to the user simultaneously without explicitly modeling speaker turns [P4]. Moshi utilizes Inner Monologue to jointly model text and audio tokens, allowing it to exploit the knowledge imparted by the text modality while remaining a speech-to-speech system [P4]. [P1]",
+    "error_code": null,
+    "expected_answer": "Helium is a 7B-parameter Transformer text LLM pretrained on 2.1T English tokens that provides reasoning and factual knowledge and initializes Moshi's Temporal Transformer. Mimi is a causal, streaming neural audio codec (SeaNet autoencoder with causal Transformer bottlenecks and split RVQ distilling WavLM semantic info) that encodes 24 kHz waveforms into discrete semantic-acoustic tokens at 12.5 Hz (8 codebooks) and decodes them back to audio. Moshi integrates them in a streaming hierarchical RQ-Transformer: the Helium-based Temporal Transformer produces a per-timestep context vector across dual streams (user and system audio plus Inner Monologue text), conditioning a smaller Depth Transformer to predict Mimi audio tokens and speech in real time.",
+    "finish_reason": "stop",
+    "gold_pages": [
+      "2410.00037v1 p.3",
+      "2410.00037v1 p.7",
+      "2410.00037v1 p.13"
+    ],
+    "grade_reasons": [
+      "missing required facts: ['Helium is a 7B|7B-parameter|7B parameter|7B text', 'Temporal Transformer|RQ-Transformer', 'Depth Transformer']"
+    ],
+    "kind": "answer",
+    "model_id": "qwen/qwen3.8-27b",
+    "proposed_grade": "wrong",
+    "question": "Explain the individual roles of Helium, Mimi and Moshi in the overall architecture. How do these three components work together?",
+    "question_id": "q07",
+    "raw_answer": "Helium is a bespoke text language model backbone built from scratch to provide strong reasoning abilities to the system [P1][P4]. Mimi is a neural audio codec that uses residual vector quantization and distills semantic knowledge from a self-supervised speech model [P1]. Mimi operates as a fully causal tokenizer at a low framerate and bitrate, which is crucial for achieving the low latency required for real-time dialogue [P2]. Moshi is the overarching multi-stream speech-to-speech Transformer model that enables full-duplex spoken dialogue [P4]. The architecture allows Moshi to speak and listen to the user simultaneously without explicitly modeling speaker turns [P4]. Moshi utilizes Inner Monologue to jointly model text and audio tokens, allowing it to exploit the knowledge imparted by the text modality while remaining a speech-to-speech system [P4]. [P1]",
+    "request_id": "exp-20261113T064542Z-c482696-000019",
+    "retrieval_setting": "small_fast",
+    "retrieved": [
+      "[P1] 2410.00037v1 pp.5-6 2410.00037v1_p5_c3",
+      "[P2] 2410.00037v1 pp.24-24 2410.00037v1_p24_c2",
+      "[P3] 2410.00037v1 pp.32-32 2410.00037v1_p32_c1",
+      "[P4] 2410.00037v1 pp.6-7 2410.00037v1_p6_c2"
+    ],
+    "review_status": "pending",
+    "status": "ok",
+    "tokens_in": 1429,
+    "tokens_out": 179,
+    "trap_type": null,
+    "verification_verdict": "VERIFIED",
+    "verifier_failures": []
+  },
+  {
+    "answerable": true,
+    "category": "multi_hop",
+    "cited_pages": [
+      "2410.00037v1 pp.5-6 [P1]",
+      "2410.00037v1 pp.6-7 [P3]",
+      "2410.00037v1 pp.3-3 [P4]"
+    ],
+    "delivered_text": "Helium is a text language model backbone built from scratch to provide strong reasoning abilities to the system [P1][P3]. Mimi is a neural audio codec that uses residual vector quantization and distills semantic knowledge to convert audio into discrete tokens [P1][P3][P4]. Moshi is the overarching multi-stream speech-to-speech Transformer model that enables full-duplex spoken dialogue [P3]. The architecture combines Helium with a smaller Transformer to predict audio tokens in a hierarchical and streaming fashion [P4]. Moshi jointly models the audio streams from both the user and the system, along with Moshi’s text tokens, using a Depth Transformer [P3]. This multi-stream design allows the model to speak and listen simultaneously without explicitly modeling speaker turns [P3].",
+    "error_code": null,
+    "expected_answer": "Helium is a 7B-parameter Transformer text LLM pretrained on 2.1T English tokens that provides reasoning and factual knowledge and initializes Moshi's Temporal Transformer. Mimi is a causal, streaming neural audio codec (SeaNet autoencoder with causal Transformer bottlenecks and split RVQ distilling WavLM semantic info) that encodes 24 kHz waveforms into discrete semantic-acoustic tokens at 12.5 Hz (8 codebooks) and decodes them back to audio. Moshi integrates them in a streaming hierarchical RQ-Transformer: the Helium-based Temporal Transformer produces a per-timestep context vector across dual streams (user and system audio plus Inner Monologue text), conditioning a smaller Depth Transformer to predict Mimi audio tokens and speech in real time.",
+    "finish_reason": "stop",
+    "gold_pages": [
+      "2410.00037v1 p.3",
+      "2410.00037v1 p.7",
+      "2410.00037v1 p.13"
+    ],
+    "grade_reasons": [
+      "missing required facts: ['Helium is a 7B|7B-parameter|7B parameter|7B text', 'Temporal Transformer|RQ-Transformer']"
+    ],
+    "kind": "answer",
+    "model_id": "qwen/qwen3.8-27b",
+    "proposed_grade": "wrong",
+    "question": "Explain the individual roles of Helium, Mimi and Moshi in the overall architecture. How do these three components work together?",
+    "question_id": "q07",
+    "raw_answer": "Helium is a text language model backbone built from scratch to provide strong reasoning abilities to the system [P1][P3]. Mimi is a neural audio codec that uses residual vector quantization and distills semantic knowledge to convert audio into discrete tokens [P1][P3][P4]. Moshi is the overarching multi-stream speech-to-speech Transformer model that enables full-duplex spoken dialogue [P3]. The architecture combines Helium with a smaller Transformer to predict audio tokens in a hierarchical and streaming fashion [P4]. Moshi jointly models the audio streams from both the user and the system, along with Moshi’s text tokens, using a Depth Transformer [P3]. This multi-stream design allows the model to speak and listen simultaneously without explicitly modeling speaker turns [P3].",
+    "request_id": "exp-20261113T064542Z-c482696-000020",
+    "retrieval_setting": "balanced_rerank",
+    "retrieved": [
+      "[P1] 2410.00037v1 pp.5-6 2410.00037v1_p5_c2",
+      "[P2] 2410.00037v1 pp.24-25 2410.00037v1_p24_c2",
+      "[P3] 2410.00037v1 pp.6-7 2410.00037v1_p6_c1",
+      "[P4] 2410.00037v1 pp.3-3 2410.00037v1_p3_c0"
+    ],
+    "review_status": "pending",
+    "status": "ok",
+    "tokens_in": 1722,
+    "tokens_out": 161,
+    "trap_type": null,
+    "verification_verdict": "VERIFIED",
+    "verifier_failures": []
+  },
+  {
+    "answerable": true,
+    "category": "multi_hop",
+    "cited_pages": [
+      "2410.00037v1 pp.6-7 [P4]"
+    ],
+    "delivered_text": "Helium is a text language model built from scratch that serves as the backbone for Moshi, providing strong reasoning abilities through high-quality text data [P4]. Mimi is a neural audio codec that combines semantic and acoustic information into a single tokenizer using residual vector quantization and knowledge distillation [P4]. Moshi is the overall multi-stream speech-to-speech Transformer model that enables full-duplex spoken dialogue by leveraging these components [P4]. The architecture uses Mimi to capture user input audio and Moshi's output voice with high quality and efficiency [P4]. Moshi jointly models the audio streams from both the user and Moshi, along with Moshi's text tokens, using a Depth Transformer compatible with streaming inference [P4]. This integration allows Moshi to exploit the knowledge imparted from the text modality via Inner Monologue while remaining a speech-to-speech system [P4].",
+    "error_code": null,
+    "expected_answer": "Helium is a 7B-parameter Transformer text LLM pretrained on 2.1T English tokens that provides reasoning and factual knowledge and initializes Moshi's Temporal Transformer. Mimi is a causal, streaming neural audio codec (SeaNet autoencoder with causal Transformer bottlenecks and split RVQ distilling WavLM semantic info) that encodes 24 kHz waveforms into discrete semantic-acoustic tokens at 12.5 Hz (8 codebooks) and decodes them back to audio. Moshi integrates them in a streaming hierarchical RQ-Transformer: the Helium-based Temporal Transformer produces a per-timestep context vector across dual streams (user and system audio plus Inner Monologue text), conditioning a smaller Depth Transformer to predict Mimi audio tokens and speech in real time.",
+    "finish_reason": "stop",
+    "gold_pages": [
+      "2410.00037v1 p.3",
+      "2410.00037v1 p.7",
+      "2410.00037v1 p.13"
+    ],
+    "grade_reasons": [
+      "missing required facts: ['Helium is a 7B|7B-parameter|7B parameter|7B text', 'Temporal Transformer|RQ-Transformer']"
+    ],
+    "kind": "answer",
+    "model_id": "qwen/qwen3.8-27b",
+    "proposed_grade": "wrong",
+    "question": "Explain the individual roles of Helium, Mimi and Moshi in the overall architecture. How do these three components work together?",
+    "question_id": "q07",
+    "raw_answer": "Helium is a text language model built from scratch that serves as the backbone for Moshi, providing strong reasoning abilities through high-quality text data [P4]. Mimi is a neural audio codec that combines semantic and acoustic information into a single tokenizer using residual vector quantization and knowledge distillation [P4]. Moshi is the overall multi-stream speech-to-speech Transformer model that enables full-duplex spoken dialogue by leveraging these components [P4]. The architecture uses Mimi to capture user input audio and Moshi's output voice with high quality and efficiency [P4]. Moshi jointly models the audio streams from both the user and Moshi, along with Moshi's text tokens, using a Depth Transformer compatible with streaming inference [P4]. This integration allows Moshi to exploit the knowledge imparted from the text modality via Inner Monologue while remaining a speech-to-speech system [P4].",
+    "request_id": "exp-20261113T064542Z-c482696-000021",
+    "retrieval_setting": "large_wide",
+    "retrieved": [
+      "[P1] 2410.00037v1 pp.24-25 2410.00037v1_p24_c1",
+      "[P2] 2410.00037v1 pp.5-6 2410.00037v1_p5_c1",
+      "[P3] 2410.00037v1 pp.62-63 2410.00037v1_p62_c2",
+      "[P4] 2410.00037v1 pp.6-7 2410.00037v1_p6_c1",
+      "[P5] 2410.00037v1 pp.27-28 2410.00037v1_p27_c0"
+    ],
+    "review_status": "pending",
+    "status": "ok",
+    "tokens_in": 3224,
+    "tokens_out": 184,
+    "trap_type": null,
+    "verification_verdict": "VERIFIED",
+    "verifier_failures": []
+  },
+  {
+    "answerable": true,
+    "category": "multi_hop",
+    "cited_pages": [
+      "2410.00037v1 pp.3-3 [P1]",
+      "2410.00037v1 pp.5-5 [P3]",
+      "2410.00037v1 pp.3-3 [P2]"
+    ],
+    "delivered_text": "Inner Monologue is a training and inference setup that predicts time-aligned text tokens before audio tokens to improve factuality and linguistic quality [P1]. It decomposes speech into a chain of text, semantic, and acoustic tokens, predicting this structured sequence in a hierarchical manner [P3]. This approach uses text tokens as a per-timestep prefix to the semantic token, extending the coarse-to-fine generation hierarchy [P2]. The method significantly improves the length and quality of generated speech by leveraging this structured prediction [P2]. Additionally, Inner Monologue allows representing all utterances as both text and speech without switching modalities [P3]. This hierarchical modeling decomposes the generation task without increasing the sequence length of the Transformer outputs [P3].",
+    "error_code": null,
+    "expected_answer": "Inner Monologue is a training and inference scaffolding procedure in which Moshi jointly models its own speech as time-aligned text tokens (aligned to Mimi's 12.5 Hz frame rate using word-level timestamps with PAD and EPAD padding tokens) inserted as the first sub-sequence—a per-timestep prefix before semantic and acoustic audio tokens. Predicting text tokens first acts as linguistic scaffolding so semantic and acoustic tokens are conditioned on the underlying text LLM's knowledge and reasoning, substantially improving speech generation length, consistency, factuality, and linguistic quality—almost tripling accuracy on spoken question answering benchmarks at minimal cost (17 vs 16 tokens per timestep).",
+    "finish_reason": "stop",
+    "gold_pages": [
+      "2410.00037v1 p.3",
+      "2410.00037v1 p.15",
+      "2410.00037v1 p.29"
+    ],
+    "grade_reasons": [
+      "missing required facts: ['almost tripling']"
+    ],
+    "kind": "answer",
+    "model_id": "qwen/qwen3.8-27b",
+    "proposed_grade": "wrong",
+    "question": "What is the Inner Monologue mechanism in Moshi, and how does predicting time-aligned text tokens before audio tokens improve the quality of generated speech?",
+    "question_id": "q08",
+    "raw_answer": "Inner Monologue is a training and inference setup that predicts time-aligned text tokens before audio tokens to improve factuality and linguistic quality [P1]. It decomposes speech into a chain of text, semantic, and acoustic tokens, predicting this structured sequence in a hierarchical manner [P3]. This approach uses text tokens as a per-timestep prefix to the semantic token, extending the coarse-to-fine generation hierarchy [P2]. The method significantly improves the length and quality of generated speech by leveraging this structured prediction [P2]. Additionally, Inner Monologue allows representing all utterances as both text and speech without switching modalities [P3]. This hierarchical modeling decomposes the generation task without increasing the sequence length of the Transformer outputs [P3].",
+    "request_id": "exp-20261113T064542Z-c482696-000022",
+    "retrieval_setting": "small_fast",
+    "retrieved": [
+      "[P1] 2410.00037v1 pp.3-3 2410.00037v1_p3_c1",
+      "[P2] 2410.00037v1 pp.3-3 2410.00037v1_p3_c2",
+      "[P3] 2410.00037v1 pp.5-5 2410.00037v1_p5_c1",
+      "[P4] 2410.00037v1 pp.1-1 2410.00037v1_p1_c2"
+    ],
+    "review_status": "pending",
+    "status": "ok",
+    "tokens_in": 1307,
+    "tokens_out": 150,
+    "trap_type": null,
+    "verification_verdict": "VERIFIED",
+    "verifier_failures": []
+  },
+  {
+    "answerable": true,
+    "category": "multi_hop",
+    "cited_pages": [
+      "2410.00037v1 pp.3-3 [P1]",
+      "2410.00037v1 pp.5-5 [P2]"
+    ],
+    "delivered_text": "Inner Monologue is a training and inference setup for audio language models that predicts time-aligned text tokens before audio tokens [P1]. This mechanism significantly improves the factuality and linguistic quality of the generated speech [P1]. The approach extends the coarse-to-fine generation hierarchy by using text tokens as a per-timestep prefix to the semantic token [P1]. Experiments demonstrate that this method drastically improves both the length and quality of the generated speech [P1]. Additionally, Inner Monologue decomposes speech on a per-frame basis, allowing each prediction step to output a speech frame [P2]. This per-frame decomposition makes the model compatible with real-time generation, unlike systems that require generating a complete text sequence first [P2].",
+    "error_code": null,
+    "expected_answer": "Inner Monologue is a training and inference scaffolding procedure in which Moshi jointly models its own speech as time-aligned text tokens (aligned to Mimi's 12.5 Hz frame rate using word-level timestamps with PAD and EPAD padding tokens) inserted as the first sub-sequence—a per-timestep prefix before semantic and acoustic audio tokens. Predicting text tokens first acts as linguistic scaffolding so semantic and acoustic tokens are conditioned on the underlying text LLM's knowledge and reasoning, substantially improving speech generation length, consistency, factuality, and linguistic quality—almost tripling accuracy on spoken question answering benchmarks at minimal cost (17 vs 16 tokens per timestep).",
+    "finish_reason": "stop",
+    "gold_pages": [
+      "2410.00037v1 p.3",
+      "2410.00037v1 p.15",
+      "2410.00037v1 p.29"
+    ],
+    "grade_reasons": [
+      "missing required facts: ['almost tripling']"
+    ],
+    "kind": "answer",
+    "model_id": "qwen/qwen3.8-27b",
+    "proposed_grade": "wrong",
+    "question": "What is the Inner Monologue mechanism in Moshi, and how does predicting time-aligned text tokens before audio tokens improve the quality of generated speech?",
+    "question_id": "q08",
+    "raw_answer": "Inner Monologue is a training and inference setup for audio language models that predicts time-aligned text tokens before audio tokens [P1]. This mechanism significantly improves the factuality and linguistic quality of the generated speech [P1]. The approach extends the coarse-to-fine generation hierarchy by using text tokens as a per-timestep prefix to the semantic token [P1]. Experiments demonstrate that this method drastically improves both the length and quality of the generated speech [P1]. Additionally, Inner Monologue decomposes speech on a per-frame basis, allowing each prediction step to output a speech frame [P2]. This per-frame decomposition makes the model compatible with real-time generation, unlike systems that require generating a complete text sequence first [P2].",
+    "request_id": "exp-20261113T064542Z-c482696-000023",
+    "retrieval_setting": "balanced_rerank",
+    "retrieved": [
+      "[P1] 2410.00037v1 pp.3-3 2410.00037v1_p3_c1",
+      "[P2] 2410.00037v1 pp.5-5 2410.00037v1_p5_c1",
+      "[P3] 2410.00037v1 pp.26-26 2410.00037v1_p26_c2",
+      "[P4] 2410.00037v1 pp.31-31 2410.00037v1_p31_c0"
+    ],
+    "review_status": "pending",
+    "status": "ok",
+    "tokens_in": 1595,
+    "tokens_out": 148,
+    "trap_type": null,
+    "verification_verdict": "VERIFIED",
+    "verifier_failures": []
+  },
+  {
+    "answerable": true,
+    "category": "multi_hop",
+    "cited_pages": [
+      "2410.00037v1 pp.3-3 [P3]",
+      "2410.00037v1 pp.5-5 [P2]",
+      "2410.00037v1 pp.15-16 [P4]",
+      "2410.00037v1 pp.26-26 [P5]"
+    ],
+    "delivered_text": "Inner Monologue is a training and inference setup that predicts time-aligned text tokens as a prefix to audio tokens to improve the factuality and linguistic quality of generated speech [P3]. It decomposes speech into a chain of text, semantic, and acoustic tokens, predicting this structured sequence in a hierarchical manner [P2]. The text stream is derived from the transcription of Moshi's own audio using the SentencePiece tokenizer and Whisper [P4]. To align with the constant framerate of 12.5Hz, word-level timestamps from Whisper are used to map text tokens to specific time indices [P4]. This mechanism provides a scaffolding that increases the linguistic quality of generation, with ablation studies showing it has one of the most critical impacts on speech quality [P4]. The most drastic improvement to the quality and length of generated speech comes from enabling Inner Monologue [P5].",
+    "error_code": null,
+    "expected_answer": "Inner Monologue is a training and inference scaffolding procedure in which Moshi jointly models its own speech as time-aligned text tokens (aligned to Mimi's 12.5 Hz frame rate using word-level timestamps with PAD and EPAD padding tokens) inserted as the first sub-sequence—a per-timestep prefix before semantic and acoustic audio tokens. Predicting text tokens first acts as linguistic scaffolding so semantic and acoustic tokens are conditioned on the underlying text LLM's knowledge and reasoning, substantially improving speech generation length, consistency, factuality, and linguistic quality—almost tripling accuracy on spoken question answering benchmarks at minimal cost (17 vs 16 tokens per timestep).",
+    "finish_reason": "stop",
+    "gold_pages": [
+      "2410.00037v1 p.3",
+      "2410.00037v1 p.15",
+      "2410.00037v1 p.29"
+    ],
+    "grade_reasons": [
+      "missing required facts: ['almost tripling']"
+    ],
+    "kind": "answer",
+    "model_id": "qwen/qwen3.8-27b",
+    "proposed_grade": "wrong",
+    "question": "What is the Inner Monologue mechanism in Moshi, and how does predicting time-aligned text tokens before audio tokens improve the quality of generated speech?",
+    "question_id": "q08",
+    "raw_answer": "Inner Monologue is a training and inference setup that predicts time-aligned text tokens as a prefix to audio tokens to improve the factuality and linguistic quality of generated speech [P3]. It decomposes speech into a chain of text, semantic, and acoustic tokens, predicting this structured sequence in a hierarchical manner [P2]. The text stream is derived from the transcription of Moshi's own audio using the SentencePiece tokenizer and Whisper [P4]. To align with the constant framerate of 12.5Hz, word-level timestamps from Whisper are used to map text tokens to specific time indices [P4]. This mechanism provides a scaffolding that increases the linguistic quality of generation, with ablation studies showing it has one of the most critical impacts on speech quality [P4]. The most drastic improvement to the quality and length of generated speech comes from enabling Inner Monologue [P5].",
+    "request_id": "exp-20261113T064542Z-c482696-000024",
+    "retrieval_setting": "large_wide",
+    "retrieved": [
+      "[P1] 2410.00037v1 pp.1-1 2410.00037v1_p1_c1",
+      "[P2] 2410.00037v1 pp.5-5 2410.00037v1_p5_c0",
+      "[P3] 2410.00037v1 pp.3-3 2410.00037v1_p3_c0",
+      "[P4] 2410.00037v1 pp.15-16 2410.00037v1_p15_c0",
+      "[P5] 2410.00037v1 pp.26-26 2410.00037v1_p26_c0"
+    ],
+    "review_status": "pending",
+    "status": "ok",
+    "tokens_in": 2885,
+    "tokens_out": 179,
+    "trap_type": null,
+    "verification_verdict": "VERIFIED",
+    "verifier_failures": []
+  },
+  {
+    "answerable": true,
+    "category": "direct_factual",
+    "cited_pages": [
+      "2410.00037v1 pp.6-7 [P3]",
+      "2410.00037v1 pp.3-3 [P4]",
+      "2410.00037v1 pp.6-6 [P1]"
+    ],
+    "delivered_text": "Moshi achieves full-duplex communication by using a multi-stream architecture that allows the model to speak and listen to the user simultaneously without explicitly modeling speaker turns [P3]. This design enables the handling of full-duplex dialogues with arbitrary dynamics by modeling several audio streams in parallel [P4]. Modeling the user's and system's audio as separate parallel streams is important because previous approaches that model both into a single token stream are challenging in the presence of significant overlap [P1]. The multi-stream approach allows for a conceptually and practically simple handling of these complex dialogue dynamics [P4]. Unlike previous full-duplex systems that may not run online or lack text knowledge, Moshi's architecture supports real-time generation with strong reasoning abilities [P1][P3].\n\n[P1][P3][P4]",
+    "error_code": null,
+    "expected_answer": "Moshi achieves full-duplex communication through multi-stream autoregressive modeling: it concatenates two parallel audio token streams (with acoustic delay) into a joint sequence V—one stream for Moshi's own speech (plus Inner Monologue text) and one stream for the user's audio—where at inference time Moshi's tokens are sampled while user tokens are continuously fed in. Modeling both streams in parallel removes the concept of explicit speaker turns altogether, allowing Moshi to listen and speak simultaneously at every timestep and handle natural conversational dynamics such as overlapping speech, interruptions, and backchanneling.",
+    "finish_reason": "stop",
+    "gold_pages": [
+      "2410.00037v1 p.2",
+      "2410.00037v1 p.15",
+      "2410.00037v1 p.1",
+      "2410.00037v1 p.7"
+    ],
+    "grade_reasons": [
+      "missing required facts: ['removes the concept of speaker turn|explicit speaker turns|removal of explicit speaker turns', 'interruptions']"
+    ],
+    "kind": "answer",
+    "model_id": "qwen/qwen3.8-27b",
+    "proposed_grade": "wrong",
+    "question": "How does Moshi achieve full-duplex communication, and why is modelling the user's audio and the system's audio as separate parallel streams important?",
+    "question_id": "q09",
+    "raw_answer": "Moshi achieves full-duplex communication by using a multi-stream architecture that allows the model to speak and listen to the user simultaneously without explicitly modeling speaker turns [P3]. This design enables the handling of full-duplex dialogues with arbitrary dynamics by modeling several audio streams in parallel [P4]. Modeling the user's and system's audio as separate parallel streams is important because previous approaches that model both into a single token stream are challenging in the presence of significant overlap [P1]. The multi-stream approach allows for a conceptually and practically simple handling of these complex dialogue dynamics [P4]. Unlike previous full-duplex systems that may not run online or lack text knowledge, Moshi's architecture supports real-time generation with strong reasoning abilities [P1][P3].\n\n[P1][P3][P4]",
+    "request_id": "exp-20261113T064542Z-c482696-000025",
+    "retrieval_setting": "small_fast",
+    "retrieved": [
+      "[P1] 2410.00037v1 pp.6-6 2410.00037v1_p6_c0",
+      "[P2] 2410.00037v1 pp.5-6 2410.00037v1_p5_c3",
+      "[P3] 2410.00037v1 pp.6-7 2410.00037v1_p6_c2",
+      "[P4] 2410.00037v1 pp.3-3 2410.00037v1_p3_c1"
+    ],
+    "review_status": "pending",
+    "status": "ok",
+    "tokens_in": 1387,
+    "tokens_out": 167,
+    "trap_type": null,
+    "verification_verdict": "VERIFIED",
+    "verifier_failures": []
+  },
+  {
+    "answerable": true,
+    "category": "direct_factual",
+    "cited_pages": [
+      "2410.00037v1 pp.6-7 [P3]",
+      "2410.00037v1 pp.3-3 [P4]",
+      "2410.00037v1 pp.5-6 [P2]",
+      "2410.00037v1 pp.6-6 [P1]"
+    ],
+    "delivered_text": "Moshi achieves full-duplex communication by using a multi-stream architecture that allows the model to speak and listen to the user simultaneously without explicitly modeling speaker turns [P3]. This design enables the handling of full-duplex dialogues with arbitrary dynamics by modeling several audio streams in parallel [P4]. Modeling the user's and system's audio as separate parallel streams is important because combining them into a single token stream is challenging in the presence of significant overlap [P2]. The multi-stream approach allows Moshi to exploit all information from the user, including linguistic and non-linguistic aspects, while producing speech in real time [P1]. By modeling two streams of semantic and acoustic tokens hierarchically, Moshi can generate an arbitrary range of emotions, voices, and acoustic conditions [P1]. This architecture relies on a Depth Transformer compatible with streaming inference to jointly model the audio streams from Moshi and the user [P3].",
+    "error_code": null,
+    "expected_answer": "Moshi achieves full-duplex communication through multi-stream autoregressive modeling: it concatenates two parallel audio token streams (with acoustic delay) into a joint sequence V—one stream for Moshi's own speech (plus Inner Monologue text) and one stream for the user's audio—where at inference time Moshi's tokens are sampled while user tokens are continuously fed in. Modeling both streams in parallel removes the concept of explicit speaker turns altogether, allowing Moshi to listen and speak simultaneously at every timestep and handle natural conversational dynamics such as overlapping speech, interruptions, and backchanneling.",
+    "finish_reason": "stop",
+    "gold_pages": [
+      "2410.00037v1 p.2",
+      "2410.00037v1 p.15",
+      "2410.00037v1 p.1",
+      "2410.00037v1 p.7"
+    ],
+    "grade_reasons": [
+      "missing required facts: ['removes the concept of speaker turn|explicit speaker turns|removal of explicit speaker turns', 'interruptions']"
+    ],
+    "kind": "answer",
+    "model_id": "qwen/qwen3.8-27b",
+    "proposed_grade": "wrong",
+    "question": "How does Moshi achieve full-duplex communication, and why is modelling the user's audio and the system's audio as separate parallel streams important?",
+    "question_id": "q09",
+    "raw_answer": "Moshi achieves full-duplex communication by using a multi-stream architecture that allows the model to speak and listen to the user simultaneously without explicitly modeling speaker turns [P3]. This design enables the handling of full-duplex dialogues with arbitrary dynamics by modeling several audio streams in parallel [P4]. Modeling the user's and system's audio as separate parallel streams is important because combining them into a single token stream is challenging in the presence of significant overlap [P2]. The multi-stream approach allows Moshi to exploit all information from the user, including linguistic and non-linguistic aspects, while producing speech in real time [P1]. By modeling two streams of semantic and acoustic tokens hierarchically, Moshi can generate an arbitrary range of emotions, voices, and acoustic conditions [P1]. This architecture relies on a Depth Transformer compatible with streaming inference to jointly model the audio streams from Moshi and the user [P3].",
+    "request_id": "exp-20261113T064542Z-c482696-000026",
+    "retrieval_setting": "balanced_rerank",
+    "retrieved": [
+      "[P1] 2410.00037v1 pp.6-6 2410.00037v1_p6_c0",
+      "[P2] 2410.00037v1 pp.5-6 2410.00037v1_p5_c2",
+      "[P3] 2410.00037v1 pp.6-7 2410.00037v1_p6_c1",
+      "[P4] 2410.00037v1 pp.3-3 2410.00037v1_p3_c1"
+    ],
+    "review_status": "pending",
+    "status": "ok",
+    "tokens_in": 1659,
+    "tokens_out": 190,
+    "trap_type": null,
+    "verification_verdict": "VERIFIED",
+    "verifier_failures": []
+  },
+  {
+    "answerable": true,
+    "category": "direct_factual",
+    "cited_pages": [
+      "2410.00037v1 pp.1-1 [P4]",
+      "2410.00037v1 pp.6-7 [P1]",
+      "2410.00037v1 pp.5-6 [P2]",
+      "2410.00037v1 pp.6-6 [P3]",
+      "2410.00037v1 pp.17-18 [P5]"
+    ],
+    "delivered_text": "Moshi achieves full-duplex communication by modeling its own speech and the user's speech into parallel streams, which allows for the removal of explicit speaker turns [P4]. This multi-stream architecture enables the model to both speak and listen to the user at the same time without needing to explicitly model speaker turns [P1]. Modeling the user's and system's audio as separate streams is important because it allows Moshi to handle full-duplex communication where there is no boundary between speaker turns [P2]. This approach addresses the limitations of previous systems that modeled both the user’s and the system’s speech into a single token stream, which is challenging in the presence of significant overlap [P2]. By using separate streams, Moshi can exploit all the information from the user, including linguistic and non-linguistic data, while producing speech in real time [P3]. The multi-stream design is essential for the model to gain the ability to both listen and speak simultaneously [P5].",
+    "error_code": null,
+    "expected_answer": "Moshi achieves full-duplex communication through multi-stream autoregressive modeling: it concatenates two parallel audio token streams (with acoustic delay) into a joint sequence V—one stream for Moshi's own speech (plus Inner Monologue text) and one stream for the user's audio—where at inference time Moshi's tokens are sampled while user tokens are continuously fed in. Modeling both streams in parallel removes the concept of explicit speaker turns altogether, allowing Moshi to listen and speak simultaneously at every timestep and handle natural conversational dynamics such as overlapping speech, interruptions, and backchanneling.",
+    "finish_reason": "stop",
+    "gold_pages": [
+      "2410.00037v1 p.2",
+      "2410.00037v1 p.15",
+      "2410.00037v1 p.1",
+      "2410.00037v1 p.7"
+    ],
+    "grade_reasons": [
+      "missing required facts: ['interruptions']"
+    ],
+    "kind": "answer",
+    "model_id": "qwen/qwen3.8-27b",
+    "proposed_grade": "wrong",
+    "question": "How does Moshi achieve full-duplex communication, and why is modelling the user's audio and the system's audio as separate parallel streams important?",
+    "question_id": "q09",
+    "raw_answer": "Moshi achieves full-duplex communication by modeling its own speech and the user's speech into parallel streams, which allows for the removal of explicit speaker turns [P4]. This multi-stream architecture enables the model to both speak and listen to the user at the same time without needing to explicitly model speaker turns [P1]. Modeling the user's and system's audio as separate streams is important because it allows Moshi to handle full-duplex communication where there is no boundary between speaker turns [P2]. This approach addresses the limitations of previous systems that modeled both the user’s and the system’s speech into a single token stream, which is challenging in the presence of significant overlap [P2]. By using separate streams, Moshi can exploit all the information from the user, including linguistic and non-linguistic data, while producing speech in real time [P3]. The multi-stream design is essential for the model to gain the ability to both listen and speak simultaneously [P5].",
+    "request_id": "exp-20261113T064542Z-c482696-000027",
+    "retrieval_setting": "large_wide",
+    "retrieved": [
+      "[P1] 2410.00037v1 pp.6-7 2410.00037v1_p6_c1",
+      "[P2] 2410.00037v1 pp.5-6 2410.00037v1_p5_c1",
+      "[P3] 2410.00037v1 pp.6-6 2410.00037v1_p6_c0",
+      "[P4] 2410.00037v1 pp.1-1 2410.00037v1_p1_c1",
+      "[P5] 2410.00037v1 pp.17-18 2410.00037v1_p17_c1"
+    ],
+    "review_status": "pending",
+    "status": "ok",
+    "tokens_in": 2450,
+    "tokens_out": 200,
+    "trap_type": null,
+    "verification_verdict": "VERIFIED",
+    "verifier_failures": []
+  },
+  {
+    "answerable": true,
+    "category": "numeric_technical",
+    "cited_pages": [
+      "2410.00037v1 pp.2-2 [P1]",
+      "2410.00037v1 pp.2-2 [P2]",
+      "2410.00037v1 pp.5-6 [P3]",
+      "2410.00037v1 pp.5-5 [P4]"
+    ],
+    "delivered_text": "The paper states that Moshi has a theoretical latency of 160 [P1]. The provided passages do not report a specific practical latency figure for Moshi [P1][P2][P3][P4]. The text notes that natural conversations demonstrate response times of a few hundred milliseconds [P2].",
+    "error_code": null,
+    "expected_answer": "Moshi reports a theoretical latency of 160 ms (80 ms from Mimi's frame size/stride at 12.5 Hz plus one 80 ms acoustic delay step after finetuning with acoustic delay 1) and a practical latency of 200 ms. Both figures are lower than the 230 ms average response latency in natural human conversations measured over 10 languages (Stivers et al., 2009).",
+    "finish_reason": "stop",
+    "gold_pages": [
+      "2410.00037v1 p.1",
+      "2410.00037v1 p.2",
+      "2410.00037v1 p.26"
+    ],
+    "grade_reasons": [
+      "missing required facts: ['160ms|160 ms', '200ms|200 ms', '230ms|230 ms', 'lower than|faster than|below the 230|under 230|less than 230']"
+    ],
+    "kind": "answer",
+    "model_id": "qwen/qwen3.8-27b",
+    "proposed_grade": "wrong",
+    "question": "What are the theoretical latency and practical latency reported for Moshi? How do these figures compare with the average response time of natural human conversations mentioned in the paper?",
+    "question_id": "q10",
+    "raw_answer": "The paper states that Moshi has a theoretical latency of 160 [P1]. The provided passages do not report a specific practical latency figure for Moshi [P1][P2][P3][P4]. The text notes that natural conversations demonstrate response times of a few hundred milliseconds [P2].",
+    "request_id": "exp-20261113T064542Z-c482696-000028",
+    "retrieval_setting": "small_fast",
+    "retrieved": [
+      "[P1] 2410.00037v1 pp.2-2 2410.00037v1_p2_c2",
+      "[P2] 2410.00037v1 pp.2-2 2410.00037v1_p2_c1",
+      "[P3] 2410.00037v1 pp.5-6 2410.00037v1_p5_c3",
+      "[P4] 2410.00037v1 pp.5-5 2410.00037v1_p5_c2"
+    ],
+    "review_status": "pending",
+    "status": "ok",
+    "tokens_in": 1399,
+    "tokens_out": 65,
+    "trap_type": null,
+    "verification_verdict": "VERIFIED",
+    "verifier_failures": []
+  },
+  {
+    "answerable": true,
+    "category": "numeric_technical",
+    "cited_pages": [
+      "2410.00037v1 pp.1-1 [P3]",
+      "2410.00037v1 pp.2-2 [P1]"
+    ],
+    "delivered_text": "Moshi has a theoretical latency of 160ms and a practical latency of 200ms [P3]. The paper states that natural conversations demonstrate response times of a few hundred milliseconds [P1]. Therefore, Moshi's reported latencies are comparable to the response times of natural human conversations [P1][P3].",
+    "error_code": null,
+    "expected_answer": "Moshi reports a theoretical latency of 160 ms (80 ms from Mimi's frame size/stride at 12.5 Hz plus one 80 ms acoustic delay step after finetuning with acoustic delay 1) and a practical latency of 200 ms. Both figures are lower than the 230 ms average response latency in natural human conversations measured over 10 languages (Stivers et al., 2009).",
+    "finish_reason": "stop",
+    "gold_pages": [
+      "2410.00037v1 p.1",
+      "2410.00037v1 p.2",
+      "2410.00037v1 p.26"
+    ],
+    "grade_reasons": [
+      "missing required facts: ['230ms|230 ms', 'lower than|faster than|below the 230|under 230|less than 230']"
+    ],
+    "kind": "answer",
+    "model_id": "qwen/qwen3.8-27b",
+    "proposed_grade": "wrong",
+    "question": "What are the theoretical latency and practical latency reported for Moshi? How do these figures compare with the average response time of natural human conversations mentioned in the paper?",
+    "question_id": "q10",
+    "raw_answer": "Moshi has a theoretical latency of 160ms and a practical latency of 200ms [P3]. The paper states that natural conversations demonstrate response times of a few hundred milliseconds [P1]. Therefore, Moshi's reported latencies are comparable to the response times of natural human conversations [P1][P3].",
+    "request_id": "exp-20261113T064542Z-c482696-000029",
+    "retrieval_setting": "balanced_rerank",
+    "retrieved": [
+      "[P1] 2410.00037v1 pp.2-2 2410.00037v1_p2_c1",
+      "[P2] 2410.00037v1 pp.41-41 2410.00037v1_p41_c1",
+      "[P3] 2410.00037v1 pp.1-1 2410.00037v1_p1_c2",
+      "[P4] 2410.00037v1 pp.24-25 2410.00037v1_p24_c2"
+    ],
+    "review_status": "pending",
+    "status": "ok",
+    "tokens_in": 1295,
+    "tokens_out": 70,
+    "trap_type": null,
+    "verification_verdict": "VERIFIED",
+    "verifier_failures": []
+  },
+  {
+    "answerable": true,
+    "category": "numeric_technical",
+    "cited_pages": [
+      "2410.00037v1 pp.2-3 [P3]",
+      "2410.00037v1 pp.1-1 [P4]"
+    ],
+    "delivered_text": "Moshi has a theoretical latency of 160 ms [P3][P4]. In practice, the latency is 200 ms [P4]. The paper states that the average response time in natural conversations is 230 ms [P3]. Therefore, Moshi's theoretical latency is lower than the average response time in natural conversations [P3]. The practical latency of 200 ms is also lower than the 230 ms average for natural conversations [P3][P4].",
+    "error_code": null,
+    "expected_answer": "Moshi reports a theoretical latency of 160 ms (80 ms from Mimi's frame size/stride at 12.5 Hz plus one 80 ms acoustic delay step after finetuning with acoustic delay 1) and a practical latency of 200 ms. Both figures are lower than the 230 ms average response latency in natural human conversations measured over 10 languages (Stivers et al., 2009).",
+    "finish_reason": "stop",
+    "gold_pages": [
+      "2410.00037v1 p.1",
+      "2410.00037v1 p.2",
+      "2410.00037v1 p.26"
+    ],
+    "grade_reasons": [
+      "all required facts present, gold page cited, no forbidden claims"
+    ],
+    "kind": "answer",
+    "model_id": "qwen/qwen3.8-27b",
+    "proposed_grade": "correct",
+    "question": "What are the theoretical latency and practical latency reported for Moshi? How do these figures compare with the average response time of natural human conversations mentioned in the paper?",
+    "question_id": "q10",
+    "raw_answer": "Moshi has a theoretical latency of 160 ms [P3][P4]. In practice, the latency is 200 ms [P4]. The paper states that the average response time in natural conversations is 230 ms [P3]. Therefore, Moshi's theoretical latency is lower than the average response time in natural conversations [P3]. The practical latency of 200 ms is also lower than the 230 ms average for natural conversations [P3][P4].",
+    "request_id": "exp-20261113T064542Z-c482696-000030",
+    "retrieval_setting": "large_wide",
+    "retrieved": [
+      "[P1] 2410.00037v1 pp.2-2 2410.00037v1_p2_c0",
+      "[P2] 2410.00037v1 pp.5-6 2410.00037v1_p5_c1",
+      "[P3] 2410.00037v1 pp.2-3 2410.00037v1_p2_c1",
+      "[P4] 2410.00037v1 pp.1-1 2410.00037v1_p1_c1",
+      "[P5] 2410.00037v1 pp.27-28 2410.00037v1_p27_c0"
+    ],
+    "review_status": "pending",
+    "status": "ok",
+    "tokens_in": 3195,
+    "tokens_out": 107,
+    "trap_type": null,
+    "verification_verdict": "VERIFIED",
+    "verifier_failures": []
+  },
+  {
+    "answerable": true,
+    "category": "direct_factual",
+    "cited_pages": [
+      "2507.07955v2 pp.1-1 [P3]",
+      "2507.07955v2 pp.39-39 [P1]"
+    ],
+    "delivered_text": "Fixed-vocabulary tokenization is described as a pervasive handcrafted preprocessing step that comes with well-documented drawbacks, including poor character-level understanding and a lack of meaning and interpretability [P3]. The authors note that this process leads to degraded performance on complex languages and modalities [P3]. Additionally, tokenization bias prevents the model from determining if a character is the start of a new word until subsequent characters are observed [P1]. This issue can be exacerbated, as determining whether a specific character is the start of a token may require knowing the next two bytes [P1]. Replacing the tokenization–LM–detokenization pipeline with a single end-to-end model would better adhere to the spirit of deep learning and potentially scale more powerfully [P3].\n\n[P3][P1]",
+    "error_code": null,
+    "expected_answer": "The authors argue that fixed-vocabulary tokenization (such as BPE) is a handcrafted preprocessing step that prevents truly end-to-end learning from raw data and comes with well-documented drawbacks: poor character-level understanding and robustness, lack of semantic meaning and interpretability, and degraded performance on complex languages and modalities without clear word/whitespace boundaries (such as Chinese, code, and DNA). Replacing the tokenization–LM–detokenization pipeline with learned dynamic chunking allows the model to discover content- and context-dependent abstractions end-to-end and scale more powerfully with data and parameters.",
+    "finish_reason": "stop",
+    "gold_pages": [
+      "2507.07955v2 p.1",
+      "2507.07955v2 p.2"
+    ],
+    "grade_reasons": [
+      "all required facts present, gold page cited, no forbidden claims"
+    ],
+    "kind": "answer",
+    "model_id": "qwen/qwen3.8-27b",
+    "proposed_grade": "correct",
+    "question": "What problems associated with traditional tokenization motivated the authors to introduce H-Net? Why do they argue that fixed-vocabulary tokenization can be a limitation?",
+    "question_id": "q11",
+    "raw_answer": "Fixed-vocabulary tokenization is described as a pervasive handcrafted preprocessing step that comes with well-documented drawbacks, including poor character-level understanding and a lack of meaning and interpretability [P3]. The authors note that this process leads to degraded performance on complex languages and modalities [P3]. Additionally, tokenization bias prevents the model from determining if a character is the start of a new word until subsequent characters are observed [P1]. This issue can be exacerbated, as determining whether a specific character is the start of a token may require knowing the next two bytes [P1]. Replacing the tokenization–LM–detokenization pipeline with a single end-to-end model would better adhere to the spirit of deep learning and potentially scale more powerfully [P3].\n\n[P3][P1]",
+    "request_id": "exp-20261113T064542Z-c482696-000031",
+    "retrieval_setting": "small_fast",
+    "retrieved": [
+      "[P1] 2507.07955v2 pp.39-39 2507.07955v2_p39_c0",
+      "[P2] 2507.07955v2 pp.34-34 2507.07955v2_p34_c3",
+      "[P3] 2507.07955v2 pp.1-1 2507.07955v2_p1_c3",
+      "[P4] 2507.07955v2 pp.39-39 2507.07955v2_p39_c1"
+    ],
+    "review_status": "pending",
+    "status": "ok",
+    "tokens_in": 1513,
+    "tokens_out": 163,
+    "trap_type": null,
+    "verification_verdict": "VERIFIED",
+    "verifier_failures": []
+  },
+  {
+    "answerable": true,
+    "category": "direct_factual",
+    "cited_pages": [
+      "2507.07955v2 pp.1-1 [P2]"
+    ],
+    "delivered_text": "The authors identify that fixed-vocabulary tokenization is a pervasive handcrafted preprocessing step that comes with well-documented drawbacks [P2]. These drawbacks include poor character-level understanding, a lack of meaning and interpretability, and degraded performance on complex languages and modalities [P2]. Replacing the tokenization–LM–detokenization pipeline with a single end-to-end model would better adhere to the spirit of deep learning [P2]. Such an approach would ideally scale more powerfully with data and parameters, aligning with the concept of the bitter lesson [P2]. However, tokenization remains indispensable for its ability to compress and shorten sequences, as no end-to-end tokenizer-free model has yet matched the performance of tokenizer-based models when matched for computational budget [P2].\n\n[P2]",
+    "error_code": null,
+    "expected_answer": "The authors argue that fixed-vocabulary tokenization (such as BPE) is a handcrafted preprocessing step that prevents truly end-to-end learning from raw data and comes with well-documented drawbacks: poor character-level understanding and robustness, lack of semantic meaning and interpretability, and degraded performance on complex languages and modalities without clear word/whitespace boundaries (such as Chinese, code, and DNA). Replacing the tokenization–LM–detokenization pipeline with learned dynamic chunking allows the model to discover content- and context-dependent abstractions end-to-end and scale more powerfully with data and parameters.",
+    "finish_reason": "stop",
+    "gold_pages": [
+      "2507.07955v2 p.1",
+      "2507.07955v2 p.2"
+    ],
+    "grade_reasons": [
+      "all required facts present, gold page cited, no forbidden claims"
+    ],
+    "kind": "answer",
+    "model_id": "qwen/qwen3.8-27b",
+    "proposed_grade": "correct",
+    "question": "What problems associated with traditional tokenization motivated the authors to introduce H-Net? Why do they argue that fixed-vocabulary tokenization can be a limitation?",
+    "question_id": "q11",
+    "raw_answer": "The authors identify that fixed-vocabulary tokenization is a pervasive handcrafted preprocessing step that comes with well-documented drawbacks [P2]. These drawbacks include poor character-level understanding, a lack of meaning and interpretability, and degraded performance on complex languages and modalities [P2]. Replacing the tokenization–LM–detokenization pipeline with a single end-to-end model would better adhere to the spirit of deep learning [P2]. Such an approach would ideally scale more powerfully with data and parameters, aligning with the concept of the bitter lesson [P2]. However, tokenization remains indispensable for its ability to compress and shorten sequences, as no end-to-end tokenizer-free model has yet matched the performance of tokenizer-based models when matched for computational budget [P2].\n\n[P2]",
+    "request_id": "exp-20261113T064542Z-c482696-000032",
+    "retrieval_setting": "balanced_rerank",
+    "retrieved": [
+      "[P1] 2507.07955v2 pp.34-35 2507.07955v2_p34_c2",
+      "[P2] 2507.07955v2 pp.1-1 2507.07955v2_p1_c3",
+      "[P3] 2507.07955v2 pp.34-34 2507.07955v2_p34_c1",
+      "[P4] 2507.07955v2 pp.39-39 2507.07955v2_p39_c0"
+    ],
+    "review_status": "pending",
+    "status": "ok",
+    "tokens_in": 1874,
+    "tokens_out": 161,
+    "trap_type": null,
+    "verification_verdict": "VERIFIED",
+    "verifier_failures": []
+  },
+  {
+    "answerable": true,
+    "category": "direct_factual",
+    "cited_pages": [
+      "2507.07955v2 pp.1-1 [P4]",
+      "2507.07955v2 pp.39-39 [P3]",
+      "2507.07955v2 pp.34-35 [P1]"
+    ],
+    "delivered_text": "Pre-processing steps such as tokenization remain a barrier to true end-to-end foundation models, which motivated the introduction of H-Net [P4]. The authors argue that tokenization implicitly contains next-byte information, a phenomenon termed \"tokenization bias\" that prevents models from determining word boundaries without seeing subsequent characters [P3]. Fixed-vocabulary tokenizers can leak information about the data mix they were trained on, as shown by examining the vocabulary of a BPE tokenizer [P1]. Additionally, tokenization qualitatively changes what Transformers can learn for certain data distributions, and the primary role of shrinking input sequence length is not the sole factor in model performance [P1]. Schmidt et al. (2024) provided evidence against the hypothesis that tokenization's primary role is to shrink input sequence length by showing that higher compression rates can lead to worse language models [P1]. H-Net addresses these issues by replacing the tokenization–LM–detokenization pipeline with a single model learned fully end-to-end [P4].",
+    "error_code": null,
+    "expected_answer": "The authors argue that fixed-vocabulary tokenization (such as BPE) is a handcrafted preprocessing step that prevents truly end-to-end learning from raw data and comes with well-documented drawbacks: poor character-level understanding and robustness, lack of semantic meaning and interpretability, and degraded performance on complex languages and modalities without clear word/whitespace boundaries (such as Chinese, code, and DNA). Replacing the tokenization–LM–detokenization pipeline with learned dynamic chunking allows the model to discover content- and context-dependent abstractions end-to-end and scale more powerfully with data and parameters.",
+    "finish_reason": "stop",
+    "gold_pages": [
+      "2507.07955v2 p.1",
+      "2507.07955v2 p.2"
+    ],
+    "grade_reasons": [
+      "missing required facts: ['character-level', 'interpretability|lack of meaning', 'complex languages and modalities|Chinese|DNA']"
+    ],
+    "kind": "answer",
+    "model_id": "qwen/qwen3.8-27b",
+    "proposed_grade": "wrong",
+    "question": "What problems associated with traditional tokenization motivated the authors to introduce H-Net? Why do they argue that fixed-vocabulary tokenization can be a limitation?",
+    "question_id": "q11",
+    "raw_answer": "Pre-processing steps such as tokenization remain a barrier to true end-to-end foundation models, which motivated the introduction of H-Net [P4]. The authors argue that tokenization implicitly contains next-byte information, a phenomenon termed \"tokenization bias\" that prevents models from determining word boundaries without seeing subsequent characters [P3]. Fixed-vocabulary tokenizers can leak information about the data mix they were trained on, as shown by examining the vocabulary of a BPE tokenizer [P1]. Additionally, tokenization qualitatively changes what Transformers can learn for certain data distributions, and the primary role of shrinking input sequence length is not the sole factor in model performance [P1]. Schmidt et al. (2024) provided evidence against the hypothesis that tokenization's primary role is to shrink input sequence length by showing that higher compression rates can lead to worse language models [P1]. H-Net addresses these issues by replacing the tokenization–LM–detokenization pipeline with a single model learned fully end-to-end [P4].",
+    "request_id": "exp-20261113T064542Z-c482696-000033",
+    "retrieval_setting": "large_wide",
+    "retrieved": [
+      "[P1] 2507.07955v2 pp.34-35 2507.07955v2_p34_c1",
+      "[P2] 2507.07955v2 pp.34-34 2507.07955v2_p34_c0",
+      "[P3] 2507.07955v2 pp.39-39 2507.07955v2_p39_c0",
+      "[P4] 2507.07955v2 pp.1-1 2507.07955v2_p1_c1",
+      "[P5] 2507.07955v2 pp.3-4 2507.07955v2_p3_c0"
+    ],
+    "review_status": "pending",
+    "status": "ok",
+    "tokens_in": 3081,
+    "tokens_out": 209,
+    "trap_type": null,
+    "verification_verdict": "VERIFIED",
+    "verifier_failures": []
+  },
+  {
+    "answerable": true,
+    "category": "direct_factual",
+    "cited_pages": [
+      "2507.07955v2 pp.4-4 [P1]",
+      "2507.07955v2 pp.2-2 [P3]",
+      "2507.07955v2 pp.5-5 [P2]"
+    ],
+    "delivered_text": "H-Net employs a hierarchical architecture comprising three primary components: encoder networks (E), a main network (M), and decoder networks (D) [P1]. In the information flow, raw data is first processed by a small encoder network [P3]. The data is then downsampled and passed through the main network, which operates on compressed chunks [P3]. Finally, the data is upsampled before being passed through a decoder network that operates on the original resolution [P3]. The encoder must simultaneously preserve fine-grained information for transmission to its corresponding decoder via residual connections and compress inputs into chunks for the main network [P2]. The decoder effectively combines coarse-grained representations from the main network with fine-grained details from the encoder residuals [P2].",
+    "error_code": null,
+    "expected_answer": "Inspired by an autoregressive U-Net, H-Net consists of encoder networks (E), a main network (M), and decoder networks (D): (1) An encoder E^s (using Mamba-2 SSM layers) processes the uncompressed fine-grained sequence to produce x_hat^s; (2) the chunking layer dynamically downsamples x_hat^s into compressed representations x^{s+1} (plus router confidences p^s), passing them into the main network M (which holds most capacity, uses Transformer layers or recursively another H-Net, and operates on the compressed length L^S << L^0) to yield z_hat^S; and (3) a dechunking layer upsamples and smooths M's output and adds a projected encoder residual connection (z^s = Dechunk(z_hat^{s+1}, p^s) + Linear(x_hat^s)), which feeds into decoder D^s (Mamba-2 layers) to combine coarse main-network semantics with fine-grained encoder details.",
+    "finish_reason": "stop",
+    "gold_pages": [
+      "2507.07955v2 p.4",
+      "2507.07955v2 p.5"
+    ],
+    "grade_reasons": [
+      "missing required facts: ['Mamba-2|state space model|SSM', 'most capacity|majority of model capacity|bulk of parameters|compressed sequence']"
+    ],
+    "kind": "answer",
+    "model_id": "qwen/qwen3.8-27b",
+    "proposed_grade": "wrong",
+    "question": "Explain the three main architectural components of H-Net: the encoder, main network and decoder. How does information flow through these components?",
+    "question_id": "q12",
+    "raw_answer": "H-Net employs a hierarchical architecture comprising three primary components: encoder networks (E), a main network (M), and decoder networks (D) [P1]. In the information flow, raw data is first processed by a small encoder network [P3]. The data is then downsampled and passed through the main network, which operates on compressed chunks [P3]. Finally, the data is upsampled before being passed through a decoder network that operates on the original resolution [P3]. The encoder must simultaneously preserve fine-grained information for transmission to its corresponding decoder via residual connections and compress inputs into chunks for the main network [P2]. The decoder effectively combines coarse-grained representations from the main network with fine-grained details from the encoder residuals [P2].",
+    "request_id": "exp-20261113T064542Z-c482696-000034",
+    "retrieval_setting": "small_fast",
+    "retrieved": [
+      "[P1] 2507.07955v2 pp.4-4 2507.07955v2_p4_c3",
+      "[P2] 2507.07955v2 pp.5-5 2507.07955v2_p5_c1",
+      "[P3] 2507.07955v2 pp.2-2 2507.07955v2_p2_c2",
+      "[P4] 2507.07955v2 pp.20-20 2507.07955v2_p20_c1"
+    ],
+    "review_status": "pending",
+    "status": "ok",
+    "tokens_in": 1479,
+    "tokens_out": 157,
+    "trap_type": null,
+    "verification_verdict": "VERIFIED",
+    "verifier_failures": []
+  },
+  {
+    "answerable": true,
+    "category": "direct_factual",
+    "cited_pages": [
+      "2507.07955v2 pp.4-5 [P1]",
+      "2507.07955v2 pp.5-5 [P2]",
+      "2507.07955v2 pp.5-5 [P3]"
+    ],
+    "delivered_text": "H-Net employs a hierarchical architecture comprising three primary components: encoder networks (E), a main network (M), and decoder networks (D) [P1]. In a single-stage model, the architecture consists of one encoder network, one main network, and one decoder network [P1]. The encoder networks must simultaneously preserve fine-grained information for transmission to their corresponding decoders via residual connections and compress inputs into chunks of richer representations for the main network [P2]. The main network operates on these progressively compressed sequences, allowing for larger networks within the same computational budget [P3]. The decoder networks effectively combine the coarse-grained representations from the main network with the fine-grained details from the encoder residuals [P2]. Both the encoder and decoder networks operate on uncompressed sequences, which makes computational efficiency a significant design constraint [P2].",
+    "error_code": null,
+    "expected_answer": "Inspired by an autoregressive U-Net, H-Net consists of encoder networks (E), a main network (M), and decoder networks (D): (1) An encoder E^s (using Mamba-2 SSM layers) processes the uncompressed fine-grained sequence to produce x_hat^s; (2) the chunking layer dynamically downsamples x_hat^s into compressed representations x^{s+1} (plus router confidences p^s), passing them into the main network M (which holds most capacity, uses Transformer layers or recursively another H-Net, and operates on the compressed length L^S << L^0) to yield z_hat^S; and (3) a dechunking layer upsamples and smooths M's output and adds a projected encoder residual connection (z^s = Dechunk(z_hat^{s+1}, p^s) + Linear(x_hat^s)), which feeds into decoder D^s (Mamba-2 layers) to combine coarse main-network semantics with fine-grained encoder details.",
+    "finish_reason": "stop",
+    "gold_pages": [
+      "2507.07955v2 p.4",
+      "2507.07955v2 p.5"
+    ],
+    "grade_reasons": [
+      "missing required facts: ['Mamba-2|state space model|SSM', 'dechunk|upsampl']"
+    ],
+    "kind": "answer",
+    "model_id": "qwen/qwen3.8-27b",
+    "proposed_grade": "wrong",
+    "question": "Explain the three main architectural components of H-Net: the encoder, main network and decoder. How does information flow through these components?",
+    "question_id": "q12",
+    "raw_answer": "H-Net employs a hierarchical architecture comprising three primary components: encoder networks (E), a main network (M), and decoder networks (D) [P1]. In a single-stage model, the architecture consists of one encoder network, one main network, and one decoder network [P1]. The encoder networks must simultaneously preserve fine-grained information for transmission to their corresponding decoders via residual connections and compress inputs into chunks of richer representations for the main network [P2]. The main network operates on these progressively compressed sequences, allowing for larger networks within the same computational budget [P3]. The decoder networks effectively combine the coarse-grained representations from the main network with the fine-grained details from the encoder residuals [P2]. Both the encoder and decoder networks operate on uncompressed sequences, which makes computational efficiency a significant design constraint [P2].",
+    "request_id": "exp-20261113T064542Z-c482696-000035",
+    "retrieval_setting": "balanced_rerank",
+    "retrieved": [
+      "[P1] 2507.07955v2 pp.4-5 2507.07955v2_p4_c2",
+      "[P2] 2507.07955v2 pp.5-5 2507.07955v2_p5_c1",
+      "[P3] 2507.07955v2 pp.5-5 2507.07955v2_p5_c2",
+      "[P4] 2507.07955v2 pp.17-18 2507.07955v2_p17_c2"
+    ],
+    "review_status": "pending",
+    "status": "ok",
+    "tokens_in": 1872,
+    "tokens_out": 170,
+    "trap_type": null,
+    "verification_verdict": "VERIFIED",
+    "verifier_failures": []
+  },
+  {
+    "answerable": true,
+    "category": "direct_factual",
+    "cited_pages": [
+      "2507.07955v2 pp.4-5 [P1]",
+      "2507.07955v2 pp.5-5 [P2]"
+    ],
+    "delivered_text": "H-Net employs a hierarchical architecture comprising three primary components: encoder networks (E), a main network (M), and decoder networks (D) [P1]. The overall pipeline begins with the encoder processing the input sequence, followed by the main network processing the compressed representations, and finally the decoder decompressing the sequence back to its original resolution [P1]. Information flows from the encoder to the main network via a chunking layer that compresses input sequences into fewer vectors with richer semantic embeddings [P1]. The main network operates on these progressively compressed sequences, where the sequence length $L^S$ is much smaller than the initial input length $L^0$ [P2]. The decoder combines coarse-grained representations from the main network with fine-grained details from the encoder residuals to reconstruct the output [P2]. This process is formalized by the equations where the encoder output is chunked, the main network processes the result, and the decoder applies a dechunking operation along with a linear projection of the encoder output [P1].",
+    "error_code": null,
+    "expected_answer": "Inspired by an autoregressive U-Net, H-Net consists of encoder networks (E), a main network (M), and decoder networks (D): (1) An encoder E^s (using Mamba-2 SSM layers) processes the uncompressed fine-grained sequence to produce x_hat^s; (2) the chunking layer dynamically downsamples x_hat^s into compressed representations x^{s+1} (plus router confidences p^s), passing them into the main network M (which holds most capacity, uses Transformer layers or recursively another H-Net, and operates on the compressed length L^S << L^0) to yield z_hat^S; and (3) a dechunking layer upsamples and smooths M's output and adds a projected encoder residual connection (z^s = Dechunk(z_hat^{s+1}, p^s) + Linear(x_hat^s)), which feeds into decoder D^s (Mamba-2 layers) to combine coarse main-network semantics with fine-grained encoder details.",
+    "finish_reason": "stop",
+    "gold_pages": [
+      "2507.07955v2 p.4",
+      "2507.07955v2 p.5"
+    ],
+    "grade_reasons": [
+      "missing required facts: ['Mamba-2|state space model|SSM']"
+    ],
+    "kind": "answer",
+    "model_id": "qwen/qwen3.8-27b",
+    "proposed_grade": "wrong",
+    "question": "Explain the three main architectural components of H-Net: the encoder, main network and decoder. How does information flow through these components?",
+    "question_id": "q12",
+    "raw_answer": "H-Net employs a hierarchical architecture comprising three primary components: encoder networks (E), a main network (M), and decoder networks (D) [P1]. The overall pipeline begins with the encoder processing the input sequence, followed by the main network processing the compressed representations, and finally the decoder decompressing the sequence back to its original resolution [P1]. Information flows from the encoder to the main network via a chunking layer that compresses input sequences into fewer vectors with richer semantic embeddings [P1]. The main network operates on these progressively compressed sequences, where the sequence length $L^S$ is much smaller than the initial input length $L^0$ [P2]. The decoder combines coarse-grained representations from the main network with fine-grained details from the encoder residuals to reconstruct the output [P2]. This process is formalized by the equations where the encoder output is chunked, the main network processes the result, and the decoder applies a dechunking operation along with a linear projection of the encoder output [P1].",
+    "request_id": "exp-20261113T064542Z-c482696-000036",
+    "retrieval_setting": "large_wide",
+    "retrieved": [
+      "[P1] 2507.07955v2 pp.4-5 2507.07955v2_p4_c2",
+      "[P2] 2507.07955v2 pp.5-5 2507.07955v2_p5_c0",
+      "[P3] 2507.07955v2 pp.8-9 2507.07955v2_p8_c2",
+      "[P4] 2507.07955v2 pp.17-18 2507.07955v2_p17_c1",
+      "[P5] 2507.07955v2 pp.2-2 2507.07955v2_p2_c0"
+    ],
+    "review_status": "pending",
+    "status": "ok",
+    "tokens_in": 3602,
+    "tokens_out": 213,
+    "trap_type": null,
+    "verification_verdict": "VERIFIED",
+    "verifier_failures": []
+  },
+  {
+    "answerable": true,
+    "category": "cross_paper",
+    "cited_pages": [
+      "2507.07955v2 pp.2-2 [P2]",
+      "2507.07955v2 pp.6-7 [P4]",
+      "1706.03762v7 pp.2-2 [P5]",
+      "1706.03762v7 pp.5-5 [P6]"
+    ],
+    "delivered_text": "The routing module predicts boundaries between adjacent data segments by calculating a similarity score [P2]. The smoothing module interpolates representations using the router's outputs to attenuate the effect of uncertain boundaries and enhance learnability [P2]. This smoothing process transforms discrete boundary indicators into interpolated representations to facilitate gradient propagation during backpropagation [P4]. The provided passages do not state how the routing module's boundary information differs from the Transformer's self-attention or encoder–decoder mechanisms [P5][P6].\n\n[P2][P4][P5][P6]",
+    "error_code": null,
+    "expected_answer": "In H-Net's Dynamic Chunking, the routing module predicts segmentation boundaries via cosine similarity between projected adjacent encoder outputs (q_t and k_{t-1}), outputting boundary probabilities p_t in [0, 1] and binary indicators b_t so the downsampler selects boundary-marked vectors for compression. The smoothing module applies an exponential moving average (EMA) weighted by the boundary confidence P_t (P_t = p_t where b_t = 1 and 1 − p_t otherwise) in the dechunking layer to turn discrete chunks into differentiable interpolations that attenuate uncertain boundaries. Unlike Transformer attention weights—which apply softmax to scaled query-key dot products across sequence positions to produce mixing weights over value vectors—H-Net's routing module compares only adjacent representations (t and t-1) via cosine similarity to produce discrete chunk-selection/compression boundaries rather than weighted averages over values.",
+    "finish_reason": "stop",
+    "gold_pages": [
+      "2507.07955v2 p.6",
+      "2507.07955v2 p.7",
+      "1706.03762v7 p.4"
+    ],
+    "grade_reasons": [
+      "missing required facts: ['cosine similarity', 'exponential moving average|moving average', 'softmax over|weights on the values|adjacent representations|adjacent encoder outputs|t and t-1']"
+    ],
+    "kind": "answer",
+    "model_id": "qwen/qwen3.8-27b",
+    "proposed_grade": "wrong",
+    "question": "In H-Net's Dynamic Chunking mechanism, what is the purpose of the routing module and the smoothing module? How does the routing module's boundary information differ from the attention weights used in the Transformer architecture?",
+    "question_id": "q13",
+    "raw_answer": "The routing module predicts boundaries between adjacent data segments by calculating a similarity score [P2]. The smoothing module interpolates representations using the router's outputs to attenuate the effect of uncertain boundaries and enhance learnability [P2]. This smoothing process transforms discrete boundary indicators into interpolated representations to facilitate gradient propagation during backpropagation [P4]. The provided passages do not state how the routing module's boundary information differs from the Transformer's self-attention or encoder–decoder mechanisms [P5][P6].\n\n[P2][P4][P5][P6]",
+    "request_id": "exp-20261113T064542Z-c482696-000037",
+    "retrieval_setting": "small_fast",
+    "retrieved": [
+      "[P1] 2507.07955v2 pp.3-3 2507.07955v2_p3_c0",
+      "[P2] 2507.07955v2 pp.2-2 2507.07955v2_p2_c3",
+      "[P3] 2507.07955v2 pp.2-3 2507.07955v2_p2_c4",
+      "[P4] 2507.07955v2 pp.6-7 2507.07955v2_p6_c4",
+      "[P5] 1706.03762v7 pp.2-2 1706.03762v7_p2_c1",
+      "[P6] 1706.03762v7 pp.5-5 1706.03762v7_p5_c1"
+    ],
+    "review_status": "pending",
+    "status": "ok",
+    "tokens_in": 1975,
+    "tokens_out": 114,
+    "trap_type": "shared_vocabulary",
+    "verification_verdict": "VERIFIED",
+    "verifier_failures": []
+  },
+  {
+    "answerable": true,
+    "category": "cross_paper",
+    "cited_pages": [
+      "2507.07955v2 pp.3-4 [P1]",
+      "2507.07955v2 pp.2-3 [P3]",
+      "2507.07955v2 pp.8-8 [P2]",
+      "1706.03762v7 pp.2-2 [P5]",
+      "1706.03762v7 pp.5-5 [P6]"
+    ],
+    "delivered_text": "The routing module in H-Net is responsible for dynamically drawing chunk boundaries [P1]. The smoothing module converts discrete chunks into interpolated representations to improve learnability [P1]. This smoothing process specifically attenuates the effect of uncertain boundaries [P3]. The routing module guides the model to retain vectors based on semantic importance rather than following predetermined patterns [P2]. The provided passages do not contain information comparing the routing module's boundary information to the attention weights used in the Transformer architecture [P5][P6].",
+    "error_code": null,
+    "expected_answer": "In H-Net's Dynamic Chunking, the routing module predicts segmentation boundaries via cosine similarity between projected adjacent encoder outputs (q_t and k_{t-1}), outputting boundary probabilities p_t in [0, 1] and binary indicators b_t so the downsampler selects boundary-marked vectors for compression. The smoothing module applies an exponential moving average (EMA) weighted by the boundary confidence P_t (P_t = p_t where b_t = 1 and 1 − p_t otherwise) in the dechunking layer to turn discrete chunks into differentiable interpolations that attenuate uncertain boundaries. Unlike Transformer attention weights—which apply softmax to scaled query-key dot products across sequence positions to produce mixing weights over value vectors—H-Net's routing module compares only adjacent representations (t and t-1) via cosine similarity to produce discrete chunk-selection/compression boundaries rather than weighted averages over values.",
+    "finish_reason": "stop",
+    "gold_pages": [
+      "2507.07955v2 p.6",
+      "2507.07955v2 p.7",
+      "1706.03762v7 p.4"
+    ],
+    "grade_reasons": [
+      "missing required facts: ['cosine similarity', 'boundary probabilities|boundary indicators|boundary probability|segmentation boundaries', 'exponential moving average|moving average', 'softmax over|weights on the values|adjacent representations|adjacent encoder outputs|t and t-1']",
+      "no citation lands on a gold page"
+    ],
+    "kind": "answer",
+    "model_id": "qwen/qwen3.8-27b",
+    "proposed_grade": "wrong",
+    "question": "In H-Net's Dynamic Chunking mechanism, what is the purpose of the routing module and the smoothing module? How does the routing module's boundary information differ from the attention weights used in the Transformer architecture?",
+    "question_id": "q13",
+    "raw_answer": "The routing module in H-Net is responsible for dynamically drawing chunk boundaries [P1]. The smoothing module converts discrete chunks into interpolated representations to improve learnability [P1]. This smoothing process specifically attenuates the effect of uncertain boundaries [P3]. The routing module guides the model to retain vectors based on semantic importance rather than following predetermined patterns [P2]. The provided passages do not contain information comparing the routing module's boundary information to the attention weights used in the Transformer architecture [P5][P6].",
+    "request_id": "exp-20261113T064542Z-c482696-000038",
+    "retrieval_setting": "balanced_rerank",
+    "retrieved": [
+      "[P1] 2507.07955v2 pp.3-4 2507.07955v2_p3_c0",
+      "[P2] 2507.07955v2 pp.8-8 2507.07955v2_p8_c2",
+      "[P3] 2507.07955v2 pp.2-3 2507.07955v2_p2_c2",
+      "[P4] 2507.07955v2 pp.6-7 2507.07955v2_p6_c4",
+      "[P5] 1706.03762v7 pp.2-2 1706.03762v7_p2_c1",
+      "[P6] 1706.03762v7 pp.5-5 1706.03762v7_p5_c1"
+    ],
+    "review_status": "pending",
+    "status": "ok",
+    "tokens_in": 2205,
+    "tokens_out": 103,
+    "trap_type": "shared_vocabulary",
+    "verification_verdict": "VERIFIED",
+    "verifier_failures": []
+  },
+  {
+    "answerable": true,
+    "category": "cross_paper",
+    "cited_pages": [
+      "2507.07955v2 pp.2-3 [P1]",
+      "1706.03762v7 pp.2-2 [P6]"
+    ],
+    "delivered_text": "The routing module predicts boundaries between adjacent elements through a similarity score [P1]. The smoothing module interpolates representations using the router’s outputs to attenuate the effect of uncertain boundaries and improve learnability [P1]. The routing module’s boundary information is used to selectively retain vectors and reduce sequence length while preserving semantically significant positions [P1]. The Transformer architecture relies entirely on an attention mechanism to draw global dependencies between input and output, eschewing recurrence [P6]. The passages do not provide a direct comparison between the routing module's boundary information and the specific nature of attention weights in the Transformer [P1][P6].\n\n[P1][P6]",
+    "error_code": null,
+    "expected_answer": "In H-Net's Dynamic Chunking, the routing module predicts segmentation boundaries via cosine similarity between projected adjacent encoder outputs (q_t and k_{t-1}), outputting boundary probabilities p_t in [0, 1] and binary indicators b_t so the downsampler selects boundary-marked vectors for compression. The smoothing module applies an exponential moving average (EMA) weighted by the boundary confidence P_t (P_t = p_t where b_t = 1 and 1 − p_t otherwise) in the dechunking layer to turn discrete chunks into differentiable interpolations that attenuate uncertain boundaries. Unlike Transformer attention weights—which apply softmax to scaled query-key dot products across sequence positions to produce mixing weights over value vectors—H-Net's routing module compares only adjacent representations (t and t-1) via cosine similarity to produce discrete chunk-selection/compression boundaries rather than weighted averages over values.",
+    "finish_reason": "stop",
+    "gold_pages": [
+      "2507.07955v2 p.6",
+      "2507.07955v2 p.7",
+      "1706.03762v7 p.4"
+    ],
+    "grade_reasons": [
+      "missing required facts: ['cosine similarity', 'boundary probabilities|boundary indicators|boundary probability|segmentation boundaries', 'exponential moving average|moving average', 'softmax over|weights on the values|adjacent representations|adjacent encoder outputs|t and t-1']",
+      "no citation lands on a gold page"
+    ],
+    "kind": "answer",
+    "model_id": "qwen/qwen3.8-27b",
+    "proposed_grade": "wrong",
+    "question": "In H-Net's Dynamic Chunking mechanism, what is the purpose of the routing module and the smoothing module? How does the routing module's boundary information differ from the attention weights used in the Transformer architecture?",
+    "question_id": "q13",
+    "raw_answer": "The routing module predicts boundaries between adjacent elements through a similarity score [P1]. The smoothing module interpolates representations using the router’s outputs to attenuate the effect of uncertain boundaries and improve learnability [P1]. The routing module’s boundary information is used to selectively retain vectors and reduce sequence length while preserving semantically significant positions [P1]. The Transformer architecture relies entirely on an attention mechanism to draw global dependencies between input and output, eschewing recurrence [P6]. The passages do not provide a direct comparison between the routing module's boundary information and the specific nature of attention weights in the Transformer [P1][P6].\n\n[P1][P6]",
+    "request_id": "exp-20261113T064542Z-c482696-000039",
+    "retrieval_setting": "large_wide",
+    "retrieved": [
+      "[P1] 2507.07955v2 pp.2-3 2507.07955v2_p2_c1",
+      "[P2] 2507.07955v2 pp.2-2 2507.07955v2_p2_c0",
+      "[P3] 2507.07955v2 pp.7-8 2507.07955v2_p7_c0",
+      "[P4] 2507.07955v2 pp.17-18 2507.07955v2_p17_c1",
+      "[P5] 2507.07955v2 pp.3-4 2507.07955v2_p3_c0",
+      "[P6] 1706.03762v7 pp.2-2 1706.03762v7_p2_c0",
+      "[P7] 1706.03762v7 pp.1-1 1706.03762v7_p1_c1"
+    ],
+    "review_status": "pending",
+    "status": "ok",
+    "tokens_in": 4563,
+    "tokens_out": 135,
+    "trap_type": "shared_vocabulary",
+    "verification_verdict": "VERIFIED",
+    "verifier_failures": []
+  },
+  {
+    "answerable": true,
+    "category": "multi_hop",
+    "cited_pages": [
+      "2507.07955v2 pp.7-7 [P3]",
+      "2507.07955v2 pp.18-18 [P2]"
+    ],
+    "delivered_text": "The smoothing module is essential for stable training dynamics because it transforms discrete upsampling operations into continuous ones, enabling effective backpropagation through chunk boundaries [P3]. It prevents the model from overfitting to suboptimal chunking patterns early in training by smoothly interpolating between discrete choices based on confidence scores [P3]. When the smoothing module is removed, compression ratios fluctuate severely throughout training, which prevents the model from learning consistent chunking boundaries [P2]. This instability directly manifests as substantial performance degradation, confirming that smooth gradient flow through the decompression process is crucial for effective end-to-end learning [P2].",
+    "error_code": null,
+    "expected_answer": "Discrete chunk boundaries impede gradient flow during backpropagation and cause alignment mismatches if early suboptimal boundaries (e.g., splitting 'product' at 'du') are selected. By computing an EMA interpolation weighted by confidence scores, the smoothing module makes decompression differentiable, attenuates uncertain boundaries, and prevents overfitting to poor initial segmentations. In Section 3.3 ablations ('w/o smoothing'), the smoothing module proves essential for stable training dynamics: without it, compression ratios (L^1/L^0 and L^2/L^1) fluctuate severely throughout training, preventing consistent boundary learning and causing substantial validation BPB degradation.",
+    "finish_reason": "stop",
+    "gold_pages": [
+      "2507.07955v2 p.7",
+      "2507.07955v2 p.17",
+      "2507.07955v2 p.18"
+    ],
+    "grade_reasons": [
+      "all required facts present, gold page cited, no forbidden claims"
+    ],
+    "kind": "answer",
+    "model_id": "qwen/qwen3.8-27b",
+    "proposed_grade": "correct",
+    "question": "Why is the smoothing module important for stable training in H-Net? What happens when this module is removed, according to the ablation experiments?",
+    "question_id": "q14",
+    "raw_answer": "The smoothing module is essential for stable training dynamics because it transforms discrete upsampling operations into continuous ones, enabling effective backpropagation through chunk boundaries [P3]. It prevents the model from overfitting to suboptimal chunking patterns early in training by smoothly interpolating between discrete choices based on confidence scores [P3]. When the smoothing module is removed, compression ratios fluctuate severely throughout training, which prevents the model from learning consistent chunking boundaries [P2]. This instability directly manifests as substantial performance degradation, confirming that smooth gradient flow through the decompression process is crucial for effective end-to-end learning [P2].",
+    "request_id": "exp-20261113T064542Z-c482696-000040",
+    "retrieval_setting": "small_fast",
+    "retrieved": [
+      "[P1] 2507.07955v2 pp.17-18 2507.07955v2_p17_c3",
+      "[P2] 2507.07955v2 pp.18-18 2507.07955v2_p18_c0",
+      "[P3] 2507.07955v2 pp.7-7 2507.07955v2_p7_c1",
+      "[P4] 2507.07955v2 pp.6-7 2507.07955v2_p6_c4"
+    ],
+    "review_status": "pending",
+    "status": "ok",
+    "tokens_in": 1638,
+    "tokens_out": 126,
+    "trap_type": null,
+    "verification_verdict": "VERIFIED",
+    "verifier_failures": []
+  },
+  {
+    "answerable": true,
+    "category": "multi_hop",
+    "cited_pages": [
+      "2507.07955v2 pp.17-18 [P1]",
+      "2507.07955v2 pp.2-3 [P3]"
+    ],
+    "delivered_text": "The smoothing module is essential for stable training dynamics in H-Net [P1]. When this module is removed, the compression ratios fluctuate severely throughout training [P1]. This instability prevents the model from learning consistent chunking boundaries [P1]. Consequently, the removal of the smoothing module leads to substantial performance degradation [P1]. This outcome confirms that smooth gradient flow through the decompression process is crucial for effective end-to-end learning [P1]. The module works by interpolating representations to attenuate the effect of uncertain boundaries, which significantly improves learnability [P3].",
+    "error_code": null,
+    "expected_answer": "Discrete chunk boundaries impede gradient flow during backpropagation and cause alignment mismatches if early suboptimal boundaries (e.g., splitting 'product' at 'du') are selected. By computing an EMA interpolation weighted by confidence scores, the smoothing module makes decompression differentiable, attenuates uncertain boundaries, and prevents overfitting to poor initial segmentations. In Section 3.3 ablations ('w/o smoothing'), the smoothing module proves essential for stable training dynamics: without it, compression ratios (L^1/L^0 and L^2/L^1) fluctuate severely throughout training, preventing consistent boundary learning and causing substantial validation BPB degradation.",
+    "finish_reason": "stop",
+    "gold_pages": [
+      "2507.07955v2 p.7",
+      "2507.07955v2 p.17",
+      "2507.07955v2 p.18"
+    ],
+    "grade_reasons": [
+      "missing required facts: ['alignment mismatches|overfitting to suboptimal']"
+    ],
+    "kind": "answer",
+    "model_id": "qwen/qwen3.8-27b",
+    "proposed_grade": "wrong",
+    "question": "Why is the smoothing module important for stable training in H-Net? What happens when this module is removed, according to the ablation experiments?",
+    "question_id": "q14",
+    "raw_answer": "The smoothing module is essential for stable training dynamics in H-Net [P1]. When this module is removed, the compression ratios fluctuate severely throughout training [P1]. This instability prevents the model from learning consistent chunking boundaries [P1]. Consequently, the removal of the smoothing module leads to substantial performance degradation [P1]. This outcome confirms that smooth gradient flow through the decompression process is crucial for effective end-to-end learning [P1]. The module works by interpolating representations to attenuate the effect of uncertain boundaries, which significantly improves learnability [P3].",
+    "request_id": "exp-20261113T064542Z-c482696-000041",
+    "retrieval_setting": "balanced_rerank",
+    "retrieved": [
+      "[P1] 2507.07955v2 pp.17-18 2507.07955v2_p17_c2",
+      "[P2] 2507.07955v2 pp.9-10 2507.07955v2_p9_c3",
+      "[P3] 2507.07955v2 pp.2-3 2507.07955v2_p2_c2",
+      "[P4] 2507.07955v2 pp.18-18 2507.07955v2_p18_c0"
+    ],
+    "review_status": "pending",
+    "status": "ok",
+    "tokens_in": 1965,
+    "tokens_out": 117,
+    "trap_type": null,
+    "verification_verdict": "VERIFIED",
+    "verifier_failures": []
+  },
+  {
+    "answerable": true,
+    "category": "multi_hop",
+    "cited_pages": [
+      "2507.07955v2 pp.6-7 [P2]",
+      "2507.07955v2 pp.17-18 [P1]"
+    ],
+    "delivered_text": "The smoothing module is essential for stable training dynamics because it transforms discrete chunking operations into differentiable computations, enabling effective backpropagation through chunk boundaries [P2]. It achieves this by applying an exponential moving average to create smooth interpolations between chunks based on confidence scores [P2]. This mechanism prevents the model from overfitting to suboptimal chunking patterns early in training [P2]. According to the ablation studies, removing the smoothing module causes compression ratios to fluctuate severely throughout training [P1]. This instability prevents the model from learning consistent chunking boundaries [P1]. Consequently, the removal of the module results in substantial performance degradation [P1].",
+    "error_code": null,
+    "expected_answer": "Discrete chunk boundaries impede gradient flow during backpropagation and cause alignment mismatches if early suboptimal boundaries (e.g., splitting 'product' at 'du') are selected. By computing an EMA interpolation weighted by confidence scores, the smoothing module makes decompression differentiable, attenuates uncertain boundaries, and prevents overfitting to poor initial segmentations. In Section 3.3 ablations ('w/o smoothing'), the smoothing module proves essential for stable training dynamics: without it, compression ratios (L^1/L^0 and L^2/L^1) fluctuate severely throughout training, preventing consistent boundary learning and causing substantial validation BPB degradation.",
+    "finish_reason": "stop",
+    "gold_pages": [
+      "2507.07955v2 p.7",
+      "2507.07955v2 p.17",
+      "2507.07955v2 p.18"
+    ],
+    "grade_reasons": [
+      "all required facts present, gold page cited, no forbidden claims"
+    ],
+    "kind": "answer",
+    "model_id": "qwen/qwen3.8-27b",
+    "proposed_grade": "correct",
+    "question": "Why is the smoothing module important for stable training in H-Net? What happens when this module is removed, according to the ablation experiments?",
+    "question_id": "q14",
+    "raw_answer": "The smoothing module is essential for stable training dynamics because it transforms discrete chunking operations into differentiable computations, enabling effective backpropagation through chunk boundaries [P2]. It achieves this by applying an exponential moving average to create smooth interpolations between chunks based on confidence scores [P2]. This mechanism prevents the model from overfitting to suboptimal chunking patterns early in training [P2]. According to the ablation studies, removing the smoothing module causes compression ratios to fluctuate severely throughout training [P1]. This instability prevents the model from learning consistent chunking boundaries [P1]. Consequently, the removal of the module results in substantial performance degradation [P1].",
+    "request_id": "exp-20261113T064542Z-c482696-000042",
+    "retrieval_setting": "large_wide",
+    "retrieved": [
+      "[P1] 2507.07955v2 pp.17-18 2507.07955v2_p17_c1",
+      "[P2] 2507.07955v2 pp.6-7 2507.07955v2_p6_c2",
+      "[P3] 2507.07955v2 pp.7-8 2507.07955v2_p7_c0",
+      "[P4] 2507.07955v2 pp.9-9 2507.07955v2_p9_c0",
+      "[P5] 2507.07955v2 pp.2-3 2507.07955v2_p2_c1"
+    ],
+    "review_status": "pending",
+    "status": "ok",
+    "tokens_in": 3483,
+    "tokens_out": 136,
+    "trap_type": null,
+    "verification_verdict": "VERIFIED",
+    "verifier_failures": []
+  },
+  {
+    "answerable": true,
+    "category": "numeric_technical",
+    "cited_pages": [
+      "2507.07955v2 pp.1-1 [P1]",
+      "2507.07955v2 pp.22-22 [P4]"
+    ],
+    "delivered_text": "Extending the hierarchy to multiple stages increases H-Net's performance by modeling multiple levels of abstraction [P1]. This multi-stage approach demonstrates significantly better scaling with data and matches the performance of a token-based Transformer that is twice its size [P1]. The authors provide experimental evidence showing that iterating H-Net from 0 to 1 stage and from 1 to 2 stages consistently improves performance [P4]. In languages and modalities with weaker tokenization heuristics, such as Chinese, code, or DNA sequences, the improvement over tokenized pipelines is further increased [P1]. Specifically, the model achieves nearly 4× improvement in data efficiency over baselines for DNA sequences [P1]. The authors note that they did not attempt a 3-stage H-Net in this paper, leaving deeper iteration as a future direction [P4].",
+    "error_code": null,
+    "expected_answer": "Iterating H-Net from 1 stage to 2 stages models multiple levels of abstraction and yields steeper training curves and stronger data scaling. At XL scale, a 2-stage byte-level H-Net overtakes the BPE Transformer's perplexity after just 30B training bytes (vs 100B for 1-stage and 200B for space-based H-Net), outperforms the BPE Transformer by 2.2% (Large) and 2.6% (XL) on downstream evaluations, and enables a Large 2-stage H-Net to match the downstream performance of an XL BPE Transformer of twice its size. On unsegmented modalities, the 2-stage H-Net reaches 66.3 on Chinese XWinograd-zh versus 59.9 for the tokenized Transformer, and on HG38 DNA H-Net achieves ~3.6x better data efficiency than isotropic baselines.",
+    "finish_reason": "stop",
+    "gold_pages": [
+      "2507.07955v2 p.4",
+      "2507.07955v2 p.12",
+      "2507.07955v2 p.12",
+      "2507.07955v2 p.17",
+      "2507.07955v2 p.22",
+      "2507.07955v2 p.1"
+    ],
+    "grade_reasons": [
+      "missing required facts: ['30B|100B', '2.2%|2.6%', '66.3|3.6x|3.6×|3.6 times']"
+    ],
+    "kind": "answer",
+    "model_id": "qwen/qwen3.8-27b",
+    "proposed_grade": "wrong",
+    "question": "How does increasing the number of hierarchical stages affect H-Net's performance? What experimental evidence do the authors provide regarding its scaling behaviour and data efficiency?",
+    "question_id": "q15",
+    "raw_answer": "Extending the hierarchy to multiple stages increases H-Net's performance by modeling multiple levels of abstraction [P1]. This multi-stage approach demonstrates significantly better scaling with data and matches the performance of a token-based Transformer that is twice its size [P1]. The authors provide experimental evidence showing that iterating H-Net from 0 to 1 stage and from 1 to 2 stages consistently improves performance [P4]. In languages and modalities with weaker tokenization heuristics, such as Chinese, code, or DNA sequences, the improvement over tokenized pipelines is further increased [P1]. Specifically, the model achieves nearly 4× improvement in data efficiency over baselines for DNA sequences [P1]. The authors note that they did not attempt a 3-stage H-Net in this paper, leaving deeper iteration as a future direction [P4].",
+    "request_id": "exp-20261113T064542Z-c482696-000043",
+    "retrieval_setting": "small_fast",
+    "retrieved": [
+      "[P1] 2507.07955v2 pp.1-1 2507.07955v2_p1_c2",
+      "[P2] 2507.07955v2 pp.11-11 2507.07955v2_p11_c2",
+      "[P3] 2507.07955v2 pp.9-9 2507.07955v2_p9_c2",
+      "[P4] 2507.07955v2 pp.22-22 2507.07955v2_p22_c2"
+    ],
+    "review_status": "pending",
+    "status": "ok",
+    "tokens_in": 1347,
+    "tokens_out": 174,
+    "trap_type": null,
+    "verification_verdict": "VERIFIED",
+    "verifier_failures": []
+  },
+  {
+    "answerable": true,
+    "category": "numeric_technical",
+    "cited_pages": [
+      "2507.07955v2 pp.20-21 [P1]",
+      "2507.07955v2 pp.37-37 [P3]",
+      "2507.07955v2 pp.23-23 [P4]"
+    ],
+    "delivered_text": "The passages do not explicitly state how increasing the number of hierarchical stages affects H-Net's performance, as they only compare 1-stage and 2-stage variants without a direct causal analysis of stage count [P1]. The authors provide experimental evidence that H-Net (2-stage) demonstrates superior scaling compared to Transformer and H-Net (space) on Chinese and code datasets [P3]. They note that H-Net achieves sparsity in a more semantically meaningful manner, which allows for better scaling than generic sparse methods [P1]. Regarding data efficiency, the authors used the models' losses during the constant learning rate phase as a proxy for how quickly they improve with data [P4]. They did not pursue formal scaling law coefficient calculations due to resource constraints [P4]. The paper acknowledges that validating H-Net at larger model sizes of 3B, 7B, and beyond remains to be done [P4].",
+    "error_code": null,
+    "expected_answer": "Iterating H-Net from 1 stage to 2 stages models multiple levels of abstraction and yields steeper training curves and stronger data scaling. At XL scale, a 2-stage byte-level H-Net overtakes the BPE Transformer's perplexity after just 30B training bytes (vs 100B for 1-stage and 200B for space-based H-Net), outperforms the BPE Transformer by 2.2% (Large) and 2.6% (XL) on downstream evaluations, and enables a Large 2-stage H-Net to match the downstream performance of an XL BPE Transformer of twice its size. On unsegmented modalities, the 2-stage H-Net reaches 66.3 on Chinese XWinograd-zh versus 59.9 for the tokenized Transformer, and on HG38 DNA H-Net achieves ~3.6x better data efficiency than isotropic baselines.",
+    "finish_reason": "stop",
+    "gold_pages": [
+      "2507.07955v2 p.4",
+      "2507.07955v2 p.12",
+      "2507.07955v2 p.12",
+      "2507.07955v2 p.17",
+      "2507.07955v2 p.22",
+      "2507.07955v2 p.1"
+    ],
+    "grade_reasons": [
+      "missing required facts: ['30B|100B', '2.2%|2.6%', 'twice its size', '66.3|3.6x|3.6×|3.6 times']",
+      "no citation lands on a gold page"
+    ],
+    "kind": "answer",
+    "model_id": "qwen/qwen3.8-27b",
+    "proposed_grade": "wrong",
+    "question": "How does increasing the number of hierarchical stages affect H-Net's performance? What experimental evidence do the authors provide regarding its scaling behaviour and data efficiency?",
+    "question_id": "q15",
+    "raw_answer": "The passages do not explicitly state how increasing the number of hierarchical stages affects H-Net's performance, as they only compare 1-stage and 2-stage variants without a direct causal analysis of stage count [P1]. The authors provide experimental evidence that H-Net (2-stage) demonstrates superior scaling compared to Transformer and H-Net (space) on Chinese and code datasets [P3]. They note that H-Net achieves sparsity in a more semantically meaningful manner, which allows for better scaling than generic sparse methods [P1]. Regarding data efficiency, the authors used the models' losses during the constant learning rate phase as a proxy for how quickly they improve with data [P4]. They did not pursue formal scaling law coefficient calculations due to resource constraints [P4]. The paper acknowledges that validating H-Net at larger model sizes of 3B, 7B, and beyond remains to be done [P4].",
+    "request_id": "exp-20261113T064542Z-c482696-000044",
+    "retrieval_setting": "balanced_rerank",
+    "retrieved": [
+      "[P1] 2507.07955v2 pp.20-21 2507.07955v2_p20_c1",
+      "[P2] 2507.07955v2 pp.9-9 2507.07955v2_p9_c1",
+      "[P3] 2507.07955v2 pp.37-37 2507.07955v2_p37_c1",
+      "[P4] 2507.07955v2 pp.23-23 2507.07955v2_p23_c0"
+    ],
+    "review_status": "pending",
+    "status": "ok",
+    "tokens_in": 1571,
+    "tokens_out": 189,
+    "trap_type": null,
+    "verification_verdict": "VERIFIED",
+    "verifier_failures": []
+  },
+  {
+    "answerable": true,
+    "category": "numeric_technical",
+    "cited_pages": [
+      "2507.07955v2 pp.22-22 [P2]",
+      "2507.07955v2 pp.22-22 [P4]",
+      "2507.07955v2 pp.2-2 [P5]"
+    ],
+    "delivered_text": "The authors state that iterating H-Net from 0 stages to 1 stage and from 1 stage to 2 stages consistently improves performance [P2][P4]. They did not attempt a 3-stage H-Net for simplicity, leaving deeper iteration as a future direction [P2][P4]. Regarding data efficiency, distilling H-Net from a pretrained Llama checkpoint with less than 200B bytes of training yields strong performance that is much better than training from scratch [P4]. This distilled model still performs worse than the teacher model but represents an efficient way to create an end-to-end byte-level model [P4]. The paper notes that H-Net matches the efficiency of tokenized pipelines while substantially improving modeling ability [P5].\n\n[P2][P4][P5]",
+    "error_code": null,
+    "expected_answer": "Iterating H-Net from 1 stage to 2 stages models multiple levels of abstraction and yields steeper training curves and stronger data scaling. At XL scale, a 2-stage byte-level H-Net overtakes the BPE Transformer's perplexity after just 30B training bytes (vs 100B for 1-stage and 200B for space-based H-Net), outperforms the BPE Transformer by 2.2% (Large) and 2.6% (XL) on downstream evaluations, and enables a Large 2-stage H-Net to match the downstream performance of an XL BPE Transformer of twice its size. On unsegmented modalities, the 2-stage H-Net reaches 66.3 on Chinese XWinograd-zh versus 59.9 for the tokenized Transformer, and on HG38 DNA H-Net achieves ~3.6x better data efficiency than isotropic baselines.",
+    "finish_reason": "stop",
+    "gold_pages": [
+      "2507.07955v2 p.4",
+      "2507.07955v2 p.12",
+      "2507.07955v2 p.12",
+      "2507.07955v2 p.17",
+      "2507.07955v2 p.22",
+      "2507.07955v2 p.1"
+    ],
+    "grade_reasons": [
+      "missing required facts: ['30B|100B', '2.2%|2.6%', 'twice its size', '66.3|3.6x|3.6×|3.6 times']"
+    ],
+    "kind": "answer",
+    "model_id": "qwen/qwen3.8-27b",
+    "proposed_grade": "wrong",
+    "question": "How does increasing the number of hierarchical stages affect H-Net's performance? What experimental evidence do the authors provide regarding its scaling behaviour and data efficiency?",
+    "question_id": "q15",
+    "raw_answer": "The authors state that iterating H-Net from 0 stages to 1 stage and from 1 stage to 2 stages consistently improves performance [P2][P4]. They did not attempt a 3-stage H-Net for simplicity, leaving deeper iteration as a future direction [P2][P4]. Regarding data efficiency, distilling H-Net from a pretrained Llama checkpoint with less than 200B bytes of training yields strong performance that is much better than training from scratch [P4]. This distilled model still performs worse than the teacher model but represents an efficient way to create an end-to-end byte-level model [P4]. The paper notes that H-Net matches the efficiency of tokenized pipelines while substantially improving modeling ability [P5].\n\n[P2][P4][P5]",
+    "request_id": "exp-20261113T064542Z-c482696-000045",
+    "retrieval_setting": "large_wide",
+    "retrieved": [
+      "[P1] 2507.07955v2 pp.9-9 2507.07955v2_p9_c0",
+      "[P2] 2507.07955v2 pp.22-22 2507.07955v2_p22_c1",
+      "[P3] 2507.07955v2 pp.20-21 2507.07955v2_p20_c0",
+      "[P4] 2507.07955v2 pp.22-22 2507.07955v2_p22_c0",
+      "[P5] 2507.07955v2 pp.2-2 2507.07955v2_p2_c0"
+    ],
+    "review_status": "pending",
+    "status": "ok",
+    "tokens_in": 3293,
+    "tokens_out": 166,
+    "trap_type": null,
+    "verification_verdict": "VERIFIED",
+    "verifier_failures": []
+  },
+  {
+    "answerable": false,
+    "category": "unanswerable",
+    "cited_pages": [],
+    "delivered_text": "I can't answer this from the three papers in the library: the passages I found do not contain the information needed.",
+    "error_code": null,
+    "expected_answer": null,
+    "finish_reason": "stop",
+    "gold_pages": [],
+    "grade_reasons": [
+      "answer is a refusal; question is unanswerable"
+    ],
+    "kind": "llm_refusal",
+    "model_id": "qwen/qwen3.8-27b",
+    "proposed_grade": "refused_correctly",
+    "question": "How do Proof of Work and Proof of Stake consensus mechanisms operate in blockchain networks, and what are their major differences?",
+    "question_id": "q16",
+    "raw_answer": "INSUFFICIENT_EVIDENCE",
+    "request_id": "exp-20261113T064542Z-c482696-000046",
+    "retrieval_setting": "small_fast",
+    "retrieved": [
+      "[P1] 2507.07955v2 pp.2-2 2507.07955v2_p2_c2",
+      "[P2] 2507.07955v2 pp.5-5 2507.07955v2_p5_c1",
+      "[P3] 2507.07955v2 pp.16-16 2507.07955v2_p16_c3",
+      "[P4] 2507.07955v2 pp.16-16 2507.07955v2_p16_c0"
+    ],
+    "review_status": "pending",
+    "status": "ok",
+    "tokens_in": 1522,
+    "tokens_out": 7,
+    "trap_type": null,
+    "verification_verdict": "REFUSAL_VERIFIED",
+    "verifier_failures": []
+  },
+  {
+    "answerable": false,
+    "category": "unanswerable",
+    "cited_pages": [],
+    "delivered_text": "I can only answer from three papers (\"Attention Is All You Need\", arXiv:1706.03762v7; Moshi, arXiv:2410.00037v1; H-Net, arXiv:2507.07955v2), and they do not cover this question.",
+    "error_code": null,
+    "expected_answer": null,
+    "finish_reason": null,
+    "gold_pages": [],
+    "grade_reasons": [
+      "answer is a refusal; question is unanswerable"
+    ],
+    "kind": "early_refusal",
+    "model_id": "qwen/qwen3.8-27b",
+    "proposed_grade": "refused_correctly",
+    "question": "How do Proof of Work and Proof of Stake consensus mechanisms operate in blockchain networks, and what are their major differences?",
+    "question_id": "q16",
+    "raw_answer": null,
+    "request_id": "exp-20261113T064542Z-c482696-000047",
+    "retrieval_setting": "balanced_rerank",
+    "retrieved": [
+      "[P1] 2507.07955v2 pp.5-5 2507.07955v2_p5_c1",
+      "[P2] 2507.07955v2 pp.2-2 2507.07955v2_p2_c1",
+      "[P3] 2507.07955v2 pp.10-11 2507.07955v2_p10_c3",
+      "[P4] 2507.07955v2 pp.4-5 2507.07955v2_p4_c2"
+    ],
+    "review_status": "pending",
+    "status": "ok",
+    "tokens_in": 0,
+    "tokens_out": 0,
+    "trap_type": null,
+    "verification_verdict": "EARLY_REFUSAL",
+    "verifier_failures": []
+  },
+  {
+    "answerable": false,
+    "category": "unanswerable",
+    "cited_pages": [],
+    "delivered_text": "I can't answer this from the three papers in the library: the passages I found do not contain the information needed.",
+    "error_code": null,
+    "expected_answer": null,
+    "finish_reason": "stop",
+    "gold_pages": [],
+    "grade_reasons": [
+      "answer is a refusal; question is unanswerable"
+    ],
+    "kind": "llm_refusal",
+    "model_id": "qwen/qwen3.8-27b",
+    "proposed_grade": "refused_correctly",
+    "question": "How do Proof of Work and Proof of Stake consensus mechanisms operate in blockchain networks, and what are their major differences?",
+    "question_id": "q16",
+    "raw_answer": "INSUFFICIENT_EVIDENCE",
+    "request_id": "exp-20261113T064542Z-c482696-000048",
+    "retrieval_setting": "large_wide",
+    "retrieved": [
+      "[P1] 2507.07955v2 pp.33-33 2507.07955v2_p33_c0",
+      "[P2] 2507.07955v2 pp.2-2 2507.07955v2_p2_c0",
+      "[P3] 2507.07955v2 pp.4-5 2507.07955v2_p4_c2",
+      "[P4] 2507.07955v2 pp.16-17 2507.07955v2_p16_c0",
+      "[P5] 2507.07955v2 pp.5-5 2507.07955v2_p5_c0"
+    ],
+    "review_status": "pending",
+    "status": "ok",
+    "tokens_in": 3364,
+    "tokens_out": 7,
+    "trap_type": null,
+    "verification_verdict": "REFUSAL_VERIFIED",
+    "verifier_failures": []
+  },
+  {
+    "answerable": false,
+    "category": "unanswerable",
+    "cited_pages": [],
+    "delivered_text": "I can't answer this from the three papers in the library: the passages I found do not contain the information needed.",
+    "error_code": null,
+    "expected_answer": null,
+    "finish_reason": "stop",
+    "gold_pages": [],
+    "grade_reasons": [
+      "answer is a refusal; question is unanswerable"
+    ],
+    "kind": "llm_refusal",
+    "model_id": "qwen/qwen3.8-27b",
+    "proposed_grade": "refused_correctly",
+    "question": "Explain the two major stages of photosynthesis: light-dependent reactions and the Calvin cycle. Where does each stage occur?",
+    "question_id": "q17",
+    "raw_answer": "INSUFFICIENT_EVIDENCE",
+    "request_id": "exp-20261113T064542Z-c482696-000049",
+    "retrieval_setting": "small_fast",
+    "retrieved": [
+      "[P1] 2507.07955v2 pp.9-9 2507.07955v2_p9_c3",
+      "[P2] 2507.07955v2 pp.11-11 2507.07955v2_p11_c2",
+      "[P3] 2507.07955v2 pp.14-15 2507.07955v2_p14_c4",
+      "[P4] 2507.07955v2 pp.16-16 2507.07955v2_p16_c3"
+    ],
+    "review_status": "pending",
+    "status": "ok",
+    "tokens_in": 1365,
+    "tokens_out": 7,
+    "trap_type": null,
+    "verification_verdict": "REFUSAL_VERIFIED",
+    "verifier_failures": []
+  },
+  {
+    "answerable": false,
+    "category": "unanswerable",
+    "cited_pages": [],
+    "delivered_text": "I can only answer from three papers (\"Attention Is All You Need\", arXiv:1706.03762v7; Moshi, arXiv:2410.00037v1; H-Net, arXiv:2507.07955v2), and they do not cover this question.",
+    "error_code": null,
+    "expected_answer": null,
+    "finish_reason": null,
+    "gold_pages": [],
+    "grade_reasons": [
+      "answer is a refusal; question is unanswerable"
+    ],
+    "kind": "early_refusal",
+    "model_id": "qwen/qwen3.8-27b",
+    "proposed_grade": "refused_correctly",
+    "question": "Explain the two major stages of photosynthesis: light-dependent reactions and the Calvin cycle. Where does each stage occur?",
+    "question_id": "q17",
+    "raw_answer": null,
+    "request_id": "exp-20261113T064542Z-c482696-000050",
+    "retrieval_setting": "balanced_rerank",
+    "retrieved": [
+      "[P1] 2507.07955v2 pp.11-11 2507.07955v2_p11_c1",
+      "[P2] 2507.07955v2 pp.14-15 2507.07955v2_p14_c2",
+      "[P3] 2507.07955v2 pp.9-9 2507.07955v2_p9_c2",
+      "[P4] 2507.07955v2 pp.22-22 2507.07955v2_p22_c2"
+    ],
+    "review_status": "pending",
+    "status": "ok",
+    "tokens_in": 0,
+    "tokens_out": 0,
+    "trap_type": null,
+    "verification_verdict": "EARLY_REFUSAL",
+    "verifier_failures": []
+  },
+  {
+    "answerable": false,
+    "category": "unanswerable",
+    "cited_pages": [],
+    "delivered_text": "I can't answer this from the three papers in the library: the passages I found do not contain the information needed.",
+    "error_code": null,
+    "expected_answer": null,
+    "finish_reason": "stop",
+    "gold_pages": [],
+    "grade_reasons": [
+      "answer is a refusal; question is unanswerable"
+    ],
+    "kind": "llm_refusal",
+    "model_id": "qwen/qwen3.8-27b",
+    "proposed_grade": "refused_correctly",
+    "question": "Explain the two major stages of photosynthesis: light-dependent reactions and the Calvin cycle. Where does each stage occur?",
+    "question_id": "q17",
+    "raw_answer": "INSUFFICIENT_EVIDENCE",
+    "request_id": "exp-20261113T064542Z-c482696-000051",
+    "retrieval_setting": "large_wide",
+    "retrieved": [
+      "[P1] 2507.07955v2 pp.4-5 2507.07955v2_p4_c2",
+      "[P2] 2507.07955v2 pp.12-12 2507.07955v2_p12_c1",
+      "[P3] 2507.07955v2 pp.10-11 2507.07955v2_p10_c2",
+      "[P4] 2507.07955v2 pp.2-3 2507.07955v2_p2_c1",
+      "[P5] 2507.07955v2 pp.9-9 2507.07955v2_p9_c0"
+    ],
+    "review_status": "pending",
+    "status": "ok",
+    "tokens_in": 3702,
+    "tokens_out": 7,
+    "trap_type": null,
+    "verification_verdict": "REFUSAL_VERIFIED",
+    "verifier_failures": []
+  },
+  {
+    "answerable": false,
+    "category": "unanswerable",
+    "cited_pages": [],
+    "delivered_text": "I can only answer from three papers (\"Attention Is All You Need\", arXiv:1706.03762v7; Moshi, arXiv:2410.00037v1; H-Net, arXiv:2507.07955v2), and they do not cover this question.",
+    "error_code": null,
+    "expected_answer": null,
+    "finish_reason": null,
+    "gold_pages": [],
+    "grade_reasons": [
+      "answer is a refusal; question is unanswerable"
+    ],
+    "kind": "early_refusal",
+    "model_id": "qwen/qwen3.8-27b",
+    "proposed_grade": "refused_correctly",
+    "question": "How does the TCP three-way handshake establish a connection between a client and server? Explain the purpose of SYN, SYN-ACK and ACK.",
+    "question_id": "q18",
+    "raw_answer": null,
+    "request_id": "exp-20261113T064542Z-c482696-000052",
+    "retrieval_setting": "small_fast",
+    "retrieved": [
+      "[P1] 2507.07955v2 pp.10-10 2507.07955v2_p10_c1",
+      "[P2] 2507.07955v2 pp.22-22 2507.07955v2_p22_c0",
+      "[P3] 2507.07955v2 pp.9-9 2507.07955v2_p9_c1",
+      "[P4] 2507.07955v2 pp.10-10 2507.07955v2_p10_c0"
+    ],
+    "review_status": "pending",
+    "status": "ok",
+    "tokens_in": 0,
+    "tokens_out": 0,
+    "trap_type": null,
+    "verification_verdict": "EARLY_REFUSAL",
+    "verifier_failures": []
+  },
+  {
+    "answerable": false,
+    "category": "unanswerable",
+    "cited_pages": [],
+    "delivered_text": "I can only answer from three papers (\"Attention Is All You Need\", arXiv:1706.03762v7; Moshi, arXiv:2410.00037v1; H-Net, arXiv:2507.07955v2), and they do not cover this question.",
+    "error_code": null,
+    "expected_answer": null,
+    "finish_reason": null,
+    "gold_pages": [],
+    "grade_reasons": [
+      "answer is a refusal; question is unanswerable"
+    ],
+    "kind": "early_refusal",
+    "model_id": "qwen/qwen3.8-27b",
+    "proposed_grade": "refused_correctly",
+    "question": "How does the TCP three-way handshake establish a connection between a client and server? Explain the purpose of SYN, SYN-ACK and ACK.",
+    "question_id": "q18",
+    "raw_answer": null,
+    "request_id": "exp-20261113T064542Z-c482696-000053",
+    "retrieval_setting": "balanced_rerank",
+    "retrieved": [
+      "[P1] 2507.07955v2 pp.9-9 2507.07955v2_p9_c0",
+      "[P2] 2507.07955v2 pp.9-9 2507.07955v2_p9_c1",
+      "[P3] 2507.07955v2 pp.17-18 2507.07955v2_p17_c2",
+      "[P4] 2507.07955v2 pp.7-8 2507.07955v2_p7_c1"
+    ],
+    "review_status": "pending",
+    "status": "ok",
+    "tokens_in": 0,
+    "tokens_out": 0,
+    "trap_type": null,
+    "verification_verdict": "EARLY_REFUSAL",
+    "verifier_failures": []
+  },
+  {
+    "answerable": false,
+    "category": "unanswerable",
+    "cited_pages": [],
+    "delivered_text": "I can only answer from three papers (\"Attention Is All You Need\", arXiv:1706.03762v7; Moshi, arXiv:2410.00037v1; H-Net, arXiv:2507.07955v2), and they do not cover this question.",
+    "error_code": null,
+    "expected_answer": null,
+    "finish_reason": null,
+    "gold_pages": [],
+    "grade_reasons": [
+      "answer is a refusal; question is unanswerable"
+    ],
+    "kind": "early_refusal",
+    "model_id": "qwen/qwen3.8-27b",
+    "proposed_grade": "refused_correctly",
+    "question": "How does the TCP three-way handshake establish a connection between a client and server? Explain the purpose of SYN, SYN-ACK and ACK.",
+    "question_id": "q18",
+    "raw_answer": null,
+    "request_id": "exp-20261113T064542Z-c482696-000054",
+    "retrieval_setting": "large_wide",
+    "retrieved": [
+      "[P1] 2507.07955v2 pp.10-10 2507.07955v2_p10_c0",
+      "[P2] 2410.00037v1 pp.62-63 2410.00037v1_p62_c1",
+      "[P3] 2507.07955v2 pp.9-9 2507.07955v2_p9_c0",
+      "[P4] 2507.07955v2 pp.39-39 2507.07955v2_p39_c1",
+      "[P5] 2507.07955v2 pp.22-22 2507.07955v2_p22_c0"
+    ],
+    "review_status": "pending",
+    "status": "ok",
+    "tokens_in": 0,
+    "tokens_out": 0,
+    "trap_type": null,
+    "verification_verdict": "EARLY_REFUSAL",
+    "verifier_failures": []
+  },
+  {
+    "answerable": false,
+    "category": "unanswerable",
+    "cited_pages": [],
+    "delivered_text": "I can't answer this from the three papers in the library: the passages I found do not contain the information needed.",
+    "error_code": null,
+    "expected_answer": null,
+    "finish_reason": "stop",
+    "gold_pages": [],
+    "grade_reasons": [
+      "answer is a refusal; question is unanswerable"
+    ],
+    "kind": "llm_refusal",
+    "model_id": "qwen/qwen3.8-27b",
+    "proposed_grade": "refused_correctly",
+    "question": "Explain Newton's three laws of motion and provide a real-world example demonstrating each law.",
+    "question_id": "q19",
+    "raw_answer": "INSUFFICIENT_EVIDENCE",
+    "request_id": "exp-20261113T064542Z-c482696-000055",
+    "retrieval_setting": "small_fast",
+    "retrieved": [
+      "[P1] 2410.00037v1 pp.62-63 2410.00037v1_p62_c3",
+      "[P2] 2507.07955v2 pp.23-23 2507.07955v2_p23_c2",
+      "[P3] 2507.07955v2 pp.4-5 2507.07955v2_p4_c4",
+      "[P4] 2507.07955v2 pp.16-16 2507.07955v2_p16_c1"
+    ],
+    "review_status": "pending",
+    "status": "ok",
+    "tokens_in": 1541,
+    "tokens_out": 7,
+    "trap_type": null,
+    "verification_verdict": "REFUSAL_VERIFIED",
+    "verifier_failures": []
+  },
+  {
+    "answerable": false,
+    "category": "unanswerable",
+    "cited_pages": [],
+    "delivered_text": "I can only answer from three papers (\"Attention Is All You Need\", arXiv:1706.03762v7; Moshi, arXiv:2410.00037v1; H-Net, arXiv:2507.07955v2), and they do not cover this question.",
+    "error_code": null,
+    "expected_answer": null,
+    "finish_reason": null,
+    "gold_pages": [],
+    "grade_reasons": [
+      "answer is a refusal; question is unanswerable"
+    ],
+    "kind": "early_refusal",
+    "model_id": "qwen/qwen3.8-27b",
+    "proposed_grade": "refused_correctly",
+    "question": "Explain Newton's three laws of motion and provide a real-world example demonstrating each law.",
+    "question_id": "q19",
+    "raw_answer": null,
+    "request_id": "exp-20261113T064542Z-c482696-000056",
+    "retrieval_setting": "balanced_rerank",
+    "retrieved": [
+      "[P1] 2410.00037v1 pp.62-62 2410.00037v1_p62_c0",
+      "[P2] 1706.03762v7 pp.13-15 1706.03762v7_p13_c0",
+      "[P3] 2507.07955v2 pp.23-23 2507.07955v2_p23_c0",
+      "[P4] 2507.07955v2 pp.7-8 2507.07955v2_p7_c1"
+    ],
+    "review_status": "pending",
+    "status": "ok",
+    "tokens_in": 0,
+    "tokens_out": 0,
+    "trap_type": null,
+    "verification_verdict": "EARLY_REFUSAL",
+    "verifier_failures": []
+  },
+  {
+    "answerable": false,
+    "category": "unanswerable",
+    "cited_pages": [],
+    "delivered_text": "I can't answer this from the three papers in the library: the passages I found do not contain the information needed.",
+    "error_code": null,
+    "expected_answer": null,
+    "finish_reason": "stop",
+    "gold_pages": [],
+    "grade_reasons": [
+      "answer is a refusal; question is unanswerable"
+    ],
+    "kind": "llm_refusal",
+    "model_id": "qwen/qwen3.8-27b",
+    "proposed_grade": "refused_correctly",
+    "question": "Explain Newton's three laws of motion and provide a real-world example demonstrating each law.",
+    "question_id": "q19",
+    "raw_answer": "INSUFFICIENT_EVIDENCE",
+    "request_id": "exp-20261113T064542Z-c482696-000057",
+    "retrieval_setting": "large_wide",
+    "retrieved": [
+      "[P1] 2507.07955v2 pp.23-23 2507.07955v2_p23_c0",
+      "[P2] 2410.00037v1 pp.62-63 2410.00037v1_p62_c2",
+      "[P3] 2507.07955v2 pp.34-34 2507.07955v2_p34_c0",
+      "[P4] 2507.07955v2 pp.4-5 2507.07955v2_p4_c2",
+      "[P5] 2410.00037v1 pp.27-28 2410.00037v1_p27_c0"
+    ],
+    "review_status": "pending",
+    "status": "ok",
+    "tokens_in": 3372,
+    "tokens_out": 7,
+    "trap_type": null,
+    "verification_verdict": "REFUSAL_VERIFIED",
+    "verifier_failures": []
+  },
+  {
+    "answerable": false,
+    "category": "unanswerable",
+    "cited_pages": [],
+    "delivered_text": "I can't answer this from the three papers in the library: the passages I found do not contain the information needed.",
+    "error_code": null,
+    "expected_answer": null,
+    "finish_reason": "stop",
+    "gold_pages": [],
+    "grade_reasons": [
+      "answer is a refusal; question is unanswerable"
+    ],
+    "kind": "llm_refusal",
+    "model_id": "qwen/qwen3.8-27b",
+    "proposed_grade": "refused_correctly",
+    "question": "What are the major differences between MySQL and MongoDB in terms of data storage, schema design and query execution?",
+    "question_id": "q20",
+    "raw_answer": "INSUFFICIENT_EVIDENCE",
+    "request_id": "exp-20261113T064542Z-c482696-000058",
+    "retrieval_setting": "small_fast",
+    "retrieved": [
+      "[P1] 2410.00037v1 pp.30-30 2410.00037v1_p30_c0",
+      "[P2] 2410.00037v1 pp.54-55 2410.00037v1_p54_c2",
+      "[P3] 2410.00037v1 pp.53-53 2410.00037v1_p53_c1",
+      "[P4] 2507.07955v2 pp.16-16 2507.07955v2_p16_c2"
+    ],
+    "review_status": "pending",
+    "status": "ok",
+    "tokens_in": 1383,
+    "tokens_out": 7,
+    "trap_type": null,
+    "verification_verdict": "REFUSAL_VERIFIED",
+    "verifier_failures": []
+  },
+  {
+    "answerable": false,
+    "category": "unanswerable",
+    "cited_pages": [],
+    "delivered_text": "I can only answer from three papers (\"Attention Is All You Need\", arXiv:1706.03762v7; Moshi, arXiv:2410.00037v1; H-Net, arXiv:2507.07955v2), and they do not cover this question.",
+    "error_code": null,
+    "expected_answer": null,
+    "finish_reason": null,
+    "gold_pages": [],
+    "grade_reasons": [
+      "answer is a refusal; question is unanswerable"
+    ],
+    "kind": "early_refusal",
+    "model_id": "qwen/qwen3.8-27b",
+    "proposed_grade": "refused_correctly",
+    "question": "What are the major differences between MySQL and MongoDB in terms of data storage, schema design and query execution?",
+    "question_id": "q20",
+    "raw_answer": null,
+    "request_id": "exp-20261113T064542Z-c482696-000059",
+    "retrieval_setting": "balanced_rerank",
+    "retrieved": [
+      "[P1] 2507.07955v2 pp.17-17 2507.07955v2_p17_c0",
+      "[P2] 1706.03762v7 pp.3-4 1706.03762v7_p3_c1",
+      "[P3] 2507.07955v2 pp.16-17 2507.07955v2_p16_c2",
+      "[P4] 2410.00037v1 pp.30-30 2410.00037v1_p30_c0"
+    ],
+    "review_status": "pending",
+    "status": "ok",
+    "tokens_in": 0,
+    "tokens_out": 0,
+    "trap_type": null,
+    "verification_verdict": "EARLY_REFUSAL",
+    "verifier_failures": []
+  },
+  {
+    "answerable": false,
+    "category": "unanswerable",
+    "cited_pages": [],
+    "delivered_text": "I can't answer this from the three papers in the library: the passages I found do not contain the information needed.",
+    "error_code": null,
+    "expected_answer": null,
+    "finish_reason": "stop",
+    "gold_pages": [],
+    "grade_reasons": [
+      "answer is a refusal; question is unanswerable"
+    ],
+    "kind": "llm_refusal",
+    "model_id": "qwen/qwen3.8-27b",
+    "proposed_grade": "refused_correctly",
+    "question": "What are the major differences between MySQL and MongoDB in terms of data storage, schema design and query execution?",
+    "question_id": "q20",
+    "raw_answer": "INSUFFICIENT_EVIDENCE",
+    "request_id": "exp-20261113T064542Z-c482696-000060",
+    "retrieval_setting": "large_wide",
+    "retrieved": [
+      "[P1] 2410.00037v1 pp.54-55 2410.00037v1_p54_c0",
+      "[P2] 2410.00037v1 pp.30-30 2410.00037v1_p30_c0",
+      "[P3] 2507.07955v2 pp.19-20 2507.07955v2_p19_c0",
+      "[P4] 2410.00037v1 pp.53-54 2410.00037v1_p53_c1",
+      "[P5] 2507.07955v2 pp.1-1 2507.07955v2_p1_c1"
+    ],
+    "review_status": "pending",
+    "status": "ok",
+    "tokens_in": 3164,
+    "tokens_out": 7,
+    "trap_type": null,
+    "verification_verdict": "REFUSAL_VERIFIED",
+    "verifier_failures": []
+  },
+  {
+    "answerable": false,
+    "category": "unanswerable",
+    "cited_pages": [],
+    "delivered_text": "I can't answer this from the three papers in the library: the passages I found do not contain the information needed.",
+    "error_code": null,
+    "expected_answer": null,
+    "finish_reason": "stop",
+    "gold_pages": [],
+    "grade_reasons": [
+      "answer is a refusal; question is unanswerable"
+    ],
+    "kind": "llm_refusal",
+    "model_id": "qwen/qwen3.8-27b",
+    "proposed_grade": "refused_correctly",
+    "question": "How does WavLM (Chen et al., 2022) perform masked speech prediction and utterance mixing during pretraining?",
+    "question_id": "q21",
+    "raw_answer": "INSUFFICIENT_EVIDENCE",
+    "request_id": "exp-20261113T064542Z-c482696-000061",
+    "retrieval_setting": "small_fast",
+    "retrieved": [
+      "[P1] 2410.00037v1 pp.11-12 2410.00037v1_p11_c3",
+      "[P2] 2410.00037v1 pp.3-3 2410.00037v1_p3_c0",
+      "[P3] 2410.00037v1 pp.12-12 2410.00037v1_p12_c0",
+      "[P4] 2410.00037v1 pp.4-4 2410.00037v1_p4_c0"
+    ],
+    "review_status": "pending",
+    "status": "ok",
+    "tokens_in": 1539,
+    "tokens_out": 7,
+    "trap_type": "bibliography_match",
+    "verification_verdict": "REFUSAL_VERIFIED",
+    "verifier_failures": []
+  },
+  {
+    "answerable": false,
+    "category": "unanswerable",
+    "cited_pages": [],
+    "delivered_text": "I can't answer this from the three papers in the library: the passages I found do not contain the information needed.",
+    "error_code": null,
+    "expected_answer": null,
+    "finish_reason": "stop",
+    "gold_pages": [],
+    "grade_reasons": [
+      "answer is a refusal; question is unanswerable"
+    ],
+    "kind": "llm_refusal",
+    "model_id": "qwen/qwen3.8-27b",
+    "proposed_grade": "refused_correctly",
+    "question": "How does WavLM (Chen et al., 2022) perform masked speech prediction and utterance mixing during pretraining?",
+    "question_id": "q21",
+    "raw_answer": "INSUFFICIENT_EVIDENCE",
+    "request_id": "exp-20261113T064542Z-c482696-000062",
+    "retrieval_setting": "balanced_rerank",
+    "retrieved": [
+      "[P1] 2410.00037v1 pp.11-12 2410.00037v1_p11_c2",
+      "[P2] 2410.00037v1 pp.5-5 2410.00037v1_p5_c0",
+      "[P3] 2410.00037v1 pp.4-5 2410.00037v1_p4_c2",
+      "[P4] 2410.00037v1 pp.4-4 2410.00037v1_p4_c0"
+    ],
+    "review_status": "pending",
+    "status": "ok",
+    "tokens_in": 1899,
+    "tokens_out": 7,
+    "trap_type": "bibliography_match",
+    "verification_verdict": "REFUSAL_VERIFIED",
+    "verifier_failures": []
+  },
+  {
+    "answerable": false,
+    "category": "unanswerable",
+    "cited_pages": [],
+    "delivered_text": null,
+    "error_code": "upstream_error",
+    "expected_answer": null,
+    "finish_reason": null,
+    "gold_pages": [],
+    "grade_reasons": [],
+    "kind": "failed",
+    "model_id": "qwen/qwen3.8-27b",
+    "proposed_grade": null,
+    "question": "How does WavLM (Chen et al., 2022) perform masked speech prediction and utterance mixing during pretraining?",
+    "question_id": "q21",
+    "raw_answer": null,
+    "request_id": "exp-20261113T064542Z-c482696-000063",
+    "retrieval_setting": "large_wide",
+    "retrieved": [
+      "[P1] 2410.00037v1 pp.11-12 2410.00037v1_p11_c1",
+      "[P2] 2410.00037v1 pp.4-4 2410.00037v1_p4_c0",
+      "[P3] 2410.00037v1 pp.2-3 2410.00037v1_p2_c1",
+      "[P4] 2410.00037v1 pp.20-21 2410.00037v1_p20_c1",
+      "[P5] 2410.00037v1 pp.26-26 2410.00037v1_p26_c0"
+    ],
+    "review_status": null,
+    "status": "error",
+    "tokens_in": 0,
+    "tokens_out": 0,
+    "trap_type": "bibliography_match",
+    "verification_verdict": "NOT_RUN",
+    "verifier_failures": []
+  }
+]

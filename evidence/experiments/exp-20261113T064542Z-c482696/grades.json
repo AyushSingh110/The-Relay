@@ -1,0 +1,1280 @@
+{
+  "grades": [
+    {
+      "facts_found": [
+        "sequential|precludes parallelization",
+        "longer sequence lengths|memory constraints",
+        "global dependencies|attention mechanism",
+        "significantly more parallelization|O(1)"
+      ],
+      "facts_missing": [],
+      "final": null,
+      "forbidden_found": [],
+      "gold_page_hits": [
+        "1706.03762v7 p.2"
+      ],
+      "owner_note": null,
+      "proposed": "correct",
+      "question_id": "q01",
+      "reasons": [
+        "all required facts present, gold page cited, no forbidden claims"
+      ],
+      "request_id": "exp-20261113T064542Z-c482696-000001",
+      "review_status": "pending"
+    },
+    {
+      "facts_found": [
+        "sequential|precludes parallelization",
+        "longer sequence lengths|memory constraints",
+        "global dependencies|attention mechanism",
+        "significantly more parallelization|O(1)"
+      ],
+      "facts_missing": [],
+      "final": null,
+      "forbidden_found": [],
+      "gold_page_hits": [
+        "1706.03762v7 p.2"
+      ],
+      "owner_note": null,
+      "proposed": "correct",
+      "question_id": "q01",
+      "reasons": [
+        "all required facts present, gold page cited, no forbidden claims"
+      ],
+      "request_id": "exp-20261113T064542Z-c482696-000002",
+      "review_status": "pending"
+    },
+    {
+      "facts_found": [
+        "sequential|precludes parallelization",
+        "longer sequence lengths|memory constraints",
+        "global dependencies|attention mechanism",
+        "significantly more parallelization|O(1)"
+      ],
+      "facts_missing": [],
+      "final": null,
+      "forbidden_found": [],
+      "gold_page_hits": [
+        "1706.03762v7 p.2"
+      ],
+      "owner_note": null,
+      "proposed": "correct",
+      "question_id": "q01",
+      "reasons": [
+        "all required facts present, gold page cited, no forbidden claims"
+      ],
+      "request_id": "exp-20261113T064542Z-c482696-000003",
+      "review_status": "pending"
+    },
+    {
+      "facts_found": [],
+      "facts_missing": [
+        "dot products of the query with all keys",
+        "softmax",
+        "large values of d_k|grow large in magnitude|variance d_k",
+        "extremely small gradients"
+      ],
+      "final": null,
+      "forbidden_found": [],
+      "gold_page_hits": [],
+      "owner_note": null,
+      "proposed": "refused_wrongly",
+      "question_id": "q02",
+      "reasons": [
+        "answer is a refusal; question is answerable"
+      ],
+      "request_id": "exp-20261113T064542Z-c482696-000004",
+      "review_status": "pending"
+    },
+    {
+      "facts_found": [
+        "dot products of the query with all keys",
+        "softmax",
+        "large values of d_k|grow large in magnitude|variance d_k",
+        "extremely small gradients"
+      ],
+      "facts_missing": [],
+      "final": null,
+      "forbidden_found": [],
+      "gold_page_hits": [
+        "1706.03762v7 p.4"
+      ],
+      "owner_note": null,
+      "proposed": "correct",
+      "question_id": "q02",
+      "reasons": [
+        "all required facts present, gold page cited, no forbidden claims"
+      ],
+      "request_id": "exp-20261113T064542Z-c482696-000005",
+      "review_status": "pending"
+    },
+    {
+      "facts_found": [
+        "dot products of the query with all keys",
+        "softmax",
+        "large values of d_k|grow large in magnitude|variance d_k",
+        "extremely small gradients"
+      ],
+      "facts_missing": [],
+      "final": null,
+      "forbidden_found": [],
+      "gold_page_hits": [
+        "1706.03762v7 p.4"
+      ],
+      "owner_note": null,
+      "proposed": "correct",
+      "question_id": "q02",
+      "reasons": [
+        "all required facts present, gold page cited, no forbidden claims"
+      ],
+      "request_id": "exp-20261113T064542Z-c482696-000006",
+      "review_status": "pending"
+    },
+    {
+      "facts_found": [
+        "8 heads|h = 8|h=8|8 parallel attention|eight heads|eight parallel",
+        "= 64|d_k = d_v = 64|dimension of 64|64 dimensions",
+        "d_k|key dimension|dimension of the keys",
+        "d_v|value dimension|dimension of the values"
+      ],
+      "facts_missing": [],
+      "final": null,
+      "forbidden_found": [],
+      "gold_page_hits": [
+        "1706.03762v7 p.5"
+      ],
+      "owner_note": null,
+      "proposed": "correct",
+      "question_id": "q03",
+      "reasons": [
+        "all required facts present, gold page cited, no forbidden claims"
+      ],
+      "request_id": "exp-20261113T064542Z-c482696-000007",
+      "review_status": "pending"
+    },
+    {
+      "facts_found": [
+        "8 heads|h = 8|h=8|8 parallel attention|eight heads|eight parallel",
+        "= 64|d_k = d_v = 64|dimension of 64|64 dimensions",
+        "d_k|key dimension|dimension of the keys",
+        "d_v|value dimension|dimension of the values"
+      ],
+      "facts_missing": [],
+      "final": null,
+      "forbidden_found": [],
+      "gold_page_hits": [
+        "1706.03762v7 p.5"
+      ],
+      "owner_note": null,
+      "proposed": "correct",
+      "question_id": "q03",
+      "reasons": [
+        "all required facts present, gold page cited, no forbidden claims"
+      ],
+      "request_id": "exp-20261113T064542Z-c482696-000008",
+      "review_status": "pending"
+    },
+    {
+      "facts_found": [
+        "8 heads|h = 8|h=8|8 parallel attention|eight heads|eight parallel",
+        "= 64|d_k = d_v = 64|dimension of 64|64 dimensions",
+        "d_k|key dimension|dimension of the keys",
+        "d_v|value dimension|dimension of the values"
+      ],
+      "facts_missing": [],
+      "final": null,
+      "forbidden_found": [],
+      "gold_page_hits": [
+        "1706.03762v7 p.5"
+      ],
+      "owner_note": null,
+      "proposed": "correct",
+      "question_id": "q03",
+      "reasons": [
+        "all required facts present, gold page cited, no forbidden claims"
+      ],
+      "request_id": "exp-20261113T064542Z-c482696-000009",
+      "review_status": "pending"
+    },
+    {
+      "facts_found": [
+        "encoder-decoder attention",
+        "encoder self-attention|self-attention layers in the encoder|encoder contains self-attention",
+        "decoder self-attention|self-attention layers in the decoder|masked self-attention",
+        "auto-regressive|masking out"
+      ],
+      "facts_missing": [],
+      "final": null,
+      "forbidden_found": [],
+      "gold_page_hits": [
+        "1706.03762v7 p.5"
+      ],
+      "owner_note": null,
+      "proposed": "correct",
+      "question_id": "q04",
+      "reasons": [
+        "all required facts present, gold page cited, no forbidden claims"
+      ],
+      "request_id": "exp-20261113T064542Z-c482696-000010",
+      "review_status": "pending"
+    },
+    {
+      "facts_found": [
+        "encoder-decoder attention",
+        "encoder self-attention|self-attention layers in the encoder|encoder contains self-attention",
+        "decoder self-attention|self-attention layers in the decoder|masked self-attention",
+        "auto-regressive|masking out"
+      ],
+      "facts_missing": [],
+      "final": null,
+      "forbidden_found": [],
+      "gold_page_hits": [
+        "1706.03762v7 p.5"
+      ],
+      "owner_note": null,
+      "proposed": "correct",
+      "question_id": "q04",
+      "reasons": [
+        "all required facts present, gold page cited, no forbidden claims"
+      ],
+      "request_id": "exp-20261113T064542Z-c482696-000011",
+      "review_status": "pending"
+    },
+    {
+      "facts_found": [
+        "encoder-decoder attention",
+        "encoder self-attention|self-attention layers in the encoder|encoder contains self-attention",
+        "decoder self-attention|self-attention layers in the decoder|masked self-attention",
+        "auto-regressive|masking out"
+      ],
+      "facts_missing": [],
+      "final": null,
+      "forbidden_found": [],
+      "gold_page_hits": [
+        "1706.03762v7 p.5"
+      ],
+      "owner_note": null,
+      "proposed": "correct",
+      "question_id": "q04",
+      "reasons": [
+        "all required facts present, gold page cited, no forbidden claims"
+      ],
+      "request_id": "exp-20261113T064542Z-c482696-000012",
+      "review_status": "pending"
+    },
+    {
+      "facts_found": [
+        "no recurrence and no convolution",
+        "nearly identical results",
+        "linear function|relative positions",
+        "extrapolate to sequence lengths longer"
+      ],
+      "facts_missing": [],
+      "final": null,
+      "forbidden_found": [],
+      "gold_page_hits": [
+        "1706.03762v7 p.6"
+      ],
+      "owner_note": null,
+      "proposed": "correct",
+      "question_id": "q05",
+      "reasons": [
+        "all required facts present, gold page cited, no forbidden claims"
+      ],
+      "request_id": "exp-20261113T064542Z-c482696-000013",
+      "review_status": "pending"
+    },
+    {
+      "facts_found": [
+        "no recurrence and no convolution",
+        "nearly identical results",
+        "linear function|relative positions",
+        "extrapolate to sequence lengths longer"
+      ],
+      "facts_missing": [],
+      "final": null,
+      "forbidden_found": [],
+      "gold_page_hits": [
+        "1706.03762v7 p.6"
+      ],
+      "owner_note": null,
+      "proposed": "correct",
+      "question_id": "q05",
+      "reasons": [
+        "all required facts present, gold page cited, no forbidden claims"
+      ],
+      "request_id": "exp-20261113T064542Z-c482696-000014",
+      "review_status": "pending"
+    },
+    {
+      "facts_found": [
+        "nearly identical results",
+        "linear function|relative positions",
+        "extrapolate to sequence lengths longer"
+      ],
+      "facts_missing": [
+        "no recurrence and no convolution"
+      ],
+      "final": null,
+      "forbidden_found": [],
+      "gold_page_hits": [
+        "1706.03762v7 p.6"
+      ],
+      "owner_note": null,
+      "proposed": "wrong",
+      "question_id": "q05",
+      "reasons": [
+        "missing required facts: ['no recurrence and no convolution']"
+      ],
+      "request_id": "exp-20261113T064542Z-c482696-000015",
+      "review_status": "pending"
+    },
+    {
+      "facts_found": [
+        "textual information bottleneck|non-linguistic|paralinguistic",
+        "turn-based modeling|speaker turns",
+        "overlapping speech|interruptions"
+      ],
+      "facts_missing": [
+        "latency of several seconds|several seconds|high latency"
+      ],
+      "final": null,
+      "forbidden_found": [],
+      "gold_page_hits": [
+        "2410.00037v1 p.2"
+      ],
+      "owner_note": null,
+      "proposed": "wrong",
+      "question_id": "q06",
+      "reasons": [
+        "missing required facts: ['latency of several seconds|several seconds|high latency']"
+      ],
+      "request_id": "exp-20261113T064542Z-c482696-000016",
+      "review_status": "pending"
+    },
+    {
+      "facts_found": [
+        "latency of several seconds|several seconds|high latency",
+        "textual information bottleneck|non-linguistic|paralinguistic",
+        "turn-based modeling|speaker turns",
+        "overlapping speech|interruptions"
+      ],
+      "facts_missing": [],
+      "final": null,
+      "forbidden_found": [],
+      "gold_page_hits": [
+        "2410.00037v1 p.1"
+      ],
+      "owner_note": null,
+      "proposed": "correct",
+      "question_id": "q06",
+      "reasons": [
+        "all required facts present, gold page cited, no forbidden claims"
+      ],
+      "request_id": "exp-20261113T064542Z-c482696-000017",
+      "review_status": "pending"
+    },
+    {
+      "facts_found": [
+        "latency of several seconds|several seconds|high latency",
+        "textual information bottleneck|non-linguistic|paralinguistic",
+        "overlapping speech|interruptions"
+      ],
+      "facts_missing": [
+        "turn-based modeling|speaker turns"
+      ],
+      "final": null,
+      "forbidden_found": [],
+      "gold_page_hits": [
+        "2410.00037v1 p.2"
+      ],
+      "owner_note": null,
+      "proposed": "wrong",
+      "question_id": "q06",
+      "reasons": [
+        "missing required facts: ['turn-based modeling|speaker turns']"
+      ],
+      "request_id": "exp-20261113T064542Z-c482696-000018",
+      "review_status": "pending"
+    },
+    {
+      "facts_found": [
+        "neural audio codec|audio codec|audio tokenizer"
+      ],
+      "facts_missing": [
+        "Helium is a 7B|7B-parameter|7B parameter|7B text",
+        "Temporal Transformer|RQ-Transformer",
+        "Depth Transformer"
+      ],
+      "final": null,
+      "forbidden_found": [],
+      "gold_page_hits": [
+        "2410.00037v1 p.7"
+      ],
+      "owner_note": null,
+      "proposed": "wrong",
+      "question_id": "q07",
+      "reasons": [
+        "missing required facts: ['Helium is a 7B|7B-parameter|7B parameter|7B text', 'Temporal Transformer|RQ-Transformer', 'Depth Transformer']"
+      ],
+      "request_id": "exp-20261113T064542Z-c482696-000019",
+      "review_status": "pending"
+    },
+    {
+      "facts_found": [
+        "neural audio codec|audio codec|audio tokenizer",
+        "Depth Transformer"
+      ],
+      "facts_missing": [
+        "Helium is a 7B|7B-parameter|7B parameter|7B text",
+        "Temporal Transformer|RQ-Transformer"
+      ],
+      "final": null,
+      "forbidden_found": [],
+      "gold_page_hits": [
+        "2410.00037v1 p.3",
+        "2410.00037v1 p.7"
+      ],
+      "owner_note": null,
+      "proposed": "wrong",
+      "question_id": "q07",
+      "reasons": [
+        "missing required facts: ['Helium is a 7B|7B-parameter|7B parameter|7B text', 'Temporal Transformer|RQ-Transformer']"
+      ],
+      "request_id": "exp-20261113T064542Z-c482696-000020",
+      "review_status": "pending"
+    },
+    {
+      "facts_found": [
+        "neural audio codec|audio codec|audio tokenizer",
+        "Depth Transformer"
+      ],
+      "facts_missing": [
+        "Helium is a 7B|7B-parameter|7B parameter|7B text",
+        "Temporal Transformer|RQ-Transformer"
+      ],
+      "final": null,
+      "forbidden_found": [],
+      "gold_page_hits": [
+        "2410.00037v1 p.7"
+      ],
+      "owner_note": null,
+      "proposed": "wrong",
+      "question_id": "q07",
+      "reasons": [
+        "missing required facts: ['Helium is a 7B|7B-parameter|7B parameter|7B text', 'Temporal Transformer|RQ-Transformer']"
+      ],
+      "request_id": "exp-20261113T064542Z-c482696-000021",
+      "review_status": "pending"
+    },
+    {
+      "facts_found": [
+        "prefix",
+        "time-aligned text tokens|12.5Hz|12.5 Hz",
+        "factuality|linguistic quality"
+      ],
+      "facts_missing": [
+        "almost tripling"
+      ],
+      "final": null,
+      "forbidden_found": [],
+      "gold_page_hits": [
+        "2410.00037v1 p.3"
+      ],
+      "owner_note": null,
+      "proposed": "wrong",
+      "question_id": "q08",
+      "reasons": [
+        "missing required facts: ['almost tripling']"
+      ],
+      "request_id": "exp-20261113T064542Z-c482696-000022",
+      "review_status": "pending"
+    },
+    {
+      "facts_found": [
+        "prefix",
+        "time-aligned text tokens|12.5Hz|12.5 Hz",
+        "factuality|linguistic quality"
+      ],
+      "facts_missing": [
+        "almost tripling"
+      ],
+      "final": null,
+      "forbidden_found": [],
+      "gold_page_hits": [
+        "2410.00037v1 p.3"
+      ],
+      "owner_note": null,
+      "proposed": "wrong",
+      "question_id": "q08",
+      "reasons": [
+        "missing required facts: ['almost tripling']"
+      ],
+      "request_id": "exp-20261113T064542Z-c482696-000023",
+      "review_status": "pending"
+    },
+    {
+      "facts_found": [
+        "prefix",
+        "time-aligned text tokens|12.5Hz|12.5 Hz",
+        "factuality|linguistic quality"
+      ],
+      "facts_missing": [
+        "almost tripling"
+      ],
+      "final": null,
+      "forbidden_found": [],
+      "gold_page_hits": [
+        "2410.00037v1 p.3",
+        "2410.00037v1 p.15"
+      ],
+      "owner_note": null,
+      "proposed": "wrong",
+      "question_id": "q08",
+      "reasons": [
+        "missing required facts: ['almost tripling']"
+      ],
+      "request_id": "exp-20261113T064542Z-c482696-000024",
+      "review_status": "pending"
+    },
+    {
+      "facts_found": [
+        "parallel streams|parallel audio token streams|two autoregressive token streams|two parallel",
+        "overlap|overlapping speech"
+      ],
+      "facts_missing": [
+        "removes the concept of speaker turn|explicit speaker turns|removal of explicit speaker turns",
+        "interruptions"
+      ],
+      "final": null,
+      "forbidden_found": [],
+      "gold_page_hits": [
+        "2410.00037v1 p.7"
+      ],
+      "owner_note": null,
+      "proposed": "wrong",
+      "question_id": "q09",
+      "reasons": [
+        "missing required facts: ['removes the concept of speaker turn|explicit speaker turns|removal of explicit speaker turns', 'interruptions']"
+      ],
+      "request_id": "exp-20261113T064542Z-c482696-000025",
+      "review_status": "pending"
+    },
+    {
+      "facts_found": [
+        "parallel streams|parallel audio token streams|two autoregressive token streams|two parallel",
+        "overlap|overlapping speech"
+      ],
+      "facts_missing": [
+        "removes the concept of speaker turn|explicit speaker turns|removal of explicit speaker turns",
+        "interruptions"
+      ],
+      "final": null,
+      "forbidden_found": [],
+      "gold_page_hits": [
+        "2410.00037v1 p.7"
+      ],
+      "owner_note": null,
+      "proposed": "wrong",
+      "question_id": "q09",
+      "reasons": [
+        "missing required facts: ['removes the concept of speaker turn|explicit speaker turns|removal of explicit speaker turns', 'interruptions']"
+      ],
+      "request_id": "exp-20261113T064542Z-c482696-000026",
+      "review_status": "pending"
+    },
+    {
+      "facts_found": [
+        "parallel streams|parallel audio token streams|two autoregressive token streams|two parallel",
+        "removes the concept of speaker turn|explicit speaker turns|removal of explicit speaker turns",
+        "overlap|overlapping speech"
+      ],
+      "facts_missing": [
+        "interruptions"
+      ],
+      "final": null,
+      "forbidden_found": [],
+      "gold_page_hits": [
+        "2410.00037v1 p.1",
+        "2410.00037v1 p.7"
+      ],
+      "owner_note": null,
+      "proposed": "wrong",
+      "question_id": "q09",
+      "reasons": [
+        "missing required facts: ['interruptions']"
+      ],
+      "request_id": "exp-20261113T064542Z-c482696-000027",
+      "review_status": "pending"
+    },
+    {
+      "facts_found": [],
+      "facts_missing": [
+        "160ms|160 ms",
+        "200ms|200 ms",
+        "230ms|230 ms",
+        "lower than|faster than|below the 230|under 230|less than 230"
+      ],
+      "final": null,
+      "forbidden_found": [],
+      "gold_page_hits": [
+        "2410.00037v1 p.2"
+      ],
+      "owner_note": null,
+      "proposed": "wrong",
+      "question_id": "q10",
+      "reasons": [
+        "missing required facts: ['160ms|160 ms', '200ms|200 ms', '230ms|230 ms', 'lower than|faster than|below the 230|under 230|less than 230']"
+      ],
+      "request_id": "exp-20261113T064542Z-c482696-000028",
+      "review_status": "pending"
+    },
+    {
+      "facts_found": [
+        "160ms|160 ms",
+        "200ms|200 ms"
+      ],
+      "facts_missing": [
+        "230ms|230 ms",
+        "lower than|faster than|below the 230|under 230|less than 230"
+      ],
+      "final": null,
+      "forbidden_found": [],
+      "gold_page_hits": [
+        "2410.00037v1 p.1",
+        "2410.00037v1 p.2"
+      ],
+      "owner_note": null,
+      "proposed": "wrong",
+      "question_id": "q10",
+      "reasons": [
+        "missing required facts: ['230ms|230 ms', 'lower than|faster than|below the 230|under 230|less than 230']"
+      ],
+      "request_id": "exp-20261113T064542Z-c482696-000029",
+      "review_status": "pending"
+    },
+    {
+      "facts_found": [
+        "160ms|160 ms",
+        "200ms|200 ms",
+        "230ms|230 ms",
+        "lower than|faster than|below the 230|under 230|less than 230"
+      ],
+      "facts_missing": [],
+      "final": null,
+      "forbidden_found": [],
+      "gold_page_hits": [
+        "2410.00037v1 p.1",
+        "2410.00037v1 p.2"
+      ],
+      "owner_note": null,
+      "proposed": "correct",
+      "question_id": "q10",
+      "reasons": [
+        "all required facts present, gold page cited, no forbidden claims"
+      ],
+      "request_id": "exp-20261113T064542Z-c482696-000030",
+      "review_status": "pending"
+    },
+    {
+      "facts_found": [
+        "handcrafted|fixed-vocabulary",
+        "character-level",
+        "interpretability|lack of meaning",
+        "complex languages and modalities|Chinese|DNA"
+      ],
+      "facts_missing": [],
+      "final": null,
+      "forbidden_found": [],
+      "gold_page_hits": [
+        "2507.07955v2 p.1"
+      ],
+      "owner_note": null,
+      "proposed": "correct",
+      "question_id": "q11",
+      "reasons": [
+        "all required facts present, gold page cited, no forbidden claims"
+      ],
+      "request_id": "exp-20261113T064542Z-c482696-000031",
+      "review_status": "pending"
+    },
+    {
+      "facts_found": [
+        "handcrafted|fixed-vocabulary",
+        "character-level",
+        "interpretability|lack of meaning",
+        "complex languages and modalities|Chinese|DNA"
+      ],
+      "facts_missing": [],
+      "final": null,
+      "forbidden_found": [],
+      "gold_page_hits": [
+        "2507.07955v2 p.1"
+      ],
+      "owner_note": null,
+      "proposed": "correct",
+      "question_id": "q11",
+      "reasons": [
+        "all required facts present, gold page cited, no forbidden claims"
+      ],
+      "request_id": "exp-20261113T064542Z-c482696-000032",
+      "review_status": "pending"
+    },
+    {
+      "facts_found": [
+        "handcrafted|fixed-vocabulary"
+      ],
+      "facts_missing": [
+        "character-level",
+        "interpretability|lack of meaning",
+        "complex languages and modalities|Chinese|DNA"
+      ],
+      "final": null,
+      "forbidden_found": [],
+      "gold_page_hits": [
+        "2507.07955v2 p.1"
+      ],
+      "owner_note": null,
+      "proposed": "wrong",
+      "question_id": "q11",
+      "reasons": [
+        "missing required facts: ['character-level', 'interpretability|lack of meaning', 'complex languages and modalities|Chinese|DNA']"
+      ],
+      "request_id": "exp-20261113T064542Z-c482696-000033",
+      "review_status": "pending"
+    },
+    {
+      "facts_found": [
+        "dechunk|upsampl",
+        "residual connection|encoder residual"
+      ],
+      "facts_missing": [
+        "Mamba-2|state space model|SSM",
+        "most capacity|majority of model capacity|bulk of parameters|compressed sequence"
+      ],
+      "final": null,
+      "forbidden_found": [],
+      "gold_page_hits": [
+        "2507.07955v2 p.4",
+        "2507.07955v2 p.5"
+      ],
+      "owner_note": null,
+      "proposed": "wrong",
+      "question_id": "q12",
+      "reasons": [
+        "missing required facts: ['Mamba-2|state space model|SSM', 'most capacity|majority of model capacity|bulk of parameters|compressed sequence']"
+      ],
+      "request_id": "exp-20261113T064542Z-c482696-000034",
+      "review_status": "pending"
+    },
+    {
+      "facts_found": [
+        "most capacity|majority of model capacity|bulk of parameters|compressed sequence",
+        "residual connection|encoder residual"
+      ],
+      "facts_missing": [
+        "Mamba-2|state space model|SSM",
+        "dechunk|upsampl"
+      ],
+      "final": null,
+      "forbidden_found": [],
+      "gold_page_hits": [
+        "2507.07955v2 p.4",
+        "2507.07955v2 p.5"
+      ],
+      "owner_note": null,
+      "proposed": "wrong",
+      "question_id": "q12",
+      "reasons": [
+        "missing required facts: ['Mamba-2|state space model|SSM', 'dechunk|upsampl']"
+      ],
+      "request_id": "exp-20261113T064542Z-c482696-000035",
+      "review_status": "pending"
+    },
+    {
+      "facts_found": [
+        "most capacity|majority of model capacity|bulk of parameters|compressed sequence",
+        "dechunk|upsampl",
+        "residual connection|encoder residual"
+      ],
+      "facts_missing": [
+        "Mamba-2|state space model|SSM"
+      ],
+      "final": null,
+      "forbidden_found": [],
+      "gold_page_hits": [
+        "2507.07955v2 p.4",
+        "2507.07955v2 p.5"
+      ],
+      "owner_note": null,
+      "proposed": "wrong",
+      "question_id": "q12",
+      "reasons": [
+        "missing required facts: ['Mamba-2|state space model|SSM']"
+      ],
+      "request_id": "exp-20261113T064542Z-c482696-000036",
+      "review_status": "pending"
+    },
+    {
+      "facts_found": [
+        "boundary probabilities|boundary indicators|boundary probability|segmentation boundaries"
+      ],
+      "facts_missing": [
+        "cosine similarity",
+        "exponential moving average|moving average",
+        "softmax over|weights on the values|adjacent representations|adjacent encoder outputs|t and t-1"
+      ],
+      "final": null,
+      "forbidden_found": [],
+      "gold_page_hits": [
+        "2507.07955v2 p.6",
+        "2507.07955v2 p.7"
+      ],
+      "owner_note": null,
+      "proposed": "wrong",
+      "question_id": "q13",
+      "reasons": [
+        "missing required facts: ['cosine similarity', 'exponential moving average|moving average', 'softmax over|weights on the values|adjacent representations|adjacent encoder outputs|t and t-1']"
+      ],
+      "request_id": "exp-20261113T064542Z-c482696-000037",
+      "review_status": "pending"
+    },
+    {
+      "facts_found": [],
+      "facts_missing": [
+        "cosine similarity",
+        "boundary probabilities|boundary indicators|boundary probability|segmentation boundaries",
+        "exponential moving average|moving average",
+        "softmax over|weights on the values|adjacent representations|adjacent encoder outputs|t and t-1"
+      ],
+      "final": null,
+      "forbidden_found": [],
+      "gold_page_hits": [],
+      "owner_note": null,
+      "proposed": "wrong",
+      "question_id": "q13",
+      "reasons": [
+        "missing required facts: ['cosine similarity', 'boundary probabilities|boundary indicators|boundary probability|segmentation boundaries', 'exponential moving average|moving average', 'softmax over|weights on the values|adjacent representations|adjacent encoder outputs|t and t-1']",
+        "no citation lands on a gold page"
+      ],
+      "request_id": "exp-20261113T064542Z-c482696-000038",
+      "review_status": "pending"
+    },
+    {
+      "facts_found": [],
+      "facts_missing": [
+        "cosine similarity",
+        "boundary probabilities|boundary indicators|boundary probability|segmentation boundaries",
+        "exponential moving average|moving average",
+        "softmax over|weights on the values|adjacent representations|adjacent encoder outputs|t and t-1"
+      ],
+      "final": null,
+      "forbidden_found": [],
+      "gold_page_hits": [],
+      "owner_note": null,
+      "proposed": "wrong",
+      "question_id": "q13",
+      "reasons": [
+        "missing required facts: ['cosine similarity', 'boundary probabilities|boundary indicators|boundary probability|segmentation boundaries', 'exponential moving average|moving average', 'softmax over|weights on the values|adjacent representations|adjacent encoder outputs|t and t-1']",
+        "no citation lands on a gold page"
+      ],
+      "request_id": "exp-20261113T064542Z-c482696-000039",
+      "review_status": "pending"
+    },
+    {
+      "facts_found": [
+        "gradient flow|backpropagation",
+        "alignment mismatches|overfitting to suboptimal",
+        "fluctuate severely",
+        "performance degradation|bpb degradation|substantial validation"
+      ],
+      "facts_missing": [],
+      "final": null,
+      "forbidden_found": [],
+      "gold_page_hits": [
+        "2507.07955v2 p.7",
+        "2507.07955v2 p.18"
+      ],
+      "owner_note": null,
+      "proposed": "correct",
+      "question_id": "q14",
+      "reasons": [
+        "all required facts present, gold page cited, no forbidden claims"
+      ],
+      "request_id": "exp-20261113T064542Z-c482696-000040",
+      "review_status": "pending"
+    },
+    {
+      "facts_found": [
+        "gradient flow|backpropagation",
+        "fluctuate severely",
+        "performance degradation|bpb degradation|substantial validation"
+      ],
+      "facts_missing": [
+        "alignment mismatches|overfitting to suboptimal"
+      ],
+      "final": null,
+      "forbidden_found": [],
+      "gold_page_hits": [
+        "2507.07955v2 p.17",
+        "2507.07955v2 p.18"
+      ],
+      "owner_note": null,
+      "proposed": "wrong",
+      "question_id": "q14",
+      "reasons": [
+        "missing required facts: ['alignment mismatches|overfitting to suboptimal']"
+      ],
+      "request_id": "exp-20261113T064542Z-c482696-000041",
+      "review_status": "pending"
+    },
+    {
+      "facts_found": [
+        "gradient flow|backpropagation",
+        "alignment mismatches|overfitting to suboptimal",
+        "fluctuate severely",
+        "performance degradation|bpb degradation|substantial validation"
+      ],
+      "facts_missing": [],
+      "final": null,
+      "forbidden_found": [],
+      "gold_page_hits": [
+        "2507.07955v2 p.7",
+        "2507.07955v2 p.17",
+        "2507.07955v2 p.18"
+      ],
+      "owner_note": null,
+      "proposed": "correct",
+      "question_id": "q14",
+      "reasons": [
+        "all required facts present, gold page cited, no forbidden claims"
+      ],
+      "request_id": "exp-20261113T064542Z-c482696-000042",
+      "review_status": "pending"
+    },
+    {
+      "facts_found": [
+        "twice its size"
+      ],
+      "facts_missing": [
+        "30B|100B",
+        "2.2%|2.6%",
+        "66.3|3.6x|3.6\u00d7|3.6 times"
+      ],
+      "final": null,
+      "forbidden_found": [],
+      "gold_page_hits": [
+        "2507.07955v2 p.22",
+        "2507.07955v2 p.1"
+      ],
+      "owner_note": null,
+      "proposed": "wrong",
+      "question_id": "q15",
+      "reasons": [
+        "missing required facts: ['30B|100B', '2.2%|2.6%', '66.3|3.6x|3.6\u00d7|3.6 times']"
+      ],
+      "request_id": "exp-20261113T064542Z-c482696-000043",
+      "review_status": "pending"
+    },
+    {
+      "facts_found": [],
+      "facts_missing": [
+        "30B|100B",
+        "2.2%|2.6%",
+        "twice its size",
+        "66.3|3.6x|3.6\u00d7|3.6 times"
+      ],
+      "final": null,
+      "forbidden_found": [],
+      "gold_page_hits": [],
+      "owner_note": null,
+      "proposed": "wrong",
+      "question_id": "q15",
+      "reasons": [
+        "missing required facts: ['30B|100B', '2.2%|2.6%', 'twice its size', '66.3|3.6x|3.6\u00d7|3.6 times']",
+        "no citation lands on a gold page"
+      ],
+      "request_id": "exp-20261113T064542Z-c482696-000044",
+      "review_status": "pending"
+    },
+    {
+      "facts_found": [],
+      "facts_missing": [
+        "30B|100B",
+        "2.2%|2.6%",
+        "twice its size",
+        "66.3|3.6x|3.6\u00d7|3.6 times"
+      ],
+      "final": null,
+      "forbidden_found": [],
+      "gold_page_hits": [
+        "2507.07955v2 p.22"
+      ],
+      "owner_note": null,
+      "proposed": "wrong",
+      "question_id": "q15",
+      "reasons": [
+        "missing required facts: ['30B|100B', '2.2%|2.6%', 'twice its size', '66.3|3.6x|3.6\u00d7|3.6 times']"
+      ],
+      "request_id": "exp-20261113T064542Z-c482696-000045",
+      "review_status": "pending"
+    },
+    {
+      "facts_found": [],
+      "facts_missing": [],
+      "final": null,
+      "forbidden_found": [],
+      "gold_page_hits": [],
+      "owner_note": null,
+      "proposed": "refused_correctly",
+      "question_id": "q16",
+      "reasons": [
+        "answer is a refusal; question is unanswerable"
+      ],
+      "request_id": "exp-20261113T064542Z-c482696-000046",
+      "review_status": "pending"
+    },
+    {
+      "facts_found": [],
+      "facts_missing": [],
+      "final": null,
+      "forbidden_found": [],
+      "gold_page_hits": [],
+      "owner_note": null,
+      "proposed": "refused_correctly",
+      "question_id": "q16",
+      "reasons": [
+        "answer is a refusal; question is unanswerable"
+      ],
+      "request_id": "exp-20261113T064542Z-c482696-000047",
+      "review_status": "pending"
+    },
+    {
+      "facts_found": [],
+      "facts_missing": [],
+      "final": null,
+      "forbidden_found": [],
+      "gold_page_hits": [],
+      "owner_note": null,
+      "proposed": "refused_correctly",
+      "question_id": "q16",
+      "reasons": [
+        "answer is a refusal; question is unanswerable"
+      ],
+      "request_id": "exp-20261113T064542Z-c482696-000048",
+      "review_status": "pending"
+    },
+    {
+      "facts_found": [],
+      "facts_missing": [],
+      "final": null,
+      "forbidden_found": [],
+      "gold_page_hits": [],
+      "owner_note": null,
+      "proposed": "refused_correctly",
+      "question_id": "q17",
+      "reasons": [
+        "answer is a refusal; question is unanswerable"
+      ],
+      "request_id": "exp-20261113T064542Z-c482696-000049",
+      "review_status": "pending"
+    },
+    {
+      "facts_found": [],
+      "facts_missing": [],
+      "final": null,
+      "forbidden_found": [],
+      "gold_page_hits": [],
+      "owner_note": null,
+      "proposed": "refused_correctly",
+      "question_id": "q17",
+      "reasons": [
+        "answer is a refusal; question is unanswerable"
+      ],
+      "request_id": "exp-20261113T064542Z-c482696-000050",
+      "review_status": "pending"
+    },
+    {
+      "facts_found": [],
+      "facts_missing": [],
+      "final": null,
+      "forbidden_found": [],
+      "gold_page_hits": [],
+      "owner_note": null,
+      "proposed": "refused_correctly",
+      "question_id": "q17",
+      "reasons": [
+        "answer is a refusal; question is unanswerable"
+      ],
+      "request_id": "exp-20261113T064542Z-c482696-000051",
+      "review_status": "pending"
+    },
+    {
+      "facts_found": [],
+      "facts_missing": [],
+      "final": null,
+      "forbidden_found": [],
+      "gold_page_hits": [],
+      "owner_note": null,
+      "proposed": "refused_correctly",
+      "question_id": "q18",
+      "reasons": [
+        "answer is a refusal; question is unanswerable"
+      ],
+      "request_id": "exp-20261113T064542Z-c482696-000052",
+      "review_status": "pending"
+    },
+    {
+      "facts_found": [],
+      "facts_missing": [],
+      "final": null,
+      "forbidden_found": [],
+      "gold_page_hits": [],
+      "owner_note": null,
+      "proposed": "refused_correctly",
+      "question_id": "q18",
+      "reasons": [
+        "answer is a refusal; question is unanswerable"
+      ],
+      "request_id": "exp-20261113T064542Z-c482696-000053",
+      "review_status": "pending"
+    },
+    {
+      "facts_found": [],
+      "facts_missing": [],
+      "final": null,
+      "forbidden_found": [],
+      "gold_page_hits": [],
+      "owner_note": null,
+      "proposed": "refused_correctly",
+      "question_id": "q18",
+      "reasons": [
+        "answer is a refusal; question is unanswerable"
+      ],
+      "request_id": "exp-20261113T064542Z-c482696-000054",
+      "review_status": "pending"
+    },
+    {
+      "facts_found": [],
+      "facts_missing": [],
+      "final": null,
+      "forbidden_found": [],
+      "gold_page_hits": [],
+      "owner_note": null,
+      "proposed": "refused_correctly",
+      "question_id": "q19",
+      "reasons": [
+        "answer is a refusal; question is unanswerable"
+      ],
+      "request_id": "exp-20261113T064542Z-c482696-000055",
+      "review_status": "pending"
+    },
+    {
+      "facts_found": [],
+      "facts_missing": [],
+      "final": null,
+      "forbidden_found": [],
+      "gold_page_hits": [],
+      "owner_note": null,
+      "proposed": "refused_correctly",
+      "question_id": "q19",
+      "reasons": [
+        "answer is a refusal; question is unanswerable"
+      ],
+      "request_id": "exp-20261113T064542Z-c482696-000056",
+      "review_status": "pending"
+    },
+    {
+      "facts_found": [],
+      "facts_missing": [],
+      "final": null,
+      "forbidden_found": [],
+      "gold_page_hits": [],
+      "owner_note": null,
+      "proposed": "refused_correctly",
+      "question_id": "q19",
+      "reasons": [
+        "answer is a refusal; question is unanswerable"
+      ],
+      "request_id": "exp-20261113T064542Z-c482696-000057",
+      "review_status": "pending"
+    },
+    {
+      "facts_found": [],
+      "facts_missing": [],
+      "final": null,
+      "forbidden_found": [],
+      "gold_page_hits": [],
+      "owner_note": null,
+      "proposed": "refused_correctly",
+      "question_id": "q20",
+      "reasons": [
+        "answer is a refusal; question is unanswerable"
+      ],
+      "request_id": "exp-20261113T064542Z-c482696-000058",
+      "review_status": "pending"
+    },
+    {
+      "facts_found": [],
+      "facts_missing": [],
+      "final": null,
+      "forbidden_found": [],
+      "gold_page_hits": [],
+      "owner_note": null,
+      "proposed": "refused_correctly",
+      "question_id": "q20",
+      "reasons": [
+        "answer is a refusal; question is unanswerable"
+      ],
+      "request_id": "exp-20261113T064542Z-c482696-000059",
+      "review_status": "pending"
+    },
+    {
+      "facts_found": [],
+      "facts_missing": [],
+      "final": null,
+      "forbidden_found": [],
+      "gold_page_hits": [],
+      "owner_note": null,
+      "proposed": "refused_correctly",
+      "question_id": "q20",
+      "reasons": [
+        "answer is a refusal; question is unanswerable"
+      ],
+      "request_id": "exp-20261113T064542Z-c482696-000060",
+      "review_status": "pending"
+    },
+    {
+      "facts_found": [],
+      "facts_missing": [],
+      "final": null,
+      "forbidden_found": [],
+      "gold_page_hits": [],
+      "owner_note": null,
+      "proposed": "refused_correctly",
+      "question_id": "q21",
+      "reasons": [
+        "answer is a refusal; question is unanswerable"
+      ],
+      "request_id": "exp-20261113T064542Z-c482696-000061",
+      "review_status": "pending"
+    },
+    {
+      "facts_found": [],
+      "facts_missing": [],
+      "final": null,
+      "forbidden_found": [],
+      "gold_page_hits": [],
+      "owner_note": null,
+      "proposed": "refused_correctly",
+      "question_id": "q21",
+      "reasons": [
+        "answer is a refusal; question is unanswerable"
+      ],
+      "request_id": "exp-20261113T064542Z-c482696-000062",
+      "review_status": "pending"
+    }
+  ],
+  "run_id": "exp-20261113T064542Z-c482696",
+  "schema_version": 1
+}
