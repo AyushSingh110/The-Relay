@@ -1,0 +1,26 @@
+{
+  "cache_mode": null,
+  "config_snapshot": {
+    "evidence_dir": "evidence",
+    "replay_repeats": 3,
+    "seed": 0
+  },
+  "ended_at": "2026-11-13T02:24:27.401489Z",
+  "git_commit": "3f687c6",
+  "git_dirty": true,
+  "kind": "standin_calibration",
+  "model_id": null,
+  "notes": "profile label: calibrated; probe calls used: 15",
+  "real_call_count": 0,
+  "reasoning_settings": null,
+  "retrieval_settings": [],
+  "run_id": "cal-20261113T022403Z-3f687c6",
+  "scenarios": [
+    "standin_calibration"
+  ],
+  "schema_version": 1,
+  "seed": 0,
+  "source": "stand-in",
+  "started_at": "2026-11-13T02:24:03.823046Z",
+  "status": "complete"
+}

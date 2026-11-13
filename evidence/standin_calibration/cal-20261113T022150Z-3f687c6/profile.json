@@ -1,0 +1,120 @@
+{
+  "calibration_run_id": "cal-20261113T022150Z-3f687c6",
+  "default_max_completion_tokens": 1024,
+  "faults": {
+    "error_rate": 0.0,
+    "error_status": 503,
+    "stall_after_pieces": 3,
+    "stall_rate": 0.0,
+    "stall_s": 60.0,
+    "straggler_multiplier": 5.0,
+    "straggler_rate": 0.0
+  },
+  "label": "calibrated",
+  "limits": {
+    "rpd": 1000,
+    "rpm": null,
+    "settle_to_usage": true,
+    "tpd": null,
+    "tpm": 8000,
+    "tpm_charge": "prompt_plus_max_completion"
+  },
+  "load": {
+    "knee_concurrency": 4,
+    "slowdown_per_extra": 0.25
+  },
+  "models": {
+    "openai/gpt-oss-120b": {
+      "context_window": 131072,
+      "latency": {
+        "header_median_ms": 498.88,
+        "header_sigma": 0.05,
+        "inter_token_ms": 2.0296,
+        "prompt_ms_per_1k_tokens": 105.721,
+        "reasoning_tokens": 43
+      },
+      "max_completion_tokens": 32768,
+      "tokens": {
+        "base_prompt_tokens": 84,
+        "output_chars_per_token": 4.0,
+        "prompt_chars_per_token": 8.3566
+      }
+    },
+    "openai/gpt-oss-20b": {
+      "context_window": 131072,
+      "latency": {
+        "header_median_ms": 458.075,
+        "header_sigma": 0.4216,
+        "inter_token_ms": 1.065,
+        "prompt_ms_per_1k_tokens": 55.333,
+        "reasoning_tokens": 41
+      },
+      "max_completion_tokens": 32768,
+      "tokens": {
+        "base_prompt_tokens": 84,
+        "output_chars_per_token": 4.0,
+        "prompt_chars_per_token": 8.3566
+      }
+    },
+    "qwen/qwen3.8-27b": {
+      "context_window": 131072,
+      "latency": {
+        "header_median_ms": 272.29,
+        "header_sigma": 0.1681,
+        "inter_token_ms": 2.581,
+        "prompt_ms_per_1k_tokens": 0.015,
+        "reasoning_tokens": 0
+      },
+      "max_completion_tokens": 32768,
+      "tokens": {
+        "base_prompt_tokens": 27,
+        "output_chars_per_token": 4.0,
+        "prompt_chars_per_token": 8.3514
+      }
+    }
+  },
+  "provenance": {
+    "429 body and retry-after": "documented_unverified: no 429 was observed on Groq",
+    "faults.error_rate": "assumed: 0 errors in 16 real calls; no failure rate measured",
+    "faults.stall_rate": "assumed: no stalled stream observed in 16 real calls",
+    "faults.straggler_rate": "assumed: not measured; set per experiment",
+    "limits.rpd": "header: x-ratelimit-limit-requests (per model; meaning consistent with RPD, see fit_report header_checks)",
+    "limits.rpm": "not measured: Groq sends no RPM header and no minute-limit probe was approved; set per experiment",
+    "limits.settle_to_usage": "assumed: how Groq settles a reservation is not observed",
+    "limits.tpd": "not measured: Groq sends no TPD header; set per experiment",
+    "limits.tpm": "header: x-ratelimit-limit-tokens (per model; meaning consistent with TPM, see fit_report header_checks)",
+    "limits.tpm_charge": "assumed: Groq's remaining-tokens drop did not equal usage in P02-LIVE (unreconciled); reserving prompt + max_completion is the conservative reading",
+    "load.knee_concurrency": "assumed: no concurrent real calls were made (P02-LIVE was sequential), so no knee was measured",
+    "load.slowdown_per_extra": "assumed: not measured (see load.knee_concurrency)",
+    "models.*.context_window": "assumed: not taken from /models",
+    "models.*.max_completion_tokens": "assumed: not taken from /models",
+    "models.*.tokens.output_chars_per_token": "assumed: probe answers were 'OK', so output tokenisation was not measurable",
+    "models.openai/gpt-oss-120b.latency.header_median_ms": "measured: median client-observed time to response headers, n=5, minus the prompt-size slope",
+    "models.openai/gpt-oss-120b.latency.header_sigma": "measured: SD of log(header delay), n=5, floored at 0.05",
+    "models.openai/gpt-oss-120b.latency.inter_token_ms": "derived: median of (total - first delta) / (completion_tokens - 1), n=5",
+    "models.openai/gpt-oss-120b.latency.prompt_ms_per_1k_tokens": "measured: least-squares slope of header delay on prompt tokens, n=5, clipped at 0",
+    "models.openai/gpt-oss-120b.latency.reasoning_tokens": "measured: median usage.reasoning_tokens, n=5",
+    "models.openai/gpt-oss-120b.tokens.base_prompt_tokens": "measured: intercept of prompt_tokens on prompt_chars, n=5",
+    "models.openai/gpt-oss-120b.tokens.prompt_chars_per_token": "measured: 1 / slope of prompt_tokens on prompt_chars, n=5 (synthetic probe prompts, not paper text)",
+    "models.openai/gpt-oss-20b.latency.header_median_ms": "measured: median client-observed time to response headers, n=5, minus the prompt-size slope",
+    "models.openai/gpt-oss-20b.latency.header_sigma": "measured: SD of log(header delay), n=5, floored at 0.05",
+    "models.openai/gpt-oss-20b.latency.inter_token_ms": "derived: median of (total - first delta) / (completion_tokens - 1), n=5",
+    "models.openai/gpt-oss-20b.latency.prompt_ms_per_1k_tokens": "measured: least-squares slope of header delay on prompt tokens, n=5, clipped at 0",
+    "models.openai/gpt-oss-20b.latency.reasoning_tokens": "measured: median usage.reasoning_tokens, n=5",
+    "models.openai/gpt-oss-20b.tokens.base_prompt_tokens": "measured: intercept of prompt_tokens on prompt_chars, n=5",
+    "models.openai/gpt-oss-20b.tokens.prompt_chars_per_token": "measured: 1 / slope of prompt_tokens on prompt_chars, n=5 (synthetic probe prompts, not paper text)",
+    "models.qwen/qwen3.8-27b.latency.header_median_ms": "measured: median client-observed time to response headers, n=5, minus the prompt-size slope",
+    "models.qwen/qwen3.8-27b.latency.header_sigma": "measured: SD of log(header delay), n=5, floored at 0.05",
+    "models.qwen/qwen3.8-27b.latency.inter_token_ms": "derived: median of (total - first delta) / (completion_tokens - 1), n=5",
+    "models.qwen/qwen3.8-27b.latency.prompt_ms_per_1k_tokens": "measured: least-squares slope of header delay on prompt tokens, n=5, clipped at 0",
+    "models.qwen/qwen3.8-27b.latency.reasoning_tokens": "measured: median usage.reasoning_tokens, n=5",
+    "models.qwen/qwen3.8-27b.tokens.base_prompt_tokens": "measured: intercept of prompt_tokens on prompt_chars, n=5",
+    "models.qwen/qwen3.8-27b.tokens.prompt_chars_per_token": "measured: 1 / slope of prompt_tokens on prompt_chars, n=5 (synthetic probe prompts, not paper text)"
+  },
+  "schema_version": 1,
+  "seed": 0,
+  "source_probe_runs": [
+    "probe-20261112T031816Z-2b5d017"
+  ],
+  "time_scale": 1.0
+}

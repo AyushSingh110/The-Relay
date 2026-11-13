@@ -684,3 +684,66 @@
 - **Real Groq calls:** 0. **Network:** one loopback-only (`127.0.0.1`) uvicorn smoke check; nothing external.
 - **Owner approval status:** pending owner review
 - **Next action:** Owner reviews `reports/phase-08-fastapi-service-and-cache.md` and decides the §5 items. Recommended next phase: P09 (stand-in service). The next phase starts only on explicit approval.
+
+---
+
+### Execution Entry
+
+- **Date and time:** 2026-11-13 07:54 IST
+- **Phase identifier:** `p09` — Stand-In Service and Calibration
+- **Task requested and objective:**
+  - OpenAI-compatible stand-in service (SSE + usage, `/models`, admin) with calibrated latency, knee slowdown, 5xx, stragglers and stalls, and RPM/TPM/RPD/TPD 429s with `retry-after` and Groq headers.
+  - Extractive cited answers.
+  - `scripts/calibrate_standin.py`, writing `evidence/standin_calibration/<run_id>/`, with a quantile comparison, the "least like the real thing" list, and the `uncalibrated_defaults` fallback.
+  - Tests through `HttpOpenAIProvider`.
+  - Real Groq calls: none.
+- **Status:** completed
+- **Files created:**
+  - `src/relay/standin/__init__.py`, `src/relay/standin/profile.py`, `src/relay/standin/server.py`
+  - `scripts/calibrate_standin.py`
+  - `tests/test_standin.py` (26 tests)
+  - `evidence/standin_calibration/cal-20261113T022150Z-3f687c6/` (superseded; see errors)
+  - `evidence/standin_calibration/cal-20261113T022403Z-3f687c6/` (current)
+  - `reports/phase-09-standin-service-and-calibration.md`
+- **Files modified:** `ENGINEERING_LOG.md` (this entry). No earlier-phase source, test or evidence file was changed.
+- **Engineering decisions (all [PROPOSED]):**
+  - Continuous-refill token buckets. The headers support this: reset-requests matched 15/15, reset-tokens 11/15 (qwen calls 2–5 do not fit).
+  - `*-requests` = RPD bucket, `*-tokens` = TPM bucket (consistent, not formally verified).
+  - TPM/TPD reservation of prompt + `max_completion_tokens`, refunded to usage at stream end.
+  - Daily limits are checked before minute limits.
+  - 429s and injected 5xx consume no quota.
+  - RPM/TPD are not enforced unless set through `/admin/config` (recorded as `scenario`).
+  - Limits are global, not per model.
+  - Answers are at most 2 extractive sentences; output tokens counted at an assumed 4 characters per token.
+  - The calibration replay runs with limits off.
+  - Stream pacing uses cumulative deadlines on `time.perf_counter`.
+  - Only `complete` probe runs are used.
+  - Sigma floor 0.05.
+- **Commands executed and observed outputs:**
+  - Read-only fit on the real baseline: 15 calls; `tpm=8000`, `rpd=1000`; header checks requests 15/15, tokens 11/15.
+  - `timeout 300 python -m pytest tests/test_standin.py -q -x` → 1 failed, 18 passed (wrong expectation 37 vs 38); after the fix, 25 passed; 5 repeats, 25 passed each.
+  - `timeout 900 python -m pytest -q` → `1 failed, 433 passed` (`test_stragglers_are_much_slower`); 3 reruns, 434 passed each; after the assertion fix, 6 runs, 434 passed each.
+  - `timeout 300 python scripts/calibrate_standin.py --evidence-dir evidence --seed 0 --replay-repeats 3` → `cal-20261113T022150Z-3f687c6`, exit 0. gpt-oss content started only 8–21 ms after the headers, where 44–87 ms was expected.
+  - `time.get_clock_info("monotonic")` → `GetTickCount64()`, resolution 0.015625. 43 × `asyncio.sleep(2.03 ms)` took 656.1 ms in isolation.
+  - After the `_Pacer` fix: `tests/test_standin.py` 3 runs, 26 passed each.
+  - Scratch check: paced 107.1 / 94.2 / 92.4 ms vs naive 19.0 / 14.5 / 9.8 ms (expected 100).
+  - Calibration run 2 → `cal-20261113T022403Z-3f687c6`, exit 0, 45 replayed calls, 0 errors. p50 total, measured / stand-in: gpt-oss-20b 521.3 / 543.4 ms, gpt-oss-120b 638.3 / 635.0 ms, qwen3.8-27b 283.9 / 296.5 ms. Largest differences are completion tokens (ratios 0.5, 0.82, 0.83).
+  - Secret scan of `evidence/standin_calibration/` (`gsk_`, `authorization`, `Bearer`) → no matches.
+  - Final: `timeout 900 python -m pytest -q` → `435 passed in 11.54s`; `python -m ruff check .` → `All checks passed!`
+- **Tests performed and results:** 435 passed, 0 failed, 0 skipped (409 earlier + 26 new). All P09 acceptance criteria are covered and pass.
+- **Errors, root causes, fixes, validation:**
+  1. Stream pacing drift: the 15.625 ms event-loop clock on Windows made per-token sleeps inaccurate and the error accumulated. Fixed with cumulative-deadline pacing. Validated by the new regression test, the scratch discrimination check, and calibration run 2.
+  2. Flaky ratio assertion in the straggler test: unscaled connection and scheduling jitter on the normal call. Fixed with floor + gap assertions (6 consecutive full passes).
+  3. Wrong test expectation (intercept 37.5 → 38). Corrected.
+  4. Lint findings (SIM905, I001, E501, SIM117). Fixed.
+- **Remaining issues and incomplete work:**
+  - The calibration rests on 15 sequential tiny-output calls.
+  - Groq's extra completion tokens are not modelled.
+  - Knee, slowdown, fault rates, RPM and TPD are unmeasured scenario inputs.
+  - The 429 format was never observed.
+  - The superseded run `cal-20261113T022150Z-3f687c6` is kept unmodified; the owner decides.
+  - The stand-in is not yet used by the Relay end to end (P10).
+- **Deviations from ARCHITECTURE.md:** none to binding decisions. `ARCHITECTURE.md` was not edited.
+- **Real Groq calls:** 0. **Network:** loopback `127.0.0.1` only.
+- **Owner approval status:** pending owner review
+- **Next action:** Owner reviews `reports/phase-09-standin-service-and-calibration.md`, decides the §5 items and the scenario values, and whether to keep the superseded run. Recommended next phase: P10. The next phase starts only on explicit approval.

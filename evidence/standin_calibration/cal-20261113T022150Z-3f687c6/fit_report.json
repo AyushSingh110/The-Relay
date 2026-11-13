@@ -1,0 +1,1041 @@
+{
+  "comparison": {
+    "openai/gpt-oss-120b": {
+      "completion_tokens": {
+        "measured": {
+          "max": 53.0,
+          "min": 53.0,
+          "n": 5,
+          "p50": 53.0,
+          "p90": 53.0
+        },
+        "p50_ratio_standin_over_measured": 0.83,
+        "standin": {
+          "max": 44.0,
+          "min": 44.0,
+          "n": 15,
+          "p50": 44.0,
+          "p90": 44.0
+        }
+      },
+      "first_content_ms": {
+        "measured": {
+          "max": 735.154,
+          "min": 601.642,
+          "n": 5,
+          "p50": 631.07,
+          "p90": 735.154
+        },
+        "p50_ratio_standin_over_measured": 0.88,
+        "standin": {
+          "max": 770.725,
+          "min": 496.267,
+          "n": 15,
+          "p50": 555.307,
+          "p90": 725.446
+        }
+      },
+      "headers_ms": {
+        "measured": {
+          "max": 678.5,
+          "min": 495.002,
+          "n": 5,
+          "p50": 521.787,
+          "p90": 678.5
+        },
+        "p50_ratio_standin_over_measured": 1.025,
+        "standin": {
+          "max": 749.471,
+          "min": 474.398,
+          "n": 15,
+          "p50": 535.072,
+          "p90": 708.428
+        }
+      },
+      "prompt_tokens": {
+        "measured": {
+          "max": 1699.0,
+          "min": 95.0,
+          "n": 5,
+          "p50": 95.0,
+          "p90": 1699.0
+        },
+        "p50_ratio_standin_over_measured": 1.011,
+        "standin": {
+          "max": 1700.0,
+          "min": 96.0,
+          "n": 15,
+          "p50": 96.0,
+          "p90": 1700.0
+        }
+      },
+      "total_ms": {
+        "measured": {
+          "max": 738.483,
+          "min": 609.398,
+          "n": 5,
+          "p50": 638.325,
+          "p90": 738.483
+        },
+        "p50_ratio_standin_over_measured": 0.871,
+        "standin": {
+          "max": 771.272,
+          "min": 496.871,
+          "n": 15,
+          "p50": 555.748,
+          "p90": 725.899
+        }
+      }
+    },
+    "openai/gpt-oss-20b": {
+      "completion_tokens": {
+        "measured": {
+          "max": 64.0,
+          "min": 50.0,
+          "n": 5,
+          "p50": 51.0,
+          "p90": 64.0
+        },
+        "p50_ratio_standin_over_measured": 0.824,
+        "standin": {
+          "max": 42.0,
+          "min": 42.0,
+          "n": 15,
+          "p50": 42.0,
+          "p90": 42.0
+        }
+      },
+      "first_content_ms": {
+        "measured": {
+          "max": 688.647,
+          "min": 320.535,
+          "n": 5,
+          "p50": 520.072,
+          "p90": 688.647
+        },
+        "p50_ratio_standin_over_measured": 1.009,
+        "standin": {
+          "max": 1050.32,
+          "min": 303.949,
+          "n": 15,
+          "p50": 524.893,
+          "p90": 882.62
+        }
+      },
+      "headers_ms": {
+        "measured": {
+          "max": 595.686,
+          "min": 228.416,
+          "n": 5,
+          "p50": 471.095,
+          "p90": 595.686
+        },
+        "p50_ratio_standin_over_measured": 1.073,
+        "standin": {
+          "max": 1034.812,
+          "min": 287.017,
+          "n": 15,
+          "p50": 505.683,
+          "p90": 865.517
+        }
+      },
+      "prompt_tokens": {
+        "measured": {
+          "max": 1699.0,
+          "min": 95.0,
+          "n": 5,
+          "p50": 95.0,
+          "p90": 1699.0
+        },
+        "p50_ratio_standin_over_measured": 1.011,
+        "standin": {
+          "max": 1700.0,
+          "min": 96.0,
+          "n": 15,
+          "p50": 96.0,
+          "p90": 1700.0
+        }
+      },
+      "total_ms": {
+        "measured": {
+          "max": 690.716,
+          "min": 323.372,
+          "n": 5,
+          "p50": 521.333,
+          "p90": 690.716
+        },
+        "p50_ratio_standin_over_measured": 1.008,
+        "standin": {
+          "max": 1050.799,
+          "min": 304.58,
+          "n": 15,
+          "p50": 525.417,
+          "p90": 883.081
+        }
+      }
+    },
+    "qwen/qwen3.8-27b": {
+      "completion_tokens": {
+        "measured": {
+          "max": 2.0,
+          "min": 2.0,
+          "n": 5,
+          "p50": 2.0,
+          "p90": 2.0
+        },
+        "p50_ratio_standin_over_measured": 0.5,
+        "standin": {
+          "max": 1.0,
+          "min": 1.0,
+          "n": 15,
+          "p50": 1.0,
+          "p90": 1.0
+        }
+      },
+      "first_content_ms": {
+        "measured": {
+          "max": 391.255,
+          "min": 260.969,
+          "n": 5,
+          "p50": 280.154,
+          "p90": 391.255
+        },
+        "p50_ratio_standin_over_measured": 1.084,
+        "standin": {
+          "max": 367.74,
+          "min": 213.37,
+          "n": 15,
+          "p50": 303.7,
+          "p90": 356.063
+        }
+      },
+      "headers_ms": {
+        "measured": {
+          "max": 390.631,
+          "min": 259.352,
+          "n": 5,
+          "p50": 272.291,
+          "p90": 390.631
+        },
+        "p50_ratio_standin_over_measured": 1.108,
+        "standin": {
+          "max": 365.569,
+          "min": 211.543,
+          "n": 15,
+          "p50": 301.621,
+          "p90": 354.202
+        }
+      },
+      "prompt_tokens": {
+        "measured": {
+          "max": 1643.0,
+          "min": 38.0,
+          "n": 5,
+          "p50": 38.0,
+          "p90": 1643.0
+        },
+        "p50_ratio_standin_over_measured": 1.026,
+        "standin": {
+          "max": 1644.0,
+          "min": 39.0,
+          "n": 15,
+          "p50": 39.0,
+          "p90": 1644.0
+        }
+      },
+      "total_ms": {
+        "measured": {
+          "max": 393.221,
+          "min": 263.543,
+          "n": 5,
+          "p50": 283.895,
+          "p90": 393.221
+        },
+        "p50_ratio_standin_over_measured": 1.074,
+        "standin": {
+          "max": 368.719,
+          "min": 214.155,
+          "n": 15,
+          "p50": 304.826,
+          "p90": 356.918
+        }
+      }
+    }
+  },
+  "fit": {
+    "label": "calibrated",
+    "per_model": {
+      "openai/gpt-oss-120b": {
+        "header_delay": {
+          "log_sd": 0.0191,
+          "raw_slope_ms_per_1k_tokens": 105.721,
+          "sigma_floor": 0.05,
+          "used_slope": 105.721
+        },
+        "inter_token_gaps_ms": [
+          1.8931,
+          2.0579,
+          2.0296,
+          2.0678,
+          1.1391
+        ],
+        "n": 5,
+        "prompt_tokens_fit": {
+          "basis": "measured",
+          "intercept_tokens": 84.351,
+          "slope_tokens_per_char": 0.119666
+        },
+        "reasoning_tokens": [
+          43,
+          43,
+          43,
+          43,
+          43
+        ]
+      },
+      "openai/gpt-oss-20b": {
+        "header_delay": {
+          "log_sd": 0.4216,
+          "raw_slope_ms_per_1k_tokens": 55.333,
+          "sigma_floor": 0.05,
+          "used_slope": 55.333
+        },
+        "inter_token_gaps_ms": [
+          1.1927,
+          0.99,
+          1.065,
+          1.1727,
+          1.0053
+        ],
+        "n": 5,
+        "prompt_tokens_fit": {
+          "basis": "measured",
+          "intercept_tokens": 84.351,
+          "slope_tokens_per_char": 0.119666
+        },
+        "reasoning_tokens": [
+          41,
+          41,
+          41,
+          40,
+          54
+        ]
+      },
+      "qwen/qwen3.8-27b": {
+        "header_delay": {
+          "log_sd": 0.1681,
+          "raw_slope_ms_per_1k_tokens": 0.015,
+          "sigma_floor": 0.05,
+          "used_slope": 0.015
+        },
+        "inter_token_gaps_ms": [
+          2.581,
+          2.574,
+          3.741,
+          1.966,
+          6.198
+        ],
+        "n": 5,
+        "prompt_tokens_fit": {
+          "basis": "measured",
+          "intercept_tokens": 27.4939,
+          "slope_tokens_per_char": 0.119741
+        },
+        "reasoning_tokens": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ]
+      }
+    }
+  },
+  "header_checks": {
+    "calls": [
+      {
+        "model": "openai/gpt-oss-20b",
+        "prompt_plus_max_completion": 351,
+        "request_id": "probe-20261112T031816Z-2b5d017-000001",
+        "requests_match": true,
+        "requests_reset_observed_s": 86.4,
+        "requests_reset_predicted_s": 86.4,
+        "tokens_match": true,
+        "tokens_reset_observed_s": 2.28,
+        "tokens_reset_predicted_s": 2.28,
+        "tokens_used_by_header": 304,
+        "usage_total_tokens": 146
+      },
+      {
+        "model": "openai/gpt-oss-20b",
+        "prompt_plus_max_completion": 351,
+        "request_id": "probe-20261112T031816Z-2b5d017-000002",
+        "requests_match": true,
+        "requests_reset_observed_s": 172.8,
+        "requests_reset_predicted_s": 172.8,
+        "tokens_match": true,
+        "tokens_reset_observed_s": 2.625,
+        "tokens_reset_predicted_s": 2.625,
+        "tokens_used_by_header": 350,
+        "usage_total_tokens": 146
+      },
+      {
+        "model": "openai/gpt-oss-20b",
+        "prompt_plus_max_completion": 351,
+        "request_id": "probe-20261112T031816Z-2b5d017-000003",
+        "requests_match": true,
+        "requests_reset_observed_s": 259.2,
+        "requests_reset_predicted_s": 259.2,
+        "tokens_match": true,
+        "tokens_reset_observed_s": 3.435,
+        "tokens_reset_predicted_s": 3.435,
+        "tokens_used_by_header": 458,
+        "usage_total_tokens": 146
+      },
+      {
+        "model": "openai/gpt-oss-20b",
+        "prompt_plus_max_completion": 755,
+        "request_id": "probe-20261112T031816Z-2b5d017-000004",
+        "requests_match": true,
+        "requests_reset_observed_s": 345.6,
+        "requests_reset_predicted_s": 345.6,
+        "tokens_match": true,
+        "tokens_reset_observed_s": 7.087,
+        "tokens_reset_predicted_s": 7.088,
+        "tokens_used_by_header": 945,
+        "usage_total_tokens": 549
+      },
+      {
+        "model": "openai/gpt-oss-20b",
+        "prompt_plus_max_completion": 1955,
+        "request_id": "probe-20261112T031816Z-2b5d017-000005",
+        "requests_match": true,
+        "requests_reset_observed_s": 432.0,
+        "requests_reset_predicted_s": 432.0,
+        "tokens_match": true,
+        "tokens_reset_observed_s": 19.687,
+        "tokens_reset_predicted_s": 19.688,
+        "tokens_used_by_header": 2625,
+        "usage_total_tokens": 1763
+      },
+      {
+        "model": "openai/gpt-oss-120b",
+        "prompt_plus_max_completion": 351,
+        "request_id": "probe-20261112T031816Z-2b5d017-000006",
+        "requests_match": true,
+        "requests_reset_observed_s": 86.4,
+        "requests_reset_predicted_s": 86.4,
+        "tokens_match": true,
+        "tokens_reset_observed_s": 2.632,
+        "tokens_reset_predicted_s": 2.632,
+        "tokens_used_by_header": 351,
+        "usage_total_tokens": 148
+      },
+      {
+        "model": "openai/gpt-oss-120b",
+        "prompt_plus_max_completion": 351,
+        "request_id": "probe-20261112T031816Z-2b5d017-000007",
+        "requests_match": true,
+        "requests_reset_observed_s": 172.8,
+        "requests_reset_predicted_s": 172.8,
+        "tokens_match": true,
+        "tokens_reset_observed_s": 3.105,
+        "tokens_reset_predicted_s": 3.105,
+        "tokens_used_by_header": 414,
+        "usage_total_tokens": 148
+      },
+      {
+        "model": "openai/gpt-oss-120b",
+        "prompt_plus_max_completion": 351,
+        "request_id": "probe-20261112T031816Z-2b5d017-000008",
+        "requests_match": true,
+        "requests_reset_observed_s": 259.2,
+        "requests_reset_predicted_s": 259.2,
+        "tokens_match": true,
+        "tokens_reset_observed_s": 3.607,
+        "tokens_reset_predicted_s": 3.607,
+        "tokens_used_by_header": 481,
+        "usage_total_tokens": 148
+      },
+      {
+        "model": "openai/gpt-oss-120b",
+        "prompt_plus_max_completion": 755,
+        "request_id": "probe-20261112T031816Z-2b5d017-000009",
+        "requests_match": true,
+        "requests_reset_observed_s": 345.6,
+        "requests_reset_predicted_s": 345.6,
+        "tokens_match": true,
+        "tokens_reset_observed_s": 5.632,
+        "tokens_reset_predicted_s": 5.633,
+        "tokens_used_by_header": 751,
+        "usage_total_tokens": 552
+      },
+      {
+        "model": "openai/gpt-oss-120b",
+        "prompt_plus_max_completion": 1955,
+        "request_id": "probe-20261112T031816Z-2b5d017-000010",
+        "requests_match": true,
+        "requests_reset_observed_s": 432.0,
+        "requests_reset_predicted_s": 432.0,
+        "tokens_match": true,
+        "tokens_reset_observed_s": 19.56,
+        "tokens_reset_predicted_s": 19.56,
+        "tokens_used_by_header": 2608,
+        "usage_total_tokens": 1752
+      },
+      {
+        "model": "qwen/qwen3.8-27b",
+        "prompt_plus_max_completion": 294,
+        "request_id": "probe-20261112T031816Z-2b5d017-000011",
+        "requests_match": true,
+        "requests_reset_observed_s": 86.4,
+        "requests_reset_predicted_s": 86.4,
+        "tokens_match": true,
+        "tokens_reset_observed_s": 1.522,
+        "tokens_reset_predicted_s": 1.522,
+        "tokens_used_by_header": 203,
+        "usage_total_tokens": 40
+      },
+      {
+        "model": "qwen/qwen3.8-27b",
+        "prompt_plus_max_completion": 294,
+        "request_id": "probe-20261112T031816Z-2b5d017-000012",
+        "requests_match": true,
+        "requests_reset_observed_s": 172.8,
+        "requests_reset_predicted_s": 172.8,
+        "tokens_match": false,
+        "tokens_reset_observed_s": 9.9,
+        "tokens_reset_predicted_s": 1.583,
+        "tokens_used_by_header": 211,
+        "usage_total_tokens": 40
+      },
+      {
+        "model": "qwen/qwen3.8-27b",
+        "prompt_plus_max_completion": 294,
+        "request_id": "probe-20261112T031816Z-2b5d017-000013",
+        "requests_match": true,
+        "requests_reset_observed_s": 259.2,
+        "requests_reset_predicted_s": 259.2,
+        "tokens_match": false,
+        "tokens_reset_observed_s": 9.9,
+        "tokens_reset_predicted_s": 1.643,
+        "tokens_used_by_header": 219,
+        "usage_total_tokens": 40
+      },
+      {
+        "model": "qwen/qwen3.8-27b",
+        "prompt_plus_max_completion": 699,
+        "request_id": "probe-20261112T031816Z-2b5d017-000014",
+        "requests_match": true,
+        "requests_reset_observed_s": 345.6,
+        "requests_reset_predicted_s": 345.6,
+        "tokens_match": false,
+        "tokens_reset_observed_s": 9.9,
+        "tokens_reset_predicted_s": 4.74,
+        "tokens_used_by_header": 632,
+        "usage_total_tokens": 445
+      },
+      {
+        "model": "qwen/qwen3.8-27b",
+        "prompt_plus_max_completion": 1899,
+        "request_id": "probe-20261112T031816Z-2b5d017-000015",
+        "requests_match": true,
+        "requests_reset_observed_s": 432.0,
+        "requests_reset_predicted_s": 432.0,
+        "tokens_match": false,
+        "tokens_reset_observed_s": 17.665,
+        "tokens_reset_predicted_s": 16.695,
+        "tokens_used_by_header": 2226,
+        "usage_total_tokens": 1645
+      }
+    ],
+    "requests": {
+      "checked": 15,
+      "matched": 15
+    },
+    "tokens": {
+      "checked": 15,
+      "matched": 11
+    },
+    "tolerance_s": 0.05
+  },
+  "label": "calibrated",
+  "largest_differences": [
+    {
+      "abs_log_ratio": 0.693,
+      "metric": "completion_tokens",
+      "model": "qwen/qwen3.8-27b",
+      "p50_ratio": 0.5
+    },
+    {
+      "abs_log_ratio": 0.194,
+      "metric": "completion_tokens",
+      "model": "openai/gpt-oss-20b",
+      "p50_ratio": 0.824
+    },
+    {
+      "abs_log_ratio": 0.186,
+      "metric": "completion_tokens",
+      "model": "openai/gpt-oss-120b",
+      "p50_ratio": 0.83
+    },
+    {
+      "abs_log_ratio": 0.138,
+      "metric": "total_ms",
+      "model": "openai/gpt-oss-120b",
+      "p50_ratio": 0.871
+    },
+    {
+      "abs_log_ratio": 0.128,
+      "metric": "first_content_ms",
+      "model": "openai/gpt-oss-120b",
+      "p50_ratio": 0.88
+    }
+  ],
+  "least_like_the_real_thing": [
+    "Latency is fitted from very little: 5 sequential calls per model, tiny answers, one time of day, one client location (Groq region 'bom'). The spread (sigma) and the prompt-size slope are rough; there is no measured tail, no diurnal change, and no network jitter beyond what the fitted header delay already contains.",
+    "No concurrency knee was measured: every real call was sequential. The knee and the slowdown per extra request are assumptions, so the stand-in's behaviour under load is a design input, not a calibration.",
+    "Failure behaviour is invented. Groq returned 0 errors in 16 calls, so 5xx rates, stragglers and stalled streams are scenario settings, not measured rates.",
+    "No 429 was ever observed on Groq. The 429 body wording, the retry-after value and whether Groq rejects (rather than queues) at a limit follow the documentation and the client's parser, not evidence.",
+    "Token accounting differs. Groq's remaining-tokens drop did not equal the reported usage; the stand-in reserves prompt + max_completion_tokens at admission and gives back the unused part at the end. The real rule is unknown, and the token-bucket reading of reset-tokens failed for some calls (see header_checks).",
+    "RPM and TPD are not known. Groq exposes neither in headers; the stand-in enforces them only when an experiment sets a value, labelled as a scenario setting.",
+    "Groq keeps separate limit counters per model (each model restarted at 999). The stand-in keeps one set of buckets for all models.",
+    "Answers are extractive copies of passage sentences, at most two sentences. Real answers are longer and paraphrased, so output length, output tokens per answer and the time spent streaming content are not like Groq's. Output tokenisation (4 characters per token) is assumed.",
+    "Reasoning is a fixed number of filler tokens per model (the measured median). Real reasoning length varies with the question and can use most of the token budget.",
+    "Prompt tokenisation was fitted on synthetic probe prompts, not on paper text with equations and identifiers, which usually tokenises into more tokens per character.",
+    "Streaming granularity differs: one SSE chunk per word with an even inter-token gap. Groq batches tokens into chunks of varying size."
+  ],
+  "n_calls": 15,
+  "note": "Measured values come only from the probe traces listed in probe_runs. Stand-in values are from the replay in this run. Nothing here is a new Groq measurement.",
+  "probe_runs": [
+    {
+      "inference_calls_used": 0,
+      "records": 1,
+      "run_id": "probe-20261112T031108Z-2b5d017",
+      "used": false
+    },
+    {
+      "inference_calls_used": 15,
+      "records": 15,
+      "run_id": "probe-20261112T031816Z-2b5d017",
+      "used": true
+    }
+  ],
+  "replay": {
+    "calls": 45,
+    "errors": [],
+    "how": "each probe call shape (model, prompt characters, max_completion_tokens) replayed sequentially on 127.0.0.1 through HttpOpenAIProvider; rate limits switched off so only latency and token counts are compared; the prompt text is synthetic",
+    "limits_enforced": false,
+    "per_call": [
+      {
+        "completion_tokens": 42,
+        "first_content_ms": 882.62,
+        "headers_ms": 865.517,
+        "label": "short",
+        "model": "openai/gpt-oss-20b",
+        "prompt_tokens": 96,
+        "total_ms": 883.081
+      },
+      {
+        "completion_tokens": 42,
+        "first_content_ms": 354.925,
+        "headers_ms": 337.824,
+        "label": "short",
+        "model": "openai/gpt-oss-20b",
+        "prompt_tokens": 96,
+        "total_ms": 355.675
+      },
+      {
+        "completion_tokens": 42,
+        "first_content_ms": 374.591,
+        "headers_ms": 355.074,
+        "label": "short",
+        "model": "openai/gpt-oss-20b",
+        "prompt_tokens": 96,
+        "total_ms": 375.09
+      },
+      {
+        "completion_tokens": 42,
+        "first_content_ms": 417.23,
+        "headers_ms": 396.386,
+        "label": "prompt_400w",
+        "model": "openai/gpt-oss-20b",
+        "prompt_tokens": 498,
+        "total_ms": 417.878
+      },
+      {
+        "completion_tokens": 42,
+        "first_content_ms": 303.949,
+        "headers_ms": 287.017,
+        "label": "prompt_1600w",
+        "model": "openai/gpt-oss-20b",
+        "prompt_tokens": 1700,
+        "total_ms": 304.58
+      },
+      {
+        "completion_tokens": 44,
+        "first_content_ms": 575.329,
+        "headers_ms": 555.229,
+        "label": "short",
+        "model": "openai/gpt-oss-120b",
+        "prompt_tokens": 96,
+        "total_ms": 575.732
+      },
+      {
+        "completion_tokens": 44,
+        "first_content_ms": 564.705,
+        "headers_ms": 546.728,
+        "label": "short",
+        "model": "openai/gpt-oss-120b",
+        "prompt_tokens": 96,
+        "total_ms": 565.198
+      },
+      {
+        "completion_tokens": 44,
+        "first_content_ms": 527.595,
+        "headers_ms": 509.6,
+        "label": "short",
+        "model": "openai/gpt-oss-120b",
+        "prompt_tokens": 96,
+        "total_ms": 528.146
+      },
+      {
+        "completion_tokens": 44,
+        "first_content_ms": 533.05,
+        "headers_ms": 525.415,
+        "label": "prompt_400w",
+        "model": "openai/gpt-oss-120b",
+        "prompt_tokens": 498,
+        "total_ms": 533.34
+      },
+      {
+        "completion_tokens": 44,
+        "first_content_ms": 725.446,
+        "headers_ms": 708.428,
+        "label": "prompt_1600w",
+        "model": "openai/gpt-oss-120b",
+        "prompt_tokens": 1700,
+        "total_ms": 725.899
+      },
+      {
+        "completion_tokens": 1,
+        "first_content_ms": 306.453,
+        "headers_ms": 305.133,
+        "label": "short",
+        "model": "qwen/qwen3.8-27b",
+        "prompt_tokens": 39,
+        "total_ms": 307.111
+      },
+      {
+        "completion_tokens": 1,
+        "first_content_ms": 264.487,
+        "headers_ms": 262.686,
+        "label": "short",
+        "model": "qwen/qwen3.8-27b",
+        "prompt_tokens": 39,
+        "total_ms": 265.742
+      },
+      {
+        "completion_tokens": 1,
+        "first_content_ms": 213.37,
+        "headers_ms": 211.543,
+        "label": "short",
+        "model": "qwen/qwen3.8-27b",
+        "prompt_tokens": 39,
+        "total_ms": 214.155
+      },
+      {
+        "completion_tokens": 1,
+        "first_content_ms": 324.709,
+        "headers_ms": 322.751,
+        "label": "prompt_400w",
+        "model": "qwen/qwen3.8-27b",
+        "prompt_tokens": 441,
+        "total_ms": 325.895
+      },
+      {
+        "completion_tokens": 1,
+        "first_content_ms": 356.063,
+        "headers_ms": 354.202,
+        "label": "prompt_1600w",
+        "model": "qwen/qwen3.8-27b",
+        "prompt_tokens": 1644,
+        "total_ms": 356.918
+      },
+      {
+        "completion_tokens": 42,
+        "first_content_ms": 1050.32,
+        "headers_ms": 1034.812,
+        "label": "short",
+        "model": "openai/gpt-oss-20b",
+        "prompt_tokens": 96,
+        "total_ms": 1050.799
+      },
+      {
+        "completion_tokens": 42,
+        "first_content_ms": 722.006,
+        "headers_ms": 700.029,
+        "label": "short",
+        "model": "openai/gpt-oss-20b",
+        "prompt_tokens": 96,
+        "total_ms": 722.625
+      },
+      {
+        "completion_tokens": 42,
+        "first_content_ms": 446.315,
+        "headers_ms": 424.776,
+        "label": "short",
+        "model": "openai/gpt-oss-20b",
+        "prompt_tokens": 96,
+        "total_ms": 446.944
+      },
+      {
+        "completion_tokens": 42,
+        "first_content_ms": 583.643,
+        "headers_ms": 567.045,
+        "label": "prompt_400w",
+        "model": "openai/gpt-oss-20b",
+        "prompt_tokens": 498,
+        "total_ms": 584.096
+      },
+      {
+        "completion_tokens": 42,
+        "first_content_ms": 672.447,
+        "headers_ms": 651.162,
+        "label": "prompt_1600w",
+        "model": "openai/gpt-oss-20b",
+        "prompt_tokens": 1700,
+        "total_ms": 672.955
+      },
+      {
+        "completion_tokens": 44,
+        "first_content_ms": 496.267,
+        "headers_ms": 474.398,
+        "label": "short",
+        "model": "openai/gpt-oss-120b",
+        "prompt_tokens": 96,
+        "total_ms": 496.871
+      },
+      {
+        "completion_tokens": 44,
+        "first_content_ms": 537.447,
+        "headers_ms": 514.849,
+        "label": "short",
+        "model": "openai/gpt-oss-120b",
+        "prompt_tokens": 96,
+        "total_ms": 537.974
+      },
+      {
+        "completion_tokens": 44,
+        "first_content_ms": 548.352,
+        "headers_ms": 531.115,
+        "label": "short",
+        "model": "openai/gpt-oss-120b",
+        "prompt_tokens": 96,
+        "total_ms": 548.748
+      },
+      {
+        "completion_tokens": 44,
+        "first_content_ms": 575.173,
+        "headers_ms": 554.207,
+        "label": "prompt_400w",
+        "model": "openai/gpt-oss-120b",
+        "prompt_tokens": 498,
+        "total_ms": 575.734
+      },
+      {
+        "completion_tokens": 44,
+        "first_content_ms": 704.219,
+        "headers_ms": 685.165,
+        "label": "prompt_1600w",
+        "model": "openai/gpt-oss-120b",
+        "prompt_tokens": 1700,
+        "total_ms": 704.879
+      },
+      {
+        "completion_tokens": 1,
+        "first_content_ms": 305.365,
+        "headers_ms": 303.514,
+        "label": "short",
+        "model": "qwen/qwen3.8-27b",
+        "prompt_tokens": 39,
+        "total_ms": 306.046
+      },
+      {
+        "completion_tokens": 1,
+        "first_content_ms": 276.429,
+        "headers_ms": 274.104,
+        "label": "short",
+        "model": "qwen/qwen3.8-27b",
+        "prompt_tokens": 39,
+        "total_ms": 277.579
+      },
+      {
+        "completion_tokens": 1,
+        "first_content_ms": 322.984,
+        "headers_ms": 321.269,
+        "label": "short",
+        "model": "qwen/qwen3.8-27b",
+        "prompt_tokens": 39,
+        "total_ms": 323.651
+      },
+      {
+        "completion_tokens": 1,
+        "first_content_ms": 279.784,
+        "headers_ms": 277.998,
+        "label": "prompt_400w",
+        "model": "qwen/qwen3.8-27b",
+        "prompt_tokens": 441,
+        "total_ms": 280.992
+      },
+      {
+        "completion_tokens": 1,
+        "first_content_ms": 246.164,
+        "headers_ms": 243.969,
+        "label": "prompt_1600w",
+        "model": "qwen/qwen3.8-27b",
+        "prompt_tokens": 1644,
+        "total_ms": 247.118
+      },
+      {
+        "completion_tokens": 42,
+        "first_content_ms": 524.893,
+        "headers_ms": 505.683,
+        "label": "short",
+        "model": "openai/gpt-oss-20b",
+        "prompt_tokens": 96,
+        "total_ms": 525.417
+      },
+      {
+        "completion_tokens": 42,
+        "first_content_ms": 527.497,
+        "headers_ms": 507.856,
+        "label": "short",
+        "model": "openai/gpt-oss-20b",
+        "prompt_tokens": 96,
+        "total_ms": 528.086
+      },
+      {
+        "completion_tokens": 42,
+        "first_content_ms": 496.212,
+        "headers_ms": 473.603,
+        "label": "short",
+        "model": "openai/gpt-oss-20b",
+        "prompt_tokens": 96,
+        "total_ms": 496.813
+      },
+      {
+        "completion_tokens": 42,
+        "first_content_ms": 735.471,
+        "headers_ms": 719.767,
+        "label": "prompt_400w",
+        "model": "openai/gpt-oss-20b",
+        "prompt_tokens": 498,
+        "total_ms": 735.89
+      },
+      {
+        "completion_tokens": 42,
+        "first_content_ms": 388.38,
+        "headers_ms": 367.601,
+        "label": "prompt_1600w",
+        "model": "openai/gpt-oss-20b",
+        "prompt_tokens": 1700,
+        "total_ms": 389.024
+      },
+      {
+        "completion_tokens": 44,
+        "first_content_ms": 517.526,
+        "headers_ms": 504.255,
+        "label": "short",
+        "model": "openai/gpt-oss-120b",
+        "prompt_tokens": 96,
+        "total_ms": 518.138
+      },
+      {
+        "completion_tokens": 44,
+        "first_content_ms": 540.297,
+        "headers_ms": 518.178,
+        "label": "short",
+        "model": "openai/gpt-oss-120b",
+        "prompt_tokens": 96,
+        "total_ms": 540.83
+      },
+      {
+        "completion_tokens": 44,
+        "first_content_ms": 555.307,
+        "headers_ms": 535.072,
+        "label": "short",
+        "model": "openai/gpt-oss-120b",
+        "prompt_tokens": 96,
+        "total_ms": 555.748
+      },
+      {
+        "completion_tokens": 44,
+        "first_content_ms": 592.791,
+        "headers_ms": 570.401,
+        "label": "prompt_400w",
+        "model": "openai/gpt-oss-120b",
+        "prompt_tokens": 498,
+        "total_ms": 593.413
+      },
+      {
+        "completion_tokens": 44,
+        "first_content_ms": 770.725,
+        "headers_ms": 749.471,
+        "label": "prompt_1600w",
+        "model": "openai/gpt-oss-120b",
+        "prompt_tokens": 1700,
+        "total_ms": 771.272
+      },
+      {
+        "completion_tokens": 1,
+        "first_content_ms": 291.724,
+        "headers_ms": 288.929,
+        "label": "short",
+        "model": "qwen/qwen3.8-27b",
+        "prompt_tokens": 39,
+        "total_ms": 292.613
+      },
+      {
+        "completion_tokens": 1,
+        "first_content_ms": 263.013,
+        "headers_ms": 260.247,
+        "label": "short",
+        "model": "qwen/qwen3.8-27b",
+        "prompt_tokens": 39,
+        "total_ms": 263.333
+      },
+      {
+        "completion_tokens": 1,
+        "first_content_ms": 303.7,
+        "headers_ms": 301.621,
+        "label": "short",
+        "model": "qwen/qwen3.8-27b",
+        "prompt_tokens": 39,
+        "total_ms": 304.826
+      },
+      {
+        "completion_tokens": 1,
+        "first_content_ms": 322.919,
+        "headers_ms": 321.103,
+        "label": "prompt_400w",
+        "model": "qwen/qwen3.8-27b",
+        "prompt_tokens": 441,
+        "total_ms": 323.866
+      },
+      {
+        "completion_tokens": 1,
+        "first_content_ms": 367.74,
+        "headers_ms": 365.569,
+        "label": "prompt_1600w",
+        "model": "qwen/qwen3.8-27b",
+        "prompt_tokens": 1644,
+        "total_ms": 368.719
+      }
+    ],
+    "repeats": 3,
+    "skipped": false
+  },
+  "run_id": "cal-20261113T022150Z-3f687c6",
+  "seed": 0
+}
