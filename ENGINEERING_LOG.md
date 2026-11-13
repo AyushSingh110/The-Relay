@@ -919,3 +919,66 @@
 - **Real Groq calls:** 10 (Day 2 total: 86 = 18 + 58 + 10). **Network:** Groq for the real run only; otherwise loopback.
 - **Owner approval status:** pending owner review
 - **Next action:** Owner reviews the report and decides patience/deadline, optional extra scenarios and canonical runs. P11 starts only on explicit approval.
+
+---
+
+### Execution Entry
+
+- **Date and time:** 2026-11-13 14:40 IST
+- **Phase identifier:** `p11` — Tables, Forensics and Submission Audit
+- **Task requested and objective:**
+  - Tables module, script and tests.
+  - Populate `canonical_runs.json`.
+  - Build `results.csv`.
+  - Compute Tables 1, 2a, 2b and 3 into `scratch/computed_tables.md`.
+  - Full submission audit.
+- **Status:** completed. `answer_grade` is blank by owner decision, pending grade review.
+- **Owner decisions recorded (2026-11-13, via question dialog before any file was written):**
+  1. The calibration run `cal-20261113T022403Z-3f687c6` is cited outside `canonical_runs.json`, because aggregation rejects run kinds without rows.
+  2. The P02-LIVE baseline probe run `probe-20261112T031816Z-2b5d017` is included (ARCH §13.2).
+  3. Build `results.csv` now with blank grades; rebuild with `--replace` after the owner's review.
+- **Files created:**
+  - `src/relay/experiments/tables.py`
+  - `scripts/compute_tables.py`
+  - `tests/test_tables.py` (6 tests)
+  - `results.csv`
+  - `scratch/computed_tables.md` (gitignored)
+  - `reports/phase-11-tables-and-submission-audit.md`
+- **Files modified:**
+  - `evidence/canonical_runs.json`: empty list → 12 runs. The superseded `exp-20261113T075226Z-c26f18c` and the 0-row discovery probe run are excluded.
+  - `ENGINEERING_LOG.md` (this entry).
+- **Engineering decisions ([PROPOSED]):**
+  - Linear (type-7) percentiles in all tables.
+  - TTFT excludes quota wait in Tables 1 and 3; Table 3 adds a model-only TTFT.
+  - Forensics split around the provider's first content token, plus client overhead.
+  - Reviewed grades preferred over proposals, and labelled either way.
+- **Commands executed and observed outputs:**
+  - `build_results.py --check` → checked, 375 rows, 12 runs.
+  - `build_results.py` → written.
+  - `--check` → `would_change: false`; rebuild → unchanged.
+  - `results.csv` SHA-256 `8dfb10df…44efd` on both builds and after the final tests; 375 unique IDs; real 106 / stand-in 269; `answer_grade` non-blank 0.
+  - `compute_tables.py` → 11,081 bytes, SHA-256 `b8e964b3…87f26`; `--check` → identical.
+  - Secret scan over 192 files (191 tracked + evidence + `results.csv`):
+    - configured key value: 0 occurrences;
+    - evidence and `results.csv` findings: 0;
+    - 13 synthetic test inputs (`FAKE_KEY`, fake `Authorization`, placeholder `org_01a…`).
+  - `git check-ignore`: `results.csv` and evidence paths exit 1 (trackable); `.env`, `scratch/` and PDFs exit 0 (ignored); `.env` tracked: 0 files.
+  - `pytest tests/test_tables.py` → 6 passed.
+  - Final `pytest -v` → `467 passed in 24.27s` (0 failed / error / skipped); `ruff check .` → `All checks passed!`
+- **Key computed figures** (grades PROPOSED):
+  - **Table 1:** qwen citation pass 100.0 %, truncation 0/6; gpt-oss truncation 3/6 each.
+  - **Table 2a:** burst delivered 96.7 % (cache on) vs 26.7 % (cache off); overload delivered 67.4 %, given up 10.5 %, 14.1 /min delivered vs 21.9 /min offered; retry attempts ×1.27 (budget on) vs ×1.41 (budget off).
+  - **Table 2b:** the slowest overload request was 29,819.2 ms, with waiting 29,156.0 ms and 29,439.2 ms before the provider's first token (guard `tpm_available` 1163); the slowest real request was 3,457.4 ms with working 3,447.0 ms.
+  - **Table 3:** small_fast / balanced_rerank / large_wide correct 40.0 / 46.7 / 40.0 %, tokens per answer 1,512.8 / 1,816.2 / 3,034.3, retrieval p50 35.0 / 1,260.2 / 32.6 ms.
+- **Errors, root causes, fixes:**
+  - Three canonical-list conflicts (aggregation contract, ARCH §13.2, P07 grade rule), resolved by owner decision with no code change.
+  - One E501, wrapped.
+- **Remaining issues:**
+  - No defined step yet to write reviewed grades into canonical rows (aggregation does not read `grades.json`).
+  - Grades pending.
+  - Open P07/P10 items.
+  - Tables output is in gitignored `scratch/`.
+- **Deviations from ARCHITECTURE.md:** none.
+- **Real Groq calls:** 0. **Network:** none.
+- **Owner approval status:** pending owner review
+- **Next action:** Owner reviews grades and decides the grade-application mechanism, then rebuilds `results.csv` with `--replace` and recomputes the tables. Nothing further has been started.
