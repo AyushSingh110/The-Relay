@@ -562,3 +562,47 @@
 - **Deviations from ARCHITECTURE.md:** none to binding decisions. One LLM call per request, no repair loop, verify-before-delivery, and safe refusal as `ok` + `citation_verification_failed` are all preserved.
 - **Owner approval status:** pending owner review
 - **Next action:** Owner reviews `reports/phase-05-pipeline-and-verifier.md` and decides the §11.1 items. P06 starts only on explicit approval.
+
+---
+
+### Execution Entry
+
+- **Date and time:** 2026-11-13 07:09 IST
+- **Phase identifier:** `p06` (ProviderGuard and Admission Queue)
+- **Task requested:** Execute P06 per CLAUDE.md: ProviderGuard (semaphore, RPM/TPM windows, header sync, daily stop, reservation and settlement, adaptive chars-per-token, circuit breaker, degraded top-k), retry policy and budget, admission queue with derived capacity and shedding. Real Groq calls: none.
+- **Status:** completed, pending owner review
+- **Preconditions:** the repo was clean at HEAD `fc57d4c` (the owner committed P05). The P05 report is still marked `Pending Review`, and its §11.1 decisions are unanswered; P06 builds on those values as proposed. A brief plan was presented before any file was written.
+- **Files created:** `src/relay/control/{__init__,retry,provider_guard,admission}.py`, `tests/test_control_plane.py` (34 tests), `reports/phase-06-provider-guard-and-admission.md`.
+- **Files modified:**
+  - `src/relay/orchestrator/pipeline.py`: additive change. An optional `deadline_ns`; `GenerationResult.attempts` and `.tokens`; an optional `budget` for degraded top-k. All 64 P05 tests pass unmodified.
+  - `ENGINEERING_LOG.md`.
+  - Nothing was installed.
+- **Decisions** (all defaults [PROPOSED]; detail in report §5):
+  - **Headers:** `*-requests` update daily state only, and `*-tokens` the per-minute token state. RPM and TPD come only from configuration.
+  - **Reservation and settlement:** reserve `ceil(chars/cpt) + max_completion_tokens`. A rejected call is released; an opened stream without usage stays charged as `estimated`.
+  - **Spans:** quota waits count as `waiting`.
+  - **Error codes:** local refusals reuse existing codes (`daily_budget_exhausted`, `circuit_open`, `predicted_wait_exceeds_deadline`, `deadline_expired`, `payload_too_large`).
+  - **Defaults:** retry 3 attempts / base 0.5 s / cap 8 s / deadline share 0.5; budget 0.2 × first attempts + 3 per 60 s; circuit 5 failures / 30 s; guard concurrency 2.
+- **Commands and observed outputs:**
+  - The P05 tests after the pipeline change → `64 passed`.
+  - `pytest tests/test_control_plane.py`, run 1 → **hung**. A test held two permits against the default concurrency of 2. The run was stopped and re-run under `timeout`.
+  - Then → `2 failed, 32 passed`.
+  - After the fixes → `34 passed`.
+  - **Final:** `pytest -q -rs` → **372 passed**, 0 failed, 0 skipped (4.68 s); `ruff check .` → All checks passed!
+- **Errors, root causes, fixes:**
+  1. **Real bug:** the admission queue kept cancelled waiters in its deque, which inflated depth and could shed requests against ghosts. A cancelled waiter is now removed. Verified by the disconnect test: depth 0, 0 provider requests, 0 reserved tokens.
+  2. A test hang, from the test helper's concurrency default. Fixed in the helper.
+  3. A wrong test expectation (the estimate after adaptation). Fixed.
+  4. Self-review fixes before the first run: the circuit is checked before quota waits, and the half-open trial flag clears at settlement.
+  5. Two inline edit scripts failed shell parsing. Nothing ran; they were re-done from script files.
+  6. Ruff: one SIM300, fixed.
+- **Remaining issues:**
+  - real RPM/TPD values are not configured or measured;
+  - the local daily counters start at process start;
+  - Groq's TPM accounting is unreconciled;
+  - the control plane is wired only in tests (P08 does the service wiring);
+  - the P05 and P06 defaults await approval.
+- **Deviations from ARCHITECTURE.md:** none to binding decisions. For daily exhaustion and circuit open, the outcome follows the §13.4 table (not delivered) and keeps the passages for the §5 "pointers".
+- **Real Groq calls:** 0. **Network:** none.
+- **Owner approval status:** pending owner review
+- **Next action:** Owner reviews `reports/phase-06-provider-guard-and-admission.md`, decides the P05 §11.1 items and the P06 defaults, and supplies RPM/TPD values with their source. The next phase starts only on explicit approval.

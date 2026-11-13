@@ -172,24 +172,51 @@ class PipelineOutcome(BaseModel):
 
 
 @dataclass(frozen=True)
+class TokenTotals:
+    """Tokens summed over every provider attempt of one request."""
+
+    tokens_in: int
+    tokens_out: int
+    usage_source: UsageSource
+
+
+@dataclass(frozen=True)
 class GenerationResult:
-    """Outcome of the LLM step. Exactly one of ``completion`` / ``error`` is set."""
+    """Outcome of the LLM step. Exactly one of ``completion`` / ``error`` is set.
+
+    ``attempts`` counts provider calls actually sent (0 when a guard refused locally).
+    ``tokens`` carries totals across attempts; when ``None`` the pipeline derives them
+    from the single completion.
+    """
 
     completion: CompletionResult | None
     error: ProviderError | None
     stream_opened: bool
     received_chars: int
     retries: int = 0
+    attempts: int = 1
+    tokens: TokenTotals | None = None
 
     def __post_init__(self) -> None:
         if (self.completion is None) == (self.error is None):
             raise ValueError("exactly one of completion / error must be set")
+        if self.attempts < 0 or not 0 <= self.retries <= max(0, self.attempts - 1):
+            raise ValueError("retries must be between 0 and attempts - 1")
+        if self.attempts == 0 and self.completion is not None:
+            raise ValueError("a completion needs at least one provider attempt")
 
 
 class AnswerGenerator(Protocol):
     async def generate(
-        self, request: ChatRequest, spans: ServerSpanTracker
+        self, request: ChatRequest, spans: ServerSpanTracker, *,
+        deadline_ns: int | None = None,
     ) -> GenerationResult: ...
+
+
+class PromptBudget(Protocol):
+    """Says whether a request fits the current token headroom (ProviderGuard in P06)."""
+
+    def fits(self, request: ChatRequest) -> bool: ...
 
 
 class SingleCallGenerator:
@@ -198,7 +225,8 @@ class SingleCallGenerator:
     def __init__(self, provider: ChatProvider) -> None:
         self._provider = provider
 
-    async def generate(self, request: ChatRequest, spans: ServerSpanTracker) -> GenerationResult:
+    async def generate(self, request: ChatRequest, spans: ServerSpanTracker, *,
+                       deadline_ns: int | None = None) -> GenerationResult:
         opened = False
         received = 0
 
@@ -239,6 +267,12 @@ def _estimate_tokens(chars: int) -> int:
 
 
 def _spend(result: GenerationResult, request: ChatRequest) -> _Spend:
+    if result.attempts == 0:
+        return _Spend()  # refused locally: the provider was never called
+    if result.tokens is not None:
+        return _Spend(provider_called=True, retries=result.retries,
+                      tokens_in=result.tokens.tokens_in, tokens_out=result.tokens.tokens_out,
+                      usage_source=result.tokens.usage_source, model_id=request.model)
     usage = None if result.completion is None else result.completion.usage
     if usage is not None:
         tokens: tuple[int, int, UsageSource] = (usage.prompt_tokens, usage.completion_tokens,
@@ -279,7 +313,7 @@ class _Run:
                 verdict: VerificationVerdict = "NOT_RUN", delivered_text: str | None = None,
                 refused: bool = False, citations: tuple[CitedPassage, ...] = (),
                 passages: tuple[RetrievedPassage, ...] = (), spend: _Spend | None = None,
-                trace: PipelineTrace | None = None) -> PipelineOutcome:
+                trace: PipelineTrace | None = None, degraded: bool = False) -> PipelineOutcome:
         spent = spend or _Spend()
         return PipelineOutcome(
             request_id=self.request.request_id,
@@ -288,7 +322,7 @@ class _Run:
             refused=refused, citations=citations, passages=passages,
             provider_called=spent.provider_called, retries=spent.retries,
             tokens_in=spent.tokens_in, tokens_out=spent.tokens_out,
-            usage_source=spent.usage_source, model_id=spent.model_id, degraded=False,
+            usage_source=spent.usage_source, model_id=spent.model_id, degraded=degraded,
             retrieval_ms=round(float(sum(c.elapsed_ms for c in self.tool_calls)), 3),
             trace=trace or self.trace(),
         )
@@ -300,7 +334,8 @@ class _Run:
 class Pipeline:
     def __init__(self, *, gateway: ToolGateway, generator: AnswerGenerator,
                  config: PipelineConfig, top_k: Mapping[str, int],
-                 vocabulary: frozenset[str] | None = None) -> None:
+                 vocabulary: frozenset[str] | None = None,
+                 budget: PromptBudget | None = None) -> None:
         missing = gateway.settings - set(top_k)
         if missing:
             raise ValueError(f"top_k missing for retrieval settings: {sorted(missing)}")
@@ -309,8 +344,30 @@ class Pipeline:
         self._config = config
         self._top_k = dict(top_k)
         self._vocabulary = vocabulary
+        self._budget = budget
 
-    async def run(self, request: PipelineRequest, spans: ServerSpanTracker) -> PipelineOutcome:
+    def _build_chat(self, question: str, passages: tuple[RetrievedPassage, ...]) -> ChatRequest:
+        return build_request(
+            question, passages, model=self._config.model_id,
+            max_completion_tokens=self._config.max_completion_tokens,
+            temperature=self._config.temperature,
+            reasoning_effort=self._config.reasoning_effort,
+        )
+
+    def _fit_to_budget(self, question: str, passages: tuple[RetrievedPassage, ...],
+                       ) -> tuple[ChatRequest, tuple[RetrievedPassage, ...], bool]:
+        """Drop the lowest-ranked passages while token headroom is too tight (degraded)."""
+        chat = self._build_chat(question, passages)
+        if self._budget is None:
+            return chat, passages, False
+        kept = passages
+        while len(kept) > 1 and not self._budget.fits(chat):
+            kept = kept[:-1]
+            chat = self._build_chat(question, kept)
+        return chat, kept, len(kept) < len(passages)
+
+    async def run(self, request: PipelineRequest, spans: ServerSpanTracker, *,
+                  deadline_ns: int | None = None) -> PipelineOutcome:
         if request.retrieval_setting not in self._gateway.settings:
             raise ContractViolationError(
                 f"unknown retrieval_setting {request.retrieval_setting!r}"
@@ -346,19 +403,14 @@ class Pipeline:
                                delivered_text=message, refused=True, passages=passages)
 
         # Step 4: the only LLM call, buffered.
-        chat = build_request(
-            request.question, passages, model=self._config.model_id,
-            max_completion_tokens=self._config.max_completion_tokens,
-            temperature=self._config.temperature,
-            reasoning_effort=self._config.reasoning_effort,
-        )
-        generated = await self._generator.generate(chat, spans)
+        chat, passages, degraded = self._fit_to_budget(request.question, passages)
+        generated = await self._generator.generate(chat, spans, deadline_ns=deadline_ns)
         spend = _spend(generated, chat)
         if generated.error is not None:
             code = generated.error.error_code
             return run.outcome(
                 "failed", status=status_for_error_code(code), error_code=code,
-                passages=passages, spend=spend,
+                passages=passages, spend=spend, degraded=degraded,
                 trace=run.trace(prompt_chars=chat.prompt_chars,
                                 provider_error=sanitize_error(generated.error)),
             )
@@ -377,15 +429,15 @@ class Pipeline:
             return run.outcome("answer", verdict="VERIFIED",
                                delivered_text=completion.content.strip(),
                                citations=verification.citations, passages=passages,
-                               spend=spend, trace=audit)
+                               spend=spend, trace=audit, degraded=degraded)
         if verification.verdict == "REFUSAL_VERIFIED":
             return run.outcome("llm_refusal", verdict="REFUSAL_VERIFIED",
                                delivered_text=LLM_REFUSAL_MESSAGE, refused=True,
-                               passages=passages, spend=spend, trace=audit)
+                               passages=passages, spend=spend, trace=audit, degraded=degraded)
         return run.outcome("safe_refusal", verdict="BLOCKED",
                            error_code="citation_verification_failed",
                            delivered_text=SAFE_REFUSAL_MESSAGE, refused=True,
-                           passages=passages, spend=spend, trace=audit)
+                           passages=passages, spend=spend, trace=audit, degraded=degraded)
 
     async def _expand(self, run: _Run, decision: GateDecision,
                       passages: tuple[RetrievedPassage, ...]) -> tuple[RetrievedPassage, ...]:
@@ -417,5 +469,7 @@ __all__ = [
     "PipelineOutcome",
     "PipelineRequest",
     "PipelineTrace",
+    "PromptBudget",
     "SingleCallGenerator",
+    "TokenTotals",
 ]
