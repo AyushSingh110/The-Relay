@@ -1,6 +1,6 @@
 # The Relay v2 — Product Architecture
 
-> **Status:** `PROPOSED` — awaiting owner approval. Nothing here is implemented.
+> **Status:** `APPROVED` by the owner on 2026-11-18 (see `docs/DECISIONS.md`). Implementation starts with V2-00 and V2-01.
 > **Date:** 2026-11-17
 > **Relation to v1:** v1 (`ARCHITECTURE.md`) is the submitted assignment system and stays frozen with its evidence. v2 turns it into a usable product and reuses most of v1's code.
 > **Basis:** every "measured" figure below comes from the v1 evidence (`results.csv`, `evidence/`, `reports/phase-07`, `-10`, `-11`). Every target is a goal, not a measurement.

@@ -1,6 +1,6 @@
 # The Relay v2 — Implementation Plan
 
-> **Status:** `PROPOSED` — awaiting owner approval. No phase has started.
+> **Status:** `APPROVED` by the owner on 2026-11-18 (see `docs/DECISIONS.md`). V2-00 and V2-01 are in progress.
 > **Date:** 2026-11-17
 > **Design:** `docs/ARCHITECTURE_V2.md` (section references such as §6 point there).
 > **Baseline:** v1 at commit `fc3c6bc`; 467 tests passing; `results.csv` and `evidence/` frozen.

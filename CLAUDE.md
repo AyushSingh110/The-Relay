@@ -26,6 +26,18 @@ Resolve any ambiguity strictly in this descending priority order:
 
 **You must NEVER silently override a higher-priority source.** If a phase prompt conflicts with `ASSIGNMENT.md` or `ARCHITECTURE.md`, stop, report the conflict clearly, and wait for the owner's decision.
 
+### 2.1 Source of truth for v2 work (owner-approved 2026-11-18)
+
+For v2 phases (`V2-xx` in `docs/IMPLEMENTATION_PLAN_V2.md`), resolve ambiguity in this order:
+
+1. **v2 design:** `docs/ARCHITECTURE_V2.md` is the source of truth for design.
+2. **v2 phase roadmap:** `docs/IMPLEMENTATION_PLAN_V2.md`.
+3. **v2 decision log:** `docs/DECISIONS.md`.
+4. **Execution history:** `ENGINEERING_LOG.md`.
+5. **The specific v2 phase prompt** from the owner.
+
+**v1 evidence is frozen and read-only during v2 work.** `results.csv` and everything under `evidence/` must not be modified, regenerated, deleted or gitignored. New measurements go into new run directories. `ASSIGNMENT.md`, `ARCHITECTURE.md` and `IMPLEMENTATION_PLAN.md` remain the record of the submitted v1 system and are not edited for v2.
+
 ---
 
 ## 3. Mandatory Operating Procedure (Before Every Implementation)
@@ -56,6 +68,15 @@ All code written in this repository MUST follow these standards:
 - **Minimal Dependencies:** Do NOT introduce LangChain, LangGraph, LlamaIndex, Redis, Kafka, Celery, Docker/Kubernetes, FAISS, ChromaDB, Qdrant, or PyTorch unless explicitly approved in `ARCHITECTURE.md`.
 - **Deterministic Offline Testing:** All unit/integration tests in `tests/` must run 100% offline with zero network calls and zero Groq API keys via `ScriptedProvider` or `httpx.MockTransport` / local ASGI transport.
 - **Clean, Readable Python:** Prefer straightforward helper functions, shallow nesting, early returns, and zero speculative abstractions; verify lint cleanliness with `ruff check .`.
+
+### 4.1 New dependencies approved for v2 (owner-approved 2026-11-18)
+
+The following dependencies are allowed in v2 work (`docs/ARCHITECTURE_V2.md` §4). They are added to `pyproject.toml` only in the phase that first uses them. Everything in the restriction list above still applies unless listed here.
+
+- `aiosqlite` — async access to the SQLite metadata store.
+- `prometheus-client` — `/metrics` endpoint.
+- `opentelemetry-sdk` — request tracing.
+- `python-multipart` — file uploads in FastAPI.
 
 ---
 

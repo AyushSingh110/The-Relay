@@ -160,8 +160,11 @@ async def test_rows_traces_grades_audit_and_summary(tmp_path: Path) -> None:
             "model_comparison", "stand-in", "off")
         assert row.answer_grade is None and row.queue_depth_at_entry is None
         assert row.question_id in {"q01", "q02", "q03"} and row.retrieval_setting == SETTING
-        assert row.first_token_ms is not None  # buffered: delivered all at once, at the end
-        assert 0 <= row.total_ms - row.first_token_ms <= 0.05
+        # Buffered delivery: the first byte is stamped after the server spans finish and
+        # before the client timer stops. An ordering check, not a time tolerance (a fixed
+        # 0.05 ms bound was flaky under scheduler/GC pauses: 0.116 ms seen on 2026-11-18).
+        assert row.first_token_ms is not None and row.server_total_ms is not None
+        assert row.server_total_ms <= row.first_token_ms <= row.total_ms
         assert abs(row.waiting_ms + row.working_ms + row.retrying_ms  # type: ignore[operator]
                    - row.server_total_ms) <= 1.0  # type: ignore[operator]
     by = {(r.question_id, r.model_id or "none"): r for r in rows}

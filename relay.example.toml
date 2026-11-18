@@ -1,0 +1,64 @@
+# The Relay — example service settings.
+#
+#   copy relay.example.toml relay.toml     (Windows)
+#   cp relay.example.toml relay.toml       (macOS / Linux)
+#   relay doctor
+#   relay serve
+#
+# These defaults need NO API key: answers come from the stand-in model service, started
+# inside the same process and calibrated from real Groq measurements (v1 evidence).
+#
+# Secrets never go in this file. GROQ_API_KEY and MAX_REAL_CALLS are read from the
+# environment or .env. Any value here can be overridden with an environment variable
+# RELAY_<SECTION>__<KEY>, for example RELAY_SERVER__PORT=9000 or RELAY_CACHE__MODE=off.
+
+[server]
+host = "127.0.0.1"
+port = 8000
+
+# Provider lanes. V2-01 serves from the first lane only; routing across lanes is V2-09.
+[[lanes]]
+name = "standin"
+kind = "standin"                 # "standin" or "groq"
+model = "qwen/qwen3.8-27b"
+embedded = true                  # start the stand-in in-process on 127.0.0.1
+profile = "evidence/standin_calibration/cal-20261113T022403Z-3f687c6/profile.json"
+max_completion_tokens = 512
+
+# To use real Groq instead, replace the lane above with this one. It needs GROQ_API_KEY in
+# the environment or .env, and MAX_REAL_CALLS > 0 as a hard cap on real calls per process.
+#
+# [[lanes]]
+# name = "groq"
+# kind = "groq"
+# model = "qwen/qwen3.8-27b"
+# max_completion_tokens = 512
+
+# ProviderGuard limits per lane. tpm and rpd default to the values Groq reported in v1, so
+# removing them from this file does NOT disable them. TOML has no null: to switch a limit
+# off (treat it as unknown), use the environment, e.g. RELAY_GUARD__RPD=null. rpm and tpd
+# are unknown (not enforced) by default.
+[guard]
+max_concurrency = 2
+tpm = 8000                       # v1 P02-LIVE: x-ratelimit-limit-tokens
+rpd = 1000                       # v1 P02-LIVE: x-ratelimit-limit-requests
+daily_safety_fraction = 0.75     # stop new calls at 75 % of the daily limit
+
+# Admission queue. Capacity = floor(service rate x patience median), where service rate =
+# TPM / (60 x tokens per answer). Set capacity to override the derived value.
+[queue]
+patience_median_s = 20.0
+tokens_per_answer = 1513.0       # v1 P07: mean tokens per answer, real small_fast
+
+# Relative paths resolve against the working directory: run from the repository root.
+[paths]
+papers_dir = "data/papers"
+index_dir = "data/indexes"
+models_dir = "data/models"
+store_path = "data/relay.sqlite3" # used from V2-02
+
+[cache]
+mode = "memory"                  # "off", "memory"; "sqlite" arrives in V2-02
+
+[retrieval]
+settings = ["small_fast", "balanced_rerank", "large_wide"]

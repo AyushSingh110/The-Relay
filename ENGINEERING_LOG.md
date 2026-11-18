@@ -982,3 +982,90 @@
 - **Real Groq calls:** 0. **Network:** none.
 - **Owner approval status:** pending owner review
 - **Next action:** Owner reviews grades and decides the grade-application mechanism, then rebuilds `results.csv` with `--replace` and recomputes the tables. Nothing further has been started.
+
+---
+
+### Execution Entry
+
+- **Date and time:** 2026-11-18 20:50 IST
+- **Phase identifier:** `v2-00` + `v2-01` — Governance and runnable service
+- **Owner decision recorded:** `docs/ARCHITECTURE_V2.md` approved by the owner on 2026-11-18; v2 builds on v1 at tag `v1-submission` (the tag does not exist yet; the owner must create it).
+- **Task requested and objective:**
+  - Approve the v2 dependencies in `CLAUDE.md`; create `docs/DECISIONS.md`; set the v2 source-of-truth order.
+  - Typed settings, `relay.example.toml`, and the `relay serve|doctor|ingest` CLI.
+  - `POST /ask` and all 467 tests still working.
+- **Status:** completed for the owner's tasks. The plan's Dockerfile, `compose.yaml` and README quickstart were not in the prompt and are not done.
+- **Files created:**
+  - `docs/DECISIONS.md`
+  - `src/relay/app/{__init__,settings,compose}.py`
+  - `src/relay/cli.py`
+  - `relay.example.toml`
+  - `tests/test_app_settings.py` (15), `tests/test_app_compose.py` (9), `tests/test_cli.py` (8), `tests/test_v2_01_review_fixes.py` (9)
+  - `reports/phase-v2-01-runnable-service.md`
+- **Files modified:**
+  - `CLAUDE.md` (added §2.1 and §4.1 only)
+  - `docs/ARCHITECTURE_V2.md`, `docs/IMPLEMENTATION_PLAN_V2.md` (status line)
+  - `pyproject.toml` (`relay` console script)
+  - `ENGINEERING_LOG.md`
+  - `results.csv` and `evidence/` unchanged (0 git changes; SHA-256 `8dfb10df…44efd`).
+- **Engineering decisions ([PROPOSED]):**
+  - Default lane is the embedded calibrated stand-in (`qwen/qwen3.8-27b`).
+  - All three v1 retrieval presets enabled.
+  - First lane only.
+  - `sqlite` cache refused until V2-02.
+  - Capacity derived by Little's law.
+  - Groq lane capped by `MAX_REAL_CALLS`.
+- **Rulings:**
+  - No worktree, branch or commits (`CLAUDE.md` §5.1).
+  - Example file created before the first settings test run.
+  - `compose.py` added (named by the plan; needed by `serve`).
+  - Relative paths resolve against the working directory.
+  - `RELAY_*` overrides are read from the process environment only.
+  - No red-first runs while creating files (owner's green-after-every-file rule); review fixes done red-first.
+- **Plugins used:**
+  - `superpowers:executing-plans` — task order and rulings.
+  - `code-review` (medium) — 10 findings, 6 fixed.
+  - `superpowers:verification-before-completion` — fresh end-to-end evidence after the fixes.
+- **Commands executed and observed outputs:**
+  - `git tag --list` → empty.
+  - Full suite after each step → 467 → 482 → 491 → 499 → 508 passed.
+  - `pip install -e . --no-deps -q` → `relay.exe` registered, no packages installed.
+  - `relay doctor` (defaults) → all required checks passed; GROQ_API_KEY "set" (value never printed).
+  - `relay serve --port 8765` → ready in 3.1 s; q03/q10/q12 → HTTP 200, `VERIFIED`, 875/625/719 ms, each citing its paper.
+  - `relay serve --port 0` → clean `ConfigurationError`, exit 1.
+  - `relay ingest` → exit 2 with the V2-03 message.
+  - `doctor` with a missing index dir → `[FAIL] index directory`, exit 1.
+  - Secret scan of the doctor output, serve log and responses → none.
+  - Final: `pytest -q` → `508 passed`; `ruff check .` → `All checks passed!`
+- **Errors, root causes, fixes:**
+  - Pydantic serialiser warning in a test (dict passed to `model_copy`) → `model_validate`.
+  - Code-review findings fixed with red-first tests (9 red, then 9 green): raw tracebacks for a bad port, a bad profile and a corrupt manifest; `doctor`/`serve` rule drift; misleading example comment; blocking model load on the event loop.
+  - One old `doctor` assertion updated to the shared messages.
+- **Remaining issues:**
+  - `v1-submission` tag missing (owner).
+  - Docker/compose/README not done.
+  - Deferred minor: environment-override conflict detection depends on iteration order.
+  - Stand-in access logs appear in the serve log.
+  - The harness smoke run was not executed this phase.
+- **Deviations from ARCHITECTURE_V2.md:** none to decisions.
+- **Real Groq calls:** 0. **Network:** loopback only.
+- **Owner approval status:** pending owner review
+- **Next action:** Owner creates the tag and decides on the Docker part of V2-01; then V2-02 on approval.
+
+---
+
+### Execution Entry
+
+- **Date and time:** 2026-11-18 21:05 IST
+- **Phase identifier:** `v2-01` — follow-up to the previous entry (final verification)
+- **Status:** completed
+- **What happened:** The final full-suite run after writing the report gave `1 failed, 507 passed`, with no code change since the previous `508 passed` run. The failure was in the v1 P07 test `tests/test_eval_runner.py::test_rows_traces_grades_audit_and_summary`: `assert (3.566 - 3.45) <= 0.05`.
+- **Root cause:** a flaky assertion. It required two separate clock reads (the first-byte stamp and the end of the client timer) to be at most 0.05 ms apart, which a scheduler or GC pause can break. The runner code is correct.
+- **Fix (verified test bug, CLAUDE.md §5.7):** replaced the tolerance with the ordering the test intends, `server_total_ms <= first_token_ms <= total_ms`. Only this one assertion in `tests/test_eval_runner.py` was modified.
+- **Validation:**
+  - The fixed test passed 30 of 30 isolated repeats.
+  - `pytest -q` → `508 passed` twice in a row.
+  - `ruff check .` → `All checks passed!`
+  - `evidence/` and `results.csv` → 0 git changes.
+- **Report updated:** `reports/phase-v2-01-runnable-service.md` §4, §7, §9.4 and §10.4.
+- **Owner approval status:** pending owner review
