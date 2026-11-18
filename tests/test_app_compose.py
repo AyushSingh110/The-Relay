@@ -93,14 +93,13 @@ async def test_cache_mode_off_is_wired_through(tmp_path: Path) -> None:
 @pytest.mark.parametrize(
     ("change", "env_values", "problem"),
     [
-        ({"cache": {"mode": "sqlite"}}, {}, "V2-02"),
         ({"lanes": [{"name": "g", "kind": "groq", "model": "m"}]}, {}, "GROQ_API_KEY"),
         ({"lanes": [{"name": "g", "kind": "groq", "model": "m"}]},
          {"groq_api_key": SecretStr(FAKE_KEY), "max_real_calls": 0}, "MAX_REAL_CALLS"),
         ({"lanes": [{"name": "s", "kind": "standin", "model": "absent-model",
                      "embedded": True}]}, {}, "no model"),
     ],
-    ids=["sqlite-cache", "groq-no-key", "groq-no-cap", "profile-model"],
+    ids=["groq-no-key", "groq-no-cap", "profile-model"],  # sqlite works since V2-02
 )
 async def test_open_runtime_refuses_unusable_settings_with_a_clear_reason(
         change: dict[str, Any], env_values: dict[str, Any], problem: str) -> None:

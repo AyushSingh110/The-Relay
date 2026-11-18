@@ -11,7 +11,7 @@ import time
 from collections.abc import AsyncIterator, Hashable, Mapping
 from contextvars import ContextVar
 from dataclasses import dataclass
-from typing import Annotated, Any, Final
+from typing import Annotated, Any, Final, Protocol
 
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse, Response
@@ -60,7 +60,6 @@ from relay.schemas import (
     UsageSource,
     VerificationVerdict,
 )
-from relay.telemetry.run_store import RunHandle
 from relay.telemetry.spans import MonotonicClock, ServerSpanTracker, SpanSummary
 
 logger = logging.getLogger(__name__)
@@ -312,13 +311,23 @@ class _Led:
     reply: AskReply
 
 
+class TraceSink(Protocol):
+    """Where the service sends its trace records: a v1 ``RunHandle`` (evidence runs) or
+    the v2 request-log writer (``relay.app.request_log.RequestLogSink``)."""
+
+    @property
+    def run_id(self) -> str | None: ...
+
+    def append_trace(self, record: Mapping[str, Any]) -> None: ...
+
+
 class RelayService:
     """Cache -> SingleFlight -> admission -> pipeline, plus traces. One event loop."""
 
     def __init__(self, *, pipeline: Pipeline, queue: AdmissionQueue,
                  retrieval_settings: frozenset[str], cache: ExactCache | None,
                  model_id: str, guard: ProviderGuard | None = None,
-                 run: RunHandle | None = None,
+                 run: TraceSink | None = None,
                  clock: MonotonicClock = time.perf_counter_ns) -> None:
         self.pipeline = pipeline
         self.queue = queue
@@ -340,7 +349,7 @@ class RelayService:
     def run_id(self) -> str | None:
         return None if self._run is None else self._run.run_id
 
-    def start_run(self, run: RunHandle | None) -> None:
+    def start_run(self, run: TraceSink | None) -> None:
         """Point traces at ``run`` and empty the cache, so runs cannot contaminate each other."""
         self._run = run
         if self.cache is not None:
@@ -536,7 +545,7 @@ class RelayService:
 
     def health(self) -> dict[str, Any]:
         guard = None if self.guard is None else self.guard.snapshot()
-        return {
+        report: dict[str, Any] = {
             "status": "ok", "run_id": self.run_id, "cache_mode": self.cache_mode,
             "cache_entries": 0 if self.cache is None else len(self.cache),
             "in_flight": len(self.flights), "queue_depth": self.queue.depth,
@@ -545,6 +554,10 @@ class RelayService:
             "circuit": None if guard is None else guard.circuit,
             "trace_failures": self.trace_failures,
         }
+        stats = getattr(self._run, "stats", None)  # v2 sinks report their own counters
+        if callable(stats):
+            report["trace_sink"] = stats()
+        return report
 
 
 # --- HTTP layer ------------------------------------------------------------------------
@@ -616,7 +629,7 @@ def create_app(*, provider: ChatProvider, retrievers: Mapping[str, PassageRetrie
                top_k: Mapping[str, int], pipeline_config: PipelineConfig,
                guard: ProviderGuard, queue: AdmissionQueue, corpus_sha256: str,
                cache_mode: CacheMode = "exact", retry: RetryPolicy | None = None,
-               vocabulary: frozenset[str] | None = None, run: RunHandle | None = None,
+               vocabulary: frozenset[str] | None = None, run: TraceSink | None = None,
                tool_timeout_s: float = DEFAULT_TOOL_TIMEOUT_S, sleep: Sleep = asyncio.sleep,
                clock: MonotonicClock = time.perf_counter_ns) -> FastAPI:
     """Wire pipeline + ProviderGuard + admission + exact cache + SingleFlight into an app."""

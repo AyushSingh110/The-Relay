@@ -66,18 +66,18 @@ def test_doctor_checks_the_key_and_call_cap_for_a_groq_lane_without_printing_the
     assert code == cli.EXIT_FAILED and "[FAIL] MAX_REAL_CALLS: 0" in text
 
 
-def test_doctor_flags_an_unavailable_cache_mode_and_a_bad_profile(tmp_path: Path) -> None:
+def test_doctor_flags_a_bad_profile(tmp_path: Path) -> None:
+    # Since V2-02 the sqlite cache mode is valid; its doctor checks are in
+    # tests/test_store_integration.py and use an in-memory store.
     bad = tmp_path / "profile.json"
     bad.write_text("{not json", encoding="utf-8")
-    settings = RelaySettings(cache={"mode": "sqlite"},  # type: ignore[arg-type]
-                             lanes=({"name": "s", "kind": "standin",  # type: ignore[arg-type]
+    settings = RelaySettings(lanes=({"name": "s", "kind": "standin",  # type: ignore[arg-type]
                                      "model": "m", "embedded": True, "profile": bad},))
     code, text = run_doctor(settings, env())
     assert code == cli.EXIT_FAILED
     # doctor reports the composition root's own messages (one rule for doctor and serve)
-    assert "[FAIL] cache mode: cache mode 'sqlite' is not available yet" in text
-    assert "V2-02" in text
     assert f"[FAIL] lane s: stand-in profile {bad} could not be loaded" in text
+    assert "[INFO] store: not used (cache mode memory)" in text
 
 
 def test_ingest_is_a_clear_stub(capsys: pytest.CaptureFixture[str]) -> None:

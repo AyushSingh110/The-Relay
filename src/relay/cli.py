@@ -19,11 +19,13 @@ from __future__ import annotations
 
 import argparse
 import asyncio
+import logging
+import signal
 import sys
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Final, Literal
+from typing import Any, Final, Literal
 
 from relay.app import compose
 from relay.app.settings import (
@@ -36,6 +38,7 @@ from relay.config import Settings, load_settings
 from relay.errors import ConfigurationError, RelayError, sanitize_error
 from relay.ingestion.arxiv_fetcher import MANIFEST_FILE, load_corpus_manifest
 from relay.retrieval.hybrid_index import INDEX_MANIFEST, RETRIEVAL_SETTINGS
+from relay.store import open_store
 
 EXIT_OK: Final = 0
 EXIT_FAILED: Final = 1
@@ -123,6 +126,33 @@ def _lane_check(lane_index: int, settings: RelaySettings) -> Check:
                  f"embedded stand-in, model {lane.model}, profile {profile.label} ({run})")
 
 
+async def _probe_store(path: Path) -> tuple[int, str, bool]:
+    """(schema version, journal mode, whether this check created a new store file)."""
+    created = str(path) != ":memory:" and not path.exists()
+    async with open_store(path) as store:
+        return store.schema_version, store.journal_mode, created
+
+
+def _store_check(settings: RelaySettings) -> Check:
+    """In sqlite mode, open the store and apply migrations (creates the file if missing).
+
+    A newly created store is a WARN, so a mistyped ``paths.store_path`` is visible instead
+    of passing quietly with an empty database.
+    """
+    if settings.cache.mode != "sqlite":
+        return Check("info", "store", f"not used (cache mode {settings.cache.mode})")
+    path = settings.paths.store_path
+    try:
+        version, journal, created = asyncio.run(_probe_store(path))
+    except RelayError as exc:  # StoreOpenError, MigrationError
+        return Check("fail", "store", str(exc))
+    detail = (f"{path} opened, migrations applied (schema v{version}, journal {journal})")
+    if created:
+        return Check("warn", "store", f"{detail}; created a new, empty store: check "
+                                      "paths.store_path if you expected existing data")
+    return Check("ok", "store", detail)
+
+
 def _rule_check(name: str, rule: Callable[[], str]) -> Check:
     try:
         return Check("ok", name, rule())
@@ -135,8 +165,17 @@ def run_checks(settings: RelaySettings, env: Settings) -> list[Check]:
     checks = [_corpus_check(settings), _index_check(settings), _models_check(settings),
               *_key_checks(settings, env)]
     checks += [_lane_check(i, settings) for i in range(len(settings.lanes))]
-    checks.append(_rule_check("cache mode", lambda: f"{settings.cache.mode} "
-                                                    f"(-> {compose.cache_mode(settings)})"))
+
+    def cache_detail() -> str:
+        compose.cache_mode(settings)  # raises for an unknown mode
+        mode = settings.cache.mode
+        if mode == "sqlite":
+            return "sqlite (answers cached in memory; request log in the store)"
+        if mode == "memory":
+            return "memory (answers cached in memory)"
+        return "off (no answer cache)"
+
+    checks.append(_rule_check("cache mode", cache_detail))
 
     def capacity() -> str:
         derived = compose.capacity_derivation(settings)
@@ -144,6 +183,7 @@ def run_checks(settings: RelaySettings, env: Settings) -> list[Check]:
                 f"{derived.service_rate_per_s * 60:.1f}/min)")
 
     checks.append(_rule_check("admission capacity", capacity))
+    checks.append(_store_check(settings))
     return checks
 
 
@@ -161,9 +201,37 @@ def doctor(settings: RelaySettings, env: Settings, source: str, out: Out = print
 # --- serve -----------------------------------------------------------------------------
 
 
+def _configure_logging() -> None:
+    """Send the service's own ``relay.*`` log records to the console (uvicorn only
+    configures its own loggers), so warnings and the shutdown summary are visible."""
+    root = logging.getLogger("relay")
+    if not root.handlers:
+        handler = logging.StreamHandler()
+        handler.setFormatter(logging.Formatter("%(levelname)s:     %(name)s: %(message)s"))
+        root.addHandler(handler)
+    root.setLevel(logging.INFO)
+
+
+def _install_break_handler(server: Any) -> Any:
+    """On Windows, make Ctrl+Break stop the server gracefully, like Ctrl+C.
+
+    uvicorn handles SIGINT and SIGTERM; Ctrl+Break (SIGBREAK) would otherwise kill the
+    process, skipping the shutdown that flushes the request log and closes the store.
+    Returns the previous handler (``None`` where SIGBREAK does not exist).
+    """
+    if not hasattr(signal, "SIGBREAK"):
+        return None
+
+    def stop(signum: int, frame: object) -> None:
+        server.should_exit = True
+
+    return signal.signal(signal.SIGBREAK, stop)
+
+
 async def serve(settings: RelaySettings, env: Settings, source: str, out: Out = print) -> int:
     import uvicorn
 
+    _configure_logging()
     out(f"config: {source}")
     out("loading indexes and models ...")
     async with compose.open_runtime(settings, env) as runtime:
@@ -173,7 +241,12 @@ async def serve(settings: RelaySettings, env: Settings, source: str, out: Out = 
         out(f"serving POST /ask and GET /healthz on http://{host}:{port}  (Ctrl+C to stop)")
         server = uvicorn.Server(uvicorn.Config(runtime.app, host=host, port=port,
                                                log_level="info", lifespan="off"))
-        await server.serve()
+        previous = _install_break_handler(server)
+        try:
+            await server.serve()
+        finally:
+            if previous is not None:
+                signal.signal(signal.SIGBREAK, previous)
     return EXIT_OK
 
 

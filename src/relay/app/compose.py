@@ -18,6 +18,7 @@ from typing import Final
 from fastapi import FastAPI
 
 from relay.api.app import RelayService, create_app
+from relay.app.request_log import RequestLogSink
 from relay.app.settings import LaneSettings, RelaySettings
 from relay.config import Settings
 from relay.control.admission import (
@@ -38,8 +39,11 @@ from relay.retrieval.hybrid_index import RETRIEVAL_SETTINGS
 from relay.schemas import Source
 from relay.standin.profile import StandinProfile, uncalibrated_defaults
 from relay.standin.server import create_standin_app, load_profile, serve_on_loopback
+from relay.store import Store, open_store
 
-CACHE_MODES: Final[dict[str, str]] = {"off": "off", "memory": "exact"}
+# The answer cache itself stays in memory in every mode; "sqlite" adds the metadata
+# store and its request log (a persistent answer cache is not in the V2-02 schema).
+CACHE_MODES: Final[dict[str, str]] = {"off": "off", "memory": "exact", "sqlite": "exact"}
 
 
 @dataclass(frozen=True)
@@ -52,6 +56,8 @@ class Runtime:
     provider_url: str
     capacity: CapacityDerivation
     real_call_cap: int | None
+    store: Store | None = None
+    request_log: RequestLogSink | None = None
 
     @property
     def service(self) -> RelayService:
@@ -68,6 +74,10 @@ class Runtime:
         ]
         if self.real_call_cap is not None:
             lines.append(f"real-call cap for this process: {self.real_call_cap}")
+        if self.store is not None:
+            lines.append(f"store: {self.store.path} (schema v{self.store.schema_version}, "
+                         f"journal {self.store.journal_mode}); request log on, answers cached in "
+                         "memory")
         return lines
 
 
@@ -140,17 +150,29 @@ async def open_runtime(settings: RelaySettings, env: Settings, *,
                        retrievers: Mapping[str, PassageRetriever] | None = None,
                        vocabulary: frozenset[str] | None = None,
                        ) -> AsyncGenerator[Runtime]:
-    """Start everything the primary lane needs and yield the ready app."""
+    """Start everything the primary lane needs and yield the ready app.
+
+    In ``sqlite`` mode the store is opened (and migrated) first, so a bad store path fails
+    before any model is loaded or server started. Shutdown runs in reverse: the provider
+    and stand-in stop, then the request log is flushed, then the store is closed.
+    """
     lane = settings.primary_lane
     mode = cache_mode(settings)
     capacity = capacity_derivation(settings)
-    # Blocking work (file hashing, ONNX model and index loading) runs in a worker thread
-    # and finishes before anything else is started on the event loop.
-    corpus = await asyncio.to_thread(corpus_sha256, settings)
-    if retrievers is None:
-        retrievers, vocabulary = await asyncio.to_thread(_default_retrievers, settings)
-    profile = standin_profile(lane) if lane.kind == "standin" and lane.embedded else None
     async with AsyncExitStack() as stack:
+        store: Store | None = None
+        sink: RequestLogSink | None = None
+        if settings.cache.mode == "sqlite":
+            store = await stack.enter_async_context(open_store(settings.paths.store_path))
+            sink = RequestLogSink(store.request_log)
+            await sink.start()
+            stack.push_async_callback(sink.aclose)
+        # Blocking work (file hashing, ONNX model and index loading) runs in a worker
+        # thread and finishes before any server is started on the event loop.
+        corpus = await asyncio.to_thread(corpus_sha256, settings)
+        if retrievers is None:
+            retrievers, vocabulary = await asyncio.to_thread(_default_retrievers, settings)
+        profile = standin_profile(lane) if lane.kind == "standin" and lane.embedded else None
         provider: ChatProvider
         real_cap: int | None = None
         if lane.kind == "standin":
@@ -184,10 +206,11 @@ async def open_runtime(settings: RelaySettings, env: Settings, *,
                                            max_completion_tokens=lane.max_completion_tokens,
                                            reasoning_effort=lane.reasoning_effort),
             guard=guard, queue=queue, corpus_sha256=corpus,
-            cache_mode=mode, vocabulary=vocabulary,  # type: ignore[arg-type]
+            cache_mode=mode, vocabulary=vocabulary, run=sink,  # type: ignore[arg-type]
         )
         yield Runtime(app=app, lane=lane, source=source, provider_url=url,
-                      capacity=capacity, real_call_cap=real_cap)
+                      capacity=capacity, real_call_cap=real_cap, store=store,
+                      request_log=sink)
 
 
 __all__ = ["Runtime", "cache_mode", "capacity_derivation", "corpus_sha256", "guard_config",

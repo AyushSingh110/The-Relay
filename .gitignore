@@ -22,6 +22,11 @@ data/papers/*.pdf
 data/processed/
 data/indexes/
 data/models/
+# v2 metadata store (runtime state, recreated by migrations): the database and its
+# WAL / shared-memory side files.
+data/*.sqlite3
+data/*.sqlite3-wal
+data/*.sqlite3-shm
 uv.lock
 # NOTE: `results.csv` and everything under `evidence/` are submission evidence
 # and are intentionally TRACKED. Do not add ignore rules for them.

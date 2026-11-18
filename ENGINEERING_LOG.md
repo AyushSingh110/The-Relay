@@ -1069,3 +1069,72 @@
   - `evidence/` and `results.csv` → 0 git changes.
 - **Report updated:** `reports/phase-v2-01-runnable-service.md` §4, §7, §9.4 and §10.4.
 - **Owner approval status:** pending owner review
+
+---
+
+### Execution Entry
+
+- **Date and time:** 2026-11-18 21:58 IST
+- **Phase identifier:** `v2-02` — Metadata store
+- **Owner decision recorded (2026-11-18):** store tests use `:memory:`, except the restart test and the WAL check, which use a pytest `tmp_path` file (asked because the prompt's "close/reopen" and "`:memory:` only" rules conflict).
+- **Task requested and objective:**
+  - SQLite (WAL) behind repositories: the 12 specified tables, an idempotent versioned migration runner, six repositories, `Store` / `open_store`.
+  - In sqlite mode, compose opens the store and passes it into the app.
+  - `doctor` reports store status.
+  - Tests on `:memory:`.
+- **Status:** completed
+- **Files created:**
+  - `src/relay/store/{__init__,migrations,repositories}.py`, `src/relay/store/schema.sql`
+  - `src/relay/app/request_log.py`
+  - `tests/test_store_migrations.py` (5), `tests/test_store_repositories.py` (11), `tests/test_store.py` (5), `tests/test_store_integration.py` (7), `tests/test_v2_02_review_fixes.py` (11)
+  - `reports/phase-v2-02-metadata-store.md`
+- **Files modified:**
+  - `pyproject.toml` (`aiosqlite>=0.20`; installed 0.22.1)
+  - `.gitignore` (`data/*.sqlite3*` only)
+  - `src/relay/api/app.py` (TraceSink protocol, `/healthz` `trace_sink`)
+  - `src/relay/app/compose.py`, `src/relay/cli.py`
+  - `tests/test_app_compose.py`, `tests/test_cli.py` (one case retired and one narrowed: they asserted that sqlite is refused)
+  - `ENGINEERING_LOG.md`
+  - `results.csv` and `evidence/` unchanged.
+- **Engineering decisions ([PROPOSED]):**
+  - The sqlite mode keeps the answer cache in memory and adds the store with its request log (the schema has no cache table).
+  - The request log is fed from the app's trace records through a background writer.
+  - Row ids are UUIDs (the schema has no `request_id` column).
+  - No automatic directory creation.
+  - One write lock per connection.
+- **Plugins used:**
+  - `superpowers:test-driven-development`: every new test file failed first.
+  - `code-review` (medium): 10 findings.
+  - `pr-review-toolkit:silent-failure-hunter` agent: 7 findings, 1 critical, overlapping.
+  - `superpowers:verification-before-completion`: fresh end-to-end runs, which found 2 more real bugs.
+- **Commands executed and observed outputs:**
+  - Full suite after each file → 508, 508, 513, 524, 529, 535, 545, 546.
+  - FK mutation check → without the pragma an orphan row is accepted; with it, `ForeignKeyViolationError`.
+  - Review-fix tests → 10/10 RED, then green; one revealed an in-flight row not counted (fixed).
+  - E2E sqlite mode, first run → sessions exited 3 with no shutdown summary (Ctrl+Break unhandled).
+  - After the fix → exit 0, "request log closed: 2 written, 0 failed, 0 dropped"; after the restart, 3 rows read back with migrations applied `()`, journal `wal`.
+  - E2E memory mode → unchanged; q03/q10/q12 `VERIFIED`.
+  - Leak checks → none.
+  - Final: `pytest -q` → `546 passed`; `ruff check .` → `All checks passed!`
+  - `git status evidence results.csv` → 0; `data/*.sqlite3*` → none.
+- **Errors, root causes, fixes:**
+  - Shared-connection rollback race (CRITICAL; reproduced) → write lock.
+  - Unreported counters → `/healthz` and shutdown summary.
+  - Unbounded or hanging `aclose` and uncounted losses → bounded flush, counting, closed flag, done-callback.
+  - `append_trace` could raise → guarded.
+  - Rollback masking → `safe_rollback`.
+  - Raw SQLite errors from migration → `StoreOpenError`.
+  - Opaque writer errors → split logging.
+  - Silent creation of a mistyped store → WARN.
+  - Misleading mode name → wording.
+  - Uncounted in-flight row → counted.
+  - Ctrl+Break kill and missing log handler → handler and console logging.
+- **Remaining issues:**
+  - No `request_id` column (owner: migration 2?).
+  - Deferred minors: abandoned-leader tokens, `start_run` detaching the sink, per-row commits, `_apply` interpolation.
+  - Repositories for `api_key` / `chunk` / eval tables are not built (later phases).
+  - The Docker/compose/README part of V2-01 is still open.
+- **Deviations from ARCHITECTURE_V2.md:** §8's persistent answer cache is not built (not in the specified schema); reported.
+- **Real Groq calls:** 0. **Network:** loopback, plus the PyPI install of aiosqlite.
+- **Owner approval status:** pending owner review
+- **Next action:** Owner reviews; decides on `request_id` and the persistent cache; then V2-03 on approval.
