@@ -383,6 +383,16 @@ class DocumentRepo(_Repo):
                                (collection_id,))
         return [Document(*row) for row in rows]
 
+    async def counts_by_collection(self, collection_ids: Sequence[str]) -> dict[str, int]:
+        """Documents per collection, in one query; collections without any are absent."""
+        if not collection_ids:
+            return {}
+        marks = ", ".join("?" for _ in collection_ids)
+        rows = await self._all(f"SELECT collection_id, COUNT(*) FROM document "
+                               f"WHERE collection_id IN ({marks}) GROUP BY collection_id",
+                               tuple(collection_ids))
+        return {str(cid): int(n) for cid, n in rows}
+
     async def set_cues(self, document_id: str, cues: str | None) -> None:
         """Store the document's cues (JSON of ``DocumentCues``), or clear them."""
         changed = await self._write("UPDATE document SET cues = ? WHERE id = ?",

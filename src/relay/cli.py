@@ -3,6 +3,7 @@
   relay serve  [--config relay.toml] [--host H] [--port P]
   relay doctor [--config relay.toml]
   relay ingest                         (stub until V2-03)
+  relay ui build [--web-dir web]       build the web UI (npm run build) into relay/app/static
 
 Settings: ``relay.toml`` if present, else built-in defaults (see ``relay.example.toml``),
 then ``RELAY_<SECTION>__<KEY>`` environment overrides. Secrets (``GROQ_API_KEY``,
@@ -20,7 +21,9 @@ from __future__ import annotations
 import argparse
 import asyncio
 import logging
+import shutil
 import signal
+import subprocess
 import sys
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass
@@ -28,6 +31,7 @@ from pathlib import Path
 from typing import Any, Final, Literal
 
 from relay.app import compose
+from relay.app.routes.ui import STATIC_DIR
 from relay.app.settings import (
     DEFAULT_CONFIG_FILE,
     RelaySettings,
@@ -43,6 +47,7 @@ from relay.store import open_store
 EXIT_OK: Final = 0
 EXIT_FAILED: Final = 1
 EXIT_UNAVAILABLE: Final = 2
+DEFAULT_WEB_DIR: Final = Path(__file__).resolve().parents[2] / "web"  # the repository's web/
 Out = Callable[[str], None]
 Level = Literal["ok", "info", "warn", "fail"]
 
@@ -238,7 +243,7 @@ async def serve(settings: RelaySettings, env: Settings, source: str, out: Out = 
         for line in runtime.describe():
             out(line)
         host, port = settings.server.host, settings.server.port
-        out(f"serving POST /ask and GET /healthz on http://{host}:{port}  (Ctrl+C to stop)")
+        out(f"serving the API and the web UI on http://{host}:{port}  (Ctrl+C to stop)")
         server = uvicorn.Server(uvicorn.Config(runtime.app, host=host, port=port,
                                                log_level="info", lifespan="off"))
         previous = _install_break_handler(server)
@@ -260,6 +265,81 @@ def ingest(out: Out = print) -> int:
     return EXIT_UNAVAILABLE
 
 
+# --- ui build --------------------------------------------------------------------------
+
+Runner = Callable[..., "subprocess.CompletedProcess[Any]"]
+
+
+def _remove(path: Path) -> None:
+    if path.exists():
+        shutil.rmtree(path)  # raises: a half-removed folder is reported, not hidden
+
+
+def _swap_in(dist: Path, static_dir: Path) -> None:
+    """Copy ``dist`` to ``static_dir`` so that any failure leaves the old files in place:
+    copy to ``.new``, move the old folder to ``.old``, move ``.new`` in, then drop ``.old``.
+    Raises OSError after undoing what it can."""
+    staging = static_dir.with_name(static_dir.name + ".new")
+    previous = static_dir.with_name(static_dir.name + ".old")
+    _remove(staging)
+    _remove(previous)
+    shutil.copytree(dist, staging)
+    had_previous = static_dir.exists()
+    try:
+        if had_previous:
+            static_dir.rename(previous)
+        try:
+            staging.rename(static_dir)
+        except OSError:
+            if had_previous:
+                previous.rename(static_dir)  # put the old build back
+            raise
+    finally:
+        _remove(staging)
+    _remove(previous)
+
+
+def ui_build(web_dir: Path, static_dir: Path = STATIC_DIR, *, run: Runner = subprocess.run,
+             which: Callable[[str], str | None] = shutil.which, out: Out = print) -> int:
+    """``npm run build`` in ``web_dir``, then replace ``static_dir`` with its ``dist/``.
+
+    The previous static files are kept unless the build succeeded and produced an
+    ``index.html``. npm is looked up on PATH (``npm.cmd`` on Windows)."""
+    if not (web_dir / "package.json").is_file():
+        out(f"relay ui build: no package.json in {web_dir} (pass --web-dir)")
+        return EXIT_FAILED
+    if not (web_dir / "node_modules").is_dir():
+        out(f"relay ui build: dependencies are not installed; run `npm ci` in {web_dir}")
+        return EXIT_FAILED
+    npm = which("npm")
+    if npm is None:
+        out("relay ui build: npm was not found on PATH (install Node.js 20 or newer)")
+        return EXIT_FAILED
+    out(f"building the web UI in {web_dir} ...")
+    try:
+        result = run([npm, "run", "build"], cwd=web_dir, check=False)
+    except OSError as exc:
+        out(f"relay ui build: npm could not be started: {sanitize_error(exc)}")
+        return EXIT_FAILED
+    if result.returncode != 0:
+        out(f"relay ui build: npm run build failed (exit {result.returncode}); "
+            "the previous UI is unchanged")
+        return EXIT_FAILED
+    dist = web_dir / "dist"
+    if not (dist / "index.html").is_file():
+        out(f"relay ui build: the build wrote no {dist / 'index.html'}; nothing was copied")
+        return EXIT_FAILED
+    try:
+        _swap_in(dist, static_dir)
+    except OSError as exc:
+        out(f"relay ui build: the new UI could not be installed in {static_dir}: "
+            f"{sanitize_error(exc)}; the previous UI is unchanged")
+        return EXIT_FAILED
+    files = sum(1 for path in static_dir.rglob("*") if path.is_file())
+    out(f"copied {files} files to {static_dir}; `relay serve` serves the UI at /")
+    return EXIT_OK
+
+
 # --- entry point -----------------------------------------------------------------------
 
 
@@ -277,6 +357,11 @@ def parse_args(argv: Sequence[str] | None) -> argparse.Namespace:
         if name == "serve":
             command.add_argument("--host", default=None)
             command.add_argument("--port", type=int, default=None)
+    ui = sub.add_parser("ui", help="the web UI")
+    ui_sub = ui.add_subparsers(dest="ui_command", required=True)
+    build = ui_sub.add_parser("build", help="npm run build in web/, copied to the API's static")
+    build.add_argument("--web-dir", type=Path, default=DEFAULT_WEB_DIR,
+                       help="the web project (default: the repository's web/)")
     return parser.parse_args(argv)
 
 
@@ -284,6 +369,8 @@ def main(argv: Sequence[str] | None = None) -> int:
     args = parse_args(argv)
     if args.command == "ingest":
         return ingest()
+    if args.command == "ui":
+        return ui_build(args.web_dir)
     try:
         settings, env, source = _load(args.config, args.env_file)
         if args.command == "doctor":

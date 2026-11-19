@@ -31,6 +31,7 @@ from relay.app.bootstrap import V1_PRESET, ensure_dev_tenant, register_v1_papers
 from relay.app.collections import LazyEmbedder, LazyReranker, StoreCollectionResolver
 from relay.app.request_log import RequestLogSink
 from relay.app.routes.ingestion import IngestionContext, fetch_arxiv_pdf, ingestion_router
+from relay.app.routes.ui import mount_ui
 from relay.app.settings import LaneSettings, RelaySettings
 from relay.config import Settings
 from relay.control.admission import (
@@ -299,6 +300,7 @@ async def open_runtime(settings: RelaySettings, env: Settings, *,
             ask_v1 = AskV1Context(service=app.state.relay, store=store)
             app.include_router(ask_v1_router(ask_v1))
             stack.push_async_callback(ask_v1.aclose)  # runs first: before provider and store
+        mount_ui(app)  # V2-06: the built web UI at / (after the API routes)
         yield Runtime(app=app, lane=lane, source=source, provider_url=url,
                       capacity=capacity, real_call_cap=real_cap, store=store,
                       request_log=sink,

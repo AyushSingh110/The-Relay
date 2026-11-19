@@ -333,7 +333,10 @@ def ingestion_router(ctx: IngestionContext) -> APIRouter:
         except Rejected as exc:
             return _error(exc.status, exc.code, str(exc))
         collections = await store.collections.list_for_tenant(tenant)
-        return JSONResponse({"collections": [_collection_view(c) for c in collections]})
+        # V2-06: the UI shows how many documents each holds (any status, failed included)
+        counts = await store.documents.counts_by_collection([c.id for c in collections])
+        return JSONResponse({"collections": [
+            {**_collection_view(c), "document_count": counts.get(c.id, 0)} for c in collections]})
 
     @router.post("/collections/{collection_id}/documents")
     async def create_document(collection_id: str, request: Request) -> JSONResponse:

@@ -22,6 +22,35 @@ python -m pytest -v
 python -m ruff check .
 ```
 
+## Web UI (V2-06)
+
+The UI is a React + Vite app in `web/`. It is built to static files that `relay serve` serves at
+`http://127.0.0.1:8000/` on the same origin as the API, so it needs no second server. Building it
+needs Node.js 20 or newer; running it needs only Python.
+
+```powershell
+cd web
+npm ci                          # once: installs the build and test tools into web/node_modules
+cd ..
+relay ui build                  # npm run build in web/, copied to src/relay/app/static/
+$env:RELAY_CACHE__MODE = "sqlite"   # collections, uploads and /v1/ask need the metadata store
+relay serve                     # then open http://127.0.0.1:8000/
+```
+
+The default lane is the stand-in model, so this needs no Groq key.
+
+**API key.** The UI sends `Authorization: Bearer <key>` on every `/v1` request. The key is read at
+build time from `VITE_API_KEY` (see `web/.env.example`), and the default is `relay-dev-key`. Until
+V2-10 the API accepts any Bearer key for the development tenant. The key is compiled into the
+JavaScript, so **never build a public UI with a real key**.
+
+```powershell
+$env:VITE_API_KEY = "relay-dev-key"; relay ui build
+```
+
+**Frontend checks** (in `web/`): `npm test` (Jest + React Testing Library), `npm run lint`
+(ESLint with jsx-a11y), and `npm run build` (type-checks, then builds).
+
 ## Groq probes (`scripts/probe_groq.py`)
 
 Default is a **dry run** that prints the planned calls and contacts nothing:

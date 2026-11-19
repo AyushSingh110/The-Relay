@@ -295,6 +295,7 @@ _V1_VERIFIER: Final = Verifier(V1_CUE_SET)
 
 # Shared with the streaming splitter, which must treat tags and the marker exactly alike.
 LEADING_TAGS: Final = _LEADING_TAGS
+TAG_PATTERN: Final = _TAG  # one whole tag, e.g. [P1, P2]
 WORD_CHAR: Final = _WORD_CHAR
 REFUSAL_MARKER_PATTERN: Final = _MARKER
 
@@ -409,6 +410,7 @@ __all__ = [
     "VerifierFailure",
     "LEADING_TAGS",
     "REFUSAL_MARKER_PATTERN",
+    "TAG_PATTERN",
     "WORD_CHAR",
     "is_refusal_marker",
     "split_sentences",

@@ -4,7 +4,8 @@ Events, in order, on one SSE connection:
 
     accepted  request_id, queue_position, expected_wait_ms   (first, before any work)
     status    stage: queued | retrieving | generating | verifying   (+ keepalives)
-    sources   passages: [{id, chunk_id, paper_id, page_range, section, text_excerpt}]
+    sources   passages: [{id, chunk_id, paper_id, short_name, page_range, section,
+                          text_excerpt, text}]   (text: the whole passage, V2-06)
     sentence  text, citations: ["P1", ...]   (only sentences that passed the verifier)
     stopped   reason_class, partial           (the answer stopped; no unverified text)
     final     status, verdict, tokens_in, tokens_out, ttft_ms, total_ms, cache_status,
@@ -68,7 +69,7 @@ from relay.orchestrator.streaming import (
     StreamRefusal,
     VerifiedSentence,
 )
-from relay.orchestrator.verifier import split_sentences
+from relay.orchestrator.verifier import TAG_PATTERN, split_sentences
 from relay.providers.probing import CONSERVATIVE_CHARS_PER_TOKEN, status_for_error_code
 from relay.retrieval.hybrid_index import RetrievedPassage
 from relay.retrieval.registry import CollectionNotReadyError
@@ -80,7 +81,7 @@ logger = logging.getLogger(__name__)
 DEFAULT_KEEPALIVE_S: Final = 4.0  # under the 5 s silence limit, with margin
 EXCERPT_CHARS: Final = 240
 _NS_PER_MS: Final = 1_000_000
-_TAG_NUMBER = re.compile(r"\[\s*P\s*(\d+)", re.IGNORECASE)
+_NUMBER = re.compile(r"\d+")
 _SUMMARY: Final = "_summary"  # internal: the flight's result, turned into each final
 Event = tuple[str, dict[str, Any]]
 
@@ -196,15 +197,19 @@ def _page_range(start: int, end: int) -> str:
 def sources_payload(passages: tuple[RetrievedPassage, ...]) -> dict[str, Any]:
     return {"passages": [{
         "id": f"P{i}", "chunk_id": p.chunk_id, "paper_id": p.paper_id,
-        "page_range": _page_range(p.page_start, p.page_end),
+        "short_name": p.short_name, "page_range": _page_range(p.page_start, p.page_end),
         "section": (f"{p.section_number} {p.section_title}" if p.section_number
                     else p.section_title),
         "text_excerpt": p.text[:EXCERPT_CHARS],
+        "text": p.text,  # the source panel shows and highlights the whole passage
     } for i, p in enumerate(passages, start=1)]}
 
 
 def tags_in(text: str) -> list[str]:
-    return [f"P{n}" for n in dict.fromkeys(_TAG_NUMBER.findall(text))]
+    """Every passage tag in ``text``, in order, once each: "[P1, P2]" gives P1 and P2 (the
+    verifier's own tag pattern, so a multi-tag bracket is not cut to its first tag)."""
+    numbers = (n for tag in TAG_PATTERN.finditer(text) for n in _NUMBER.findall(tag.group()))
+    return [f"P{n}" for n in dict.fromkeys(numbers)]
 
 
 def _message(outcome: PipelineOutcome) -> str | None:
@@ -414,8 +419,8 @@ async def _cached(ctx: AskV1Context, hit: CachedAnswer, *, request_id: str,
                            "expected_wait_ms": 0.0})
     yield sse("sources", {"passages": [{
         "id": f"P{c.tag}", "chunk_id": c.chunk_id, "paper_id": c.paper_id,
-        "page_range": _page_range(c.page_start, c.page_end),
-        "section": None, "text_excerpt": None} for c in hit.citations]})
+        "short_name": None, "page_range": _page_range(c.page_start, c.page_end),
+        "section": None, "text_excerpt": None, "text": None} for c in hit.citations]})
     first: float | None = None
     if not hit.refused:  # a refusal's text is a message, never a sentence
         for sentence in split_sentences(hit.delivered_text):
@@ -581,5 +586,6 @@ def ask_v1_router(ctx: AskV1Context) -> APIRouter:
     return router
 
 
-__all__ = ["DEFAULT_KEEPALIVE_S", "AskV1Body", "AskV1Context", "Flight", "ReplayChannel",
+__all__ = ["DEFAULT_KEEPALIVE_S", "EXCERPT_CHARS",
+           "AskV1Body", "AskV1Context", "Flight", "ReplayChannel",
            "ask_v1_router", "sources_payload", "sse"]

@@ -1358,3 +1358,71 @@
 - **Real Groq calls:** 0. **Network:** loopback only.
 - **Owner approval status:** pending owner review
 - **Next action:** Owner reviews the latency result and rulings 4, 5 and 9, and decides on a live spot check; then V2-06.
+
+### Execution Entry
+
+- **Date and time:** 2026-11-19 22:40 IST
+- **Phase identifier:** `v2-06` — Web UI
+- **Task requested and objective:**
+  - A React + Vite + TypeScript UI in `web/`, built to static files and served by the API (D10). It has four pages: Collections, Upload, Chat and Status.
+  - Verified sentences show with citation chips, a source panel and an estimated time bar, and every non-ok state has words.
+  - `relay ui build`; Jest + React Testing Library tests 1–7.
+  - The UI works at 375 px and with the keyboard alone. No real Groq calls; `evidence/` and `results.csv` untouched.
+- **Status:** completed. The plan's "open the PDF at the cited page" is not built (no PDF endpoint; report §11).
+- **Files created:**
+  - `web/`: `package.json` and `package-lock.json`; Vite, TypeScript, Jest, Babel and ESLint configs; `.env.example`; `index.html`.
+  - `web/src/`:
+    - `api.ts`, `sse.ts`, `answer.ts`, `buildConfig.ts`, `router.tsx`, `App.tsx`, `ApiContext.tsx`, `useCollection.ts`, `main.tsx`, `styles.css`
+    - `components/{AnswerView,Dialog,SourcePanel,TimeBar}.tsx`
+    - `pages/{Collections,Upload,Chat,Status}Page.tsx`
+    - `test/*`, plus 5 Jest suites (40 tests)
+  - `src/relay/app/routes/ui.py`; `src/relay/app/static/` (build output, 3 files)
+  - `tests/test_v2_06_ui_backend.py` (17 tests)
+  - `reports/phase-v2-06-web-ui.md`
+- **Files modified:**
+  - `src/relay/cli.py`: `relay ui build`, with a staged swap.
+  - `src/relay/app/compose.py`: `mount_ui`.
+  - `src/relay/app/routes/ingestion.py`: `document_count`.
+  - `src/relay/store/repositories.py`: `DocumentRepo.counts_by_collection`.
+  - `src/relay/api/routes/ask_v1.py`: `sources` gains `short_name` and `text`; `tags_in` now reads every tag in a multi-tag bracket.
+  - `src/relay/orchestrator/verifier.py`: `TAG_PATTERN` exported (behaviour unchanged).
+  - `tests/test_ask_v1.py`: a flaky V2-05 assertion fixed.
+  - `.gitignore` (`web/node_modules/`, `web/dist/`), `README.md` (UI quickstart), `docs/DECISIONS.md`.
+- **Engineering decisions** ([PROPOSED] in DECISIONS.md, report §5):
+  - "rerank" maps to `balanced_rerank`.
+  - The time bar is estimated in the browser.
+  - `sources` gains `short_name` and `text`.
+  - `document_count` counts documents of any status.
+  - The store status is derived from `trace_sink`.
+  - A small hand-written router, so no new dependency.
+  - The built `static/` is left untracked for the owner to decide.
+- **Commands executed (final, after the last edit):**
+  - `python -m pytest -q` → **735 passed** (718 + 17 new).
+  - `python -m ruff check .` → All checks passed.
+  - In `web/`: `npx jest` → **40 passed** (5 suites); `npx eslint .` → 0 problems; `npm run build` → tsc clean, built.
+  - `relay ui build` → copied 3 files; `diff -rq web/dist src/relay/app/static` → identical.
+  - `git status --short evidence results.csv` → empty; `results.csv` sha256 starts `8dfb10df`.
+- **Browser test** (Playwright; `relay serve` in sqlite mode with the embedded stand-in on 127.0.0.1:8765; store and uploads in the session scratchpad; 0 real calls):
+  - **Width:** checked at 375 px and at 1280 px.
+  - **Keyboard only, verified:**
+    - Tab order; the New collection dialog (focus in, Tab trap, focus back to its button); upload through the file input.
+    - Ask with Enter, then citation chip → source panel → Escape, with focus returned to the chip.
+  - **Real states:** streamed answer; queued ("position 1, expected wait 12s"); evidence-gate refusal; capacity shed (queue_full); cache hit; partial answer ("stopped after 1 sentence: no citation", from retrying a lost answer); upload Queued → Ready with extraction quality; suspected scan (9 of 10 pages empty); duplicate upload.
+  - **Injected server responses:** partial, daily limit, connection lost, safe refusal, ingestion failed.
+  - **Console:** no errors or warnings, apart from the 404 of a deliberate `/v1/nothing` probe.
+  - **Width bug found and fixed:** horizontal overflow at 375 px (CSS grid `min-width`).
+- **Errors, root causes, fixes:**
+  - A Jest `moduleNameMapper` rule caught Testing Library's own `./config` → our module renamed `buildConfig`.
+  - eslint 10 conflicts with jsx-a11y → pinned eslint 9.
+  - A V2-05 test was flaky ("999" occurring inside timing floats; 1 failure in 40 runs) → fixed to check the sentence's own words.
+  - Overflow at 375 px → fixed.
+  - Code review: backend 5 findings, UI 7 findings plus test gaps. All fixed with tests that failed first, except one test written after its fix (report §9–10).
+- **Remaining issues:**
+  - No PDF view of the cited page.
+  - Cached answers carry no passage text.
+  - The time bar is estimated in the browser.
+  - The dev key is compiled into the bundle (acceptable only until V2-10).
+- **Deviations:** none from ARCH_V2. The plan's V2-06 task 3 is partial (see above).
+- **Real Groq calls:** 0. **Network:** npm registry for the package install; loopback for the tests.
+- **Owner approval status:** pending owner review
+- **Next action:** Owner reviews the rulings and decides whether to commit `src/relay/app/static/`; then V2-07.

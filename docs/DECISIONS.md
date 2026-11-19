@@ -27,3 +27,15 @@ Owner decisions for v2 work, newest last. Each entry records what was decided, b
 - **V2-05:** The partial-answer rate on the v1 questions is measured by **replaying the 63 recorded Table 3 answers** through the streaming path (splitter, per-sentence verifier, final pass). There are no real calls; the stand-in's rate is reported separately (owner, 2026-11-19).
 - **V2-05:** Property tests use a **seeded random generator, with no new dependency** (Hypothesis is not added) (owner, 2026-11-19).
 - **V2-05:** `POST /v1/ask` without a `collection_id` answers from the caller's **`v1-papers` collection** (owner, 2026-11-19).
+- **V2-06:** The web UI is **React + Vite + TypeScript in `web/`**. It is built to static files and served by the API on the same origin (D10). The phase prompt fixed these details (owner, 2026-11-19):
+  - **Node is a build-time tool only.** `relay ui build` runs `npm run build` and copies `web/dist/` to `src/relay/app/static/`. No Node dependency is added to `pyproject.toml`.
+  - **Frontend tests use Jest + React Testing Library.**
+  - **The Bearer key is read at build time from `VITE_API_KEY`.** Until V2-10 the API accepts any key for the development tenant, so the default `relay-dev-key` is not a secret.
+- **V2-06 [PROPOSED, pending owner approval]:** Rulings made while building the UI (Claude Code, 2026-11-19):
+  - **The "rerank" preset option sends `retrieval_preset: "balanced_rerank"`**, the backend's reranking preset.
+  - **The per-answer time bar is estimated in the browser** from when each `status` event arrived, and it says so. `final` does not yet carry a span breakdown (ARCHITECTURE_V2 §11). The UI uses `final.spans` as soon as the server sends it.
+  - **The `sources` event gains `short_name` and the full passage `text`.** `text_excerpt` is unchanged. Citation chips need the paper's short name, and the source panel highlights within the whole passage. Cached answers still carry no passage text; the panel says so.
+  - **`GET /v1/collections` gains `document_count`.** It counts documents of any status, failed ones included.
+  - **The Status page derives "metadata store" from `/healthz`** (`trace_sink` present means SQLite with the request log writing). `/healthz` has no separate store field.
+  - **The source panel shows the cited passage text.** Opening the PDF at the cited page (V2-06 plan, task 3) is not built: there is no endpoint that serves PDFs.
+  - **The built `src/relay/app/static/` is neither gitignored nor committed.** Whether to commit the build output is the owner's decision.

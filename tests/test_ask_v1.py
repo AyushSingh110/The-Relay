@@ -283,7 +283,9 @@ async def test_a_failed_sentence_stops_the_stream(env: Env) -> None:
     assert (stopped["reason_class"], stopped["partial"]) == ("ungrounded", True)
     final = stream.of("final")[0]
     assert (final["partial"], final["verdict"]) == (True, "BLOCKED")
-    assert "999" not in stream.raw  # the failed sentence never left the server
+    # the failed sentence never left the server (its own words: a bare "999" can also
+    # occur by chance inside a timing float such as total_ms, which made this flaky)
+    assert "has 999 layers" not in stream.raw
     assert harness.provider.closed_early == 1  # generation was cancelled
 
 
