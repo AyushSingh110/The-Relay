@@ -34,8 +34,10 @@ async def conn() -> AsyncGenerator[aiosqlite.Connection]:
 async def test_migrations_apply_cleanly_from_empty(conn: aiosqlite.Connection) -> None:
     assert await schema_version(conn) == 0
     result = await migrate(conn)
-    assert (result.from_version, result.to_version, result.applied) == (0, LATEST_VERSION, (1,))
-    assert await schema_version(conn) == LATEST_VERSION == 1
+    everything = tuple(range(1, LATEST_VERSION + 1))
+    assert (result.from_version, result.to_version, result.applied) == (0, LATEST_VERSION,
+                                                                         everything)
+    assert await schema_version(conn) == LATEST_VERSION
     assert TABLES | {"_schema_version"} == set(await table_names(conn))
 
 
@@ -43,13 +45,14 @@ async def test_migrations_are_idempotent(conn: aiosqlite.Connection) -> None:
     await migrate(conn)
     before = await row_counts(conn)
     second = await migrate(conn)
-    assert second.applied == () and second.from_version == second.to_version == 1
+    assert second.applied == () and second.from_version == second.to_version == LATEST_VERSION
     assert await row_counts(conn) == before
     assert before["_schema_version"] == 1  # exactly one version row
 
 
 async def test_a_database_newer_than_the_code_is_refused(conn: aiosqlite.Connection) -> None:
-    newer = (*MIGRATIONS, Migration(2, "future", "CREATE TABLE future_thing (id TEXT);"))
+    newer = (*MIGRATIONS, Migration(LATEST_VERSION + 1, "future",
+                                    "CREATE TABLE future_thing (id TEXT);"))
     await migrate(conn, migrations=newer)
     with pytest.raises(MigrationError, match="newer than this code"):
         await migrate(conn)
@@ -57,11 +60,11 @@ async def test_a_database_newer_than_the_code_is_refused(conn: aiosqlite.Connect
 
 async def test_a_failing_migration_rolls_back_completely(conn: aiosqlite.Connection) -> None:
     await migrate(conn)
-    broken = (*MIGRATIONS, Migration(2, "broken",
+    broken = (*MIGRATIONS, Migration(LATEST_VERSION + 1, "broken",
                                      "CREATE TABLE half_done (id TEXT); NOT VALID SQL;"))
-    with pytest.raises(MigrationError, match="migration 2"):
+    with pytest.raises(MigrationError, match=f"migration {LATEST_VERSION + 1}"):
         await migrate(conn, migrations=broken)
-    assert await schema_version(conn) == 1
+    assert await schema_version(conn) == LATEST_VERSION
     assert "half_done" not in await table_names(conn)
 
 

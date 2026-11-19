@@ -5,20 +5,31 @@ retrievers and the P08 app. Nothing in the v1 modules changes.
 
 ``open_runtime`` is an async context manager because an embedded stand-in is a second
 uvicorn server on 127.0.0.1 that must start before the provider and stop after it.
+
+In ``sqlite`` mode (V2-03) it also opens the collections: the development tenant, the
+``v1-papers`` collection on first start-up (reading the v1 index, nothing re-embedded), the
+per-collection index registry, the ingest worker, and the ``/v1`` collection routes. The
+embedding and rerank models for collections load on first use.
 """
 
 from __future__ import annotations
 
 import asyncio
+import logging
+import os
 from collections.abc import AsyncGenerator, Mapping
 from contextlib import AsyncExitStack, asynccontextmanager
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Final
 
 from fastapi import FastAPI
 
 from relay.api.app import RelayService, create_app
+from relay.app.bootstrap import V1_PRESET, ensure_dev_tenant, register_v1_papers
+from relay.app.collections import LazyEmbedder, LazyReranker, StoreCollectionResolver
 from relay.app.request_log import RequestLogSink
+from relay.app.routes.ingestion import IngestionContext, fetch_arxiv_pdf, ingestion_router
 from relay.app.settings import LaneSettings, RelaySettings
 from relay.config import Settings
 from relay.control.admission import (
@@ -31,15 +42,20 @@ from relay.control.cache import corpus_digest
 from relay.control.provider_guard import GuardConfig, ProviderGuard
 from relay.errors import ConfigurationError
 from relay.ingestion.arxiv_fetcher import load_corpus_manifest
+from relay.ingestion.worker import FileLocator, IngestWorker
 from relay.orchestrator.pipeline import PipelineConfig
 from relay.orchestrator.tools import PassageRetriever
 from relay.providers.base import ChatProvider, RealCallBudget
 from relay.providers.http_provider import HttpOpenAIProvider
-from relay.retrieval.hybrid_index import RETRIEVAL_SETTINGS
+from relay.retrieval.embedder import Embedder, Reranker
+from relay.retrieval.hybrid_index import INDEX_MANIFEST, RETRIEVAL_SETTINGS
+from relay.retrieval.registry import IndexRegistry
 from relay.schemas import Source
 from relay.standin.profile import StandinProfile, uncalibrated_defaults
 from relay.standin.server import create_standin_app, load_profile, serve_on_loopback
 from relay.store import Store, open_store
+
+logger = logging.getLogger(__name__)
 
 # The answer cache itself stays in memory in every mode; "sqlite" adds the metadata
 # store and its request log (a persistent answer cache is not in the V2-02 schema).
@@ -58,6 +74,9 @@ class Runtime:
     real_call_cap: int | None
     store: Store | None = None
     request_log: RequestLogSink | None = None
+    collections: StoreCollectionResolver | None = None
+    ingest_worker: IngestWorker | None = None
+    notes: tuple[str, ...] = ()
 
     @property
     def service(self) -> RelayService:
@@ -78,6 +97,7 @@ class Runtime:
             lines.append(f"store: {self.store.path} (schema v{self.store.schema_version}, "
                          f"journal {self.store.journal_mode}); request log on, answers cached in "
                          "memory")
+        lines.extend(self.notes)
         return lines
 
 
@@ -145,10 +165,66 @@ def _default_retrievers(settings: RelaySettings,
                            models_dir=settings.paths.models_dir)
 
 
+def _fastembed_embedder(models_dir: Path) -> Embedder:
+    os.environ.setdefault("HF_HUB_OFFLINE", "1")
+    from relay.retrieval.embedder import FastEmbedEmbedder
+
+    return FastEmbedEmbedder(models_dir, local_files_only=True)
+
+
+def _fastembed_reranker(models_dir: Path) -> Reranker:
+    os.environ.setdefault("HF_HUB_OFFLINE", "1")
+    from relay.retrieval.embedder import FastEmbedReranker
+
+    return FastEmbedReranker(models_dir, local_files_only=True)
+
+
+@dataclass(frozen=True)
+class _Collections:
+    resolver: StoreCollectionResolver
+    worker: IngestWorker
+    routes: IngestionContext
+    note: str
+
+
+async def _open_collections(settings: RelaySettings, store: Store, *,
+                            embedder: Embedder | None,
+                            reranker: Reranker | None) -> _Collections:
+    paths, limits = settings.paths, settings.ingestion
+    await ensure_dev_tenant(store)
+    if (paths.index_dir / V1_PRESET / INDEX_MANIFEST).is_file():
+        v1 = await register_v1_papers(store, papers_dir=paths.papers_dir,
+                                      index_dir=paths.index_dir,
+                                      collections_dir=paths.collections_dir)
+        note = ("collections: v1-papers not registered (the store already has collections)"
+                if v1 is None else
+                f"collections: v1-papers ready (version {v1.version}, reads the v1 "
+                f"{V1_PRESET} index)")
+    else:
+        note = (f"collections: v1-papers not registered (no v1 {V1_PRESET} index in "
+                f"{paths.index_dir})")
+        logger.warning(note)
+    models_dir = paths.models_dir
+    embedder = embedder or LazyEmbedder(lambda: _fastembed_embedder(models_dir))
+    reranker = reranker or LazyReranker(lambda: _fastembed_reranker(models_dir))
+    indexes = IndexRegistry(paths.collections_dir, embedder=embedder, reranker=reranker,
+                            max_loaded=limits.max_loaded_collections)
+    files = FileLocator(papers_dir=paths.papers_dir, uploads_dir=paths.uploads_dir)
+    worker = IngestWorker(store, index_root=paths.collections_dir, files=files,
+                          embedder=embedder, poll_interval_s=limits.poll_interval_s,
+                          max_attempts=limits.max_attempts)
+    routes = IngestionContext(store=store, files=files, collections_dir=paths.collections_dir,
+                              max_upload_bytes=limits.max_upload_bytes,
+                              max_pages=limits.max_pages, fetch_arxiv=fetch_arxiv_pdf)
+    return _Collections(StoreCollectionResolver(store, indexes), worker, routes, note)
+
+
 @asynccontextmanager
 async def open_runtime(settings: RelaySettings, env: Settings, *,
                        retrievers: Mapping[str, PassageRetriever] | None = None,
                        vocabulary: frozenset[str] | None = None,
+                       collection_embedder: Embedder | None = None,
+                       collection_reranker: Reranker | None = None,
                        ) -> AsyncGenerator[Runtime]:
     """Start everything the primary lane needs and yield the ready app.
 
@@ -162,11 +238,17 @@ async def open_runtime(settings: RelaySettings, env: Settings, *,
     async with AsyncExitStack() as stack:
         store: Store | None = None
         sink: RequestLogSink | None = None
+        collections: _Collections | None = None
         if settings.cache.mode == "sqlite":
             store = await stack.enter_async_context(open_store(settings.paths.store_path))
             sink = RequestLogSink(store.request_log)
             await sink.start()
             stack.push_async_callback(sink.aclose)
+            collections = await _open_collections(settings, store,
+                                                  embedder=collection_embedder,
+                                                  reranker=collection_reranker)
+            await collections.worker.start()
+            stack.push_async_callback(collections.worker.aclose)  # stops before the store
         # Blocking work (file hashing, ONNX model and index loading) runs in a worker
         # thread and finishes before any server is started on the event loop.
         corpus = await asyncio.to_thread(corpus_sha256, settings)
@@ -207,10 +289,16 @@ async def open_runtime(settings: RelaySettings, env: Settings, *,
                                            reasoning_effort=lane.reasoning_effort),
             guard=guard, queue=queue, corpus_sha256=corpus,
             cache_mode=mode, vocabulary=vocabulary, run=sink,  # type: ignore[arg-type]
+            collections=None if collections is None else collections.resolver,
         )
+        if collections is not None:
+            app.include_router(ingestion_router(collections.routes))
         yield Runtime(app=app, lane=lane, source=source, provider_url=url,
                       capacity=capacity, real_call_cap=real_cap, store=store,
-                      request_log=sink)
+                      request_log=sink,
+                      collections=None if collections is None else collections.resolver,
+                      ingest_worker=None if collections is None else collections.worker,
+                      notes=() if collections is None else (collections.note,))
 
 
 __all__ = ["Runtime", "cache_mode", "capacity_derivation", "corpus_sha256", "guard_config",

@@ -40,7 +40,7 @@ Clock = Callable[[], datetime]
 IdFactory = Callable[[], str]
 Params = Sequence[Any]
 
-DOCUMENT_STATUSES: Final = frozenset({"pending", "ingesting", "ready", "failed"})
+DOCUMENT_STATUSES: Final = frozenset({"pending", "queued", "ingesting", "ready", "failed"})
 INGEST_STATES: Final = ("queued", "parsing", "embedding", "indexing", "ready", "failed")
 PENDING_STATES: Final = ("queued", "parsing", "embedding", "indexing")
 MESSAGE_ROLES: Final = frozenset({"user", "assistant", "system"})
@@ -87,6 +87,7 @@ class Collection:
     retrieval_preset: str
     version: int
     created_at: str
+    rerank: bool = False
 
 
 @dataclass(frozen=True, slots=True)
@@ -130,6 +131,7 @@ class Message:
 @dataclass(frozen=True, slots=True)
 class RequestLogEntry:
     id: str
+    request_id: str | None
     collection_id: str | None
     tenant_id: str | None
     question_hash: str | None
@@ -195,11 +197,19 @@ class _Repo:
     async def _write(self, sql: str, params: Params, *, context: str) -> int:
         """Execute one write and commit under the connection's write lock; returns the
         changed row count."""
+        return (await self._write_many([(sql, params)], context=context))[0]
+
+    async def _write_many(self, statements: Sequence[tuple[str, Params]], *,
+                          context: str) -> list[int]:
+        """Execute several writes in ONE transaction (all or nothing) under the write lock;
+        returns each statement's changed row count."""
         async with write_lock(self._conn):
             try:
-                cursor = await self._conn.execute(sql, params)
-                changed = cursor.rowcount
-                await cursor.close()
+                changed: list[int] = []
+                for sql, params in statements:
+                    cursor = await self._conn.execute(sql, params)
+                    changed.append(cursor.rowcount)
+                    await cursor.close()
                 await self._conn.commit()
             except aiosqlite.IntegrityError as exc:
                 message = str(exc)
@@ -242,30 +252,44 @@ class TenantRepo(_Repo):
         return None if row is None else Tenant(*row)
 
 
-_COLLECTION_COLUMNS: Final = "id, tenant_id, name, retrieval_preset, version, created_at"
+_COLLECTION_COLUMNS: Final = ("id, tenant_id, name, retrieval_preset, version, created_at, "
+                              "rerank")
+
+
+def _collection(row: tuple[Any, ...]) -> Collection:
+    values = list(row)
+    values[6] = bool(values[6])  # rerank is stored as 0/1 (NULL on pre-002 rows -> False)
+    return Collection(*values)
 
 
 class CollectionRepo(_Repo):
     async def create(self, tenant_id: str, name: str, *, retrieval_preset: str = "small_fast",
-                     collection_id: str | None = None) -> Collection:
+                     rerank: bool = False, collection_id: str | None = None) -> Collection:
         collection = Collection(id=collection_id or self._ids(), tenant_id=tenant_id,
                                 name=name, retrieval_preset=retrieval_preset, version=0,
-                                created_at=self._now())
+                                created_at=self._now(), rerank=rerank)
         await self._write(
-            f"INSERT INTO collection ({_COLLECTION_COLUMNS}) VALUES (?, ?, ?, ?, ?, ?)",
-            (collection.id, tenant_id, name, retrieval_preset, 0, collection.created_at),
+            f"INSERT INTO collection ({_COLLECTION_COLUMNS}) VALUES (?, ?, ?, ?, ?, ?, ?)",
+            (collection.id, tenant_id, name, retrieval_preset, 0, collection.created_at,
+             int(rerank)),
             context=f"create collection: tenant {tenant_id!r} does not exist")
         return collection
 
     async def get_by_id(self, collection_id: str) -> Collection | None:
         row = await self._one(f"SELECT {_COLLECTION_COLUMNS} FROM collection WHERE id = ?",
                               (collection_id,))
-        return None if row is None else Collection(*row)
+        return None if row is None else _collection(row)
+
+    async def find_by_name(self, tenant_id: str, name: str) -> Collection | None:
+        row = await self._one(f"SELECT {_COLLECTION_COLUMNS} FROM collection "
+                              "WHERE tenant_id = ? AND name = ? ORDER BY rowid LIMIT 1",
+                              (tenant_id, name))
+        return None if row is None else _collection(row)
 
     async def list_for_tenant(self, tenant_id: str) -> list[Collection]:
         rows = await self._all(f"SELECT {_COLLECTION_COLUMNS} FROM collection "
                                "WHERE tenant_id = ? ORDER BY created_at, rowid", (tenant_id,))
-        return [Collection(*row) for row in rows]
+        return [_collection(row) for row in rows]
 
     async def bump_version(self, collection_id: str) -> int:
         """Increment the collection's version and return the new value."""
@@ -302,9 +326,49 @@ class DocumentRepo(_Repo):
             context=f"create document: collection {collection_id!r} does not exist")
         return document
 
+    async def create_queued(self, collection_id: str, *, source: str, sha256: str,
+                            title: str | None = None, pages: int | None = None,
+                            document_id: str | None = None,
+                            job_id: str | None = None) -> tuple[Document, IngestJob]:
+        """A ``queued`` document and its ingest job, written in one transaction."""
+        now = self._now()
+        document = Document(id=document_id or self._ids(), collection_id=collection_id,
+                            source=source, sha256=sha256, title=title, pages=pages,
+                            status="queued", created_at=now)
+        job = IngestJob(id=job_id or self._ids(), document_id=document.id, state="queued",
+                        attempts=0, error_class=None, updated_at=now)
+        await self._write_many([
+            (f"INSERT INTO document ({_DOCUMENT_COLUMNS}) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+             (document.id, collection_id, source, sha256, title, pages, "queued", now)),
+            (f"INSERT INTO ingest_job ({_JOB_COLUMNS}) VALUES (?, ?, ?, ?, ?, ?)",
+             (job.id, document.id, "queued", 0, None, now)),
+        ], context=f"queue document: collection {collection_id!r} does not exist")
+        return document, job
+
+    async def requeue(self, document_id: str) -> IngestJob:
+        """Queue a document again (status ``queued`` plus a fresh job), in one transaction."""
+        now = self._now()
+        job = IngestJob(id=self._ids(), document_id=document_id, state="queued", attempts=0,
+                        error_class=None, updated_at=now)
+        changed = await self._write_many([
+            ("UPDATE document SET status = 'queued' WHERE id = ?", (document_id,)),
+            (f"INSERT INTO ingest_job ({_JOB_COLUMNS}) VALUES (?, ?, ?, ?, ?, ?)",
+             (job.id, document_id, "queued", 0, None, now)),
+        ], context=f"requeue document: document {document_id!r} does not exist")
+        if changed[0] != 1:
+            raise NotFoundError(f"document {document_id!r} does not exist")
+        return job
+
     async def get_by_id(self, document_id: str) -> Document | None:
         row = await self._one(f"SELECT {_DOCUMENT_COLUMNS} FROM document WHERE id = ?",
                               (document_id,))
+        return None if row is None else Document(*row)
+
+    async def find_by_sha256(self, collection_id: str, sha256: str) -> Document | None:
+        """The document with this content hash in this collection, if any (de-duplication)."""
+        row = await self._one(f"SELECT {_DOCUMENT_COLUMNS} FROM document "
+                              "WHERE collection_id = ? AND sha256 = ? ORDER BY rowid LIMIT 1",
+                              (collection_id, sha256))
         return None if row is None else Document(*row)
 
     async def list_for_collection(self, collection_id: str) -> list[Document]:
@@ -313,10 +377,13 @@ class DocumentRepo(_Repo):
                                (collection_id,))
         return [Document(*row) for row in rows]
 
-    async def update_status(self, document_id: str, status: str) -> Document:
+    async def update_status(self, document_id: str, status: str, *,
+                            pages: int | None = None) -> Document:
+        """Set the status (and the page count, when given)."""
         _check(status, DOCUMENT_STATUSES, "document status")
-        changed = await self._write("UPDATE document SET status = ? WHERE id = ?",
-                                    (status, document_id), context="update document")
+        changed = await self._write("UPDATE document SET status = ?, pages = COALESCE(?, pages) "
+                                    "WHERE id = ?", (status, pages, document_id),
+                                    context="update document")
         document = await self.get_by_id(document_id) if changed else None
         if document is None:
             raise NotFoundError(f"document {document_id!r} does not exist")
@@ -355,6 +422,51 @@ class IngestJobRepo(_Repo):
             raise NotFoundError(f"ingest job {job_id!r} does not exist")
         return job
 
+    async def complete(self, job_id: str, *, document_id: str, collection_id: str,
+                       pages: int | None) -> int:
+        """Finish an ingest in ONE transaction: the document becomes ``ready``, the job
+        ``ready``, and the collection version is bumped (returned). A request therefore
+        never sees the new version without the new document, or the reverse."""
+        async with write_lock(self._conn):
+            try:
+                cursor = await self._conn.execute(
+                    "UPDATE document SET status = 'ready', pages = COALESCE(?, pages) "
+                    "WHERE id = ? AND collection_id = ?", (pages, document_id, collection_id))
+                documents = cursor.rowcount
+                await cursor.close()
+                cursor = await self._conn.execute(
+                    "UPDATE ingest_job SET state = 'ready', error_class = NULL, updated_at = ? "
+                    "WHERE id = ? AND document_id = ?", (self._now(), job_id, document_id))
+                jobs = cursor.rowcount
+                await cursor.close()
+                async with self._conn.execute(
+                        "UPDATE collection SET version = version + 1 WHERE id = ? "
+                        "RETURNING version", (collection_id,)) as cursor:
+                    row = await cursor.fetchone()
+                if documents != 1 or jobs != 1 or row is None:
+                    raise NotFoundError(f"complete ingest: job {job_id!r}, document "
+                                        f"{document_id!r} or collection {collection_id!r} "
+                                        "does not exist")
+                await self._conn.commit()
+            except (aiosqlite.Error, NotFoundError) as exc:
+                await safe_rollback(self._conn, exc)
+                raise
+        return int(row[0])
+
+    async def list_runnable(self, *, max_attempts: int, limit: int = 100) -> list[IngestJob]:
+        """Pending jobs, plus failed jobs with attempts left; oldest update first."""
+        marks = ", ".join("?" for _ in PENDING_STATES)
+        rows = await self._all(f"SELECT {_JOB_COLUMNS} FROM ingest_job "
+                               f"WHERE state IN ({marks}) OR (state = 'failed' AND attempts < ?) "
+                               "ORDER BY updated_at, rowid LIMIT ?",
+                               (*PENDING_STATES, max_attempts, limit))
+        return [IngestJob(*row) for row in rows]
+
+    async def latest_for_document(self, document_id: str) -> IngestJob | None:
+        row = await self._one(f"SELECT {_JOB_COLUMNS} FROM ingest_job WHERE document_id = ? "
+                              "ORDER BY rowid DESC LIMIT 1", (document_id,))
+        return None if row is None else IngestJob(*row)
+
     async def list_pending(self, limit: int = 100) -> list[IngestJob]:
         """Jobs not yet ready or failed, oldest update first."""
         marks = ", ".join("?" for _ in PENDING_STATES)
@@ -364,14 +476,14 @@ class IngestJobRepo(_Repo):
         return [IngestJob(*row) for row in rows]
 
 
-_LOG_COLUMNS: Final = ("id, collection_id, tenant_id, question_hash, status, ttft_ms, "
-                       "total_ms, tokens_in, tokens_out, cache_hit, coalesced, verdict, "
-                       "created_at")
+_LOG_COLUMNS: Final = ("id, request_id, collection_id, tenant_id, question_hash, status, "
+                       "ttft_ms, total_ms, tokens_in, tokens_out, cache_hit, coalesced, "
+                       "verdict, created_at")
 
 
 def _log_entry(row: tuple[Any, ...]) -> RequestLogEntry:
     values = list(row)
-    values[9], values[10] = bool(values[9]), bool(values[10])
+    values[10], values[11] = bool(values[10]), bool(values[11])
     return RequestLogEntry(*values)
 
 
@@ -382,17 +494,19 @@ class RequestLogRepo(_Repo):
                      cache_hit: bool = False, coalesced: bool = False,
                      verdict: str | None = None, collection_id: str | None = None,
                      tenant_id: str | None = None, entry_id: str | None = None,
-                     ) -> RequestLogEntry:
+                     request_id: str | None = None) -> RequestLogEntry:
         """One row per completed request."""
         entry = RequestLogEntry(
-            id=entry_id or self._ids(), collection_id=collection_id, tenant_id=tenant_id,
+            id=entry_id or self._ids(), request_id=request_id, collection_id=collection_id,
+            tenant_id=tenant_id,
             question_hash=question_hash, status=status, ttft_ms=ttft_ms, total_ms=total_ms,
             tokens_in=tokens_in, tokens_out=tokens_out, cache_hit=cache_hit,
             coalesced=coalesced, verdict=verdict, created_at=self._now())
         await self._write(
             f"INSERT INTO request_log ({_LOG_COLUMNS}) "
-            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-            (entry.id, collection_id, tenant_id, question_hash, status, ttft_ms, total_ms,
+            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            (entry.id, request_id, collection_id, tenant_id, question_hash, status, ttft_ms,
+             total_ms,
              tokens_in, tokens_out, int(cache_hit), int(coalesced), verdict,
              entry.created_at),
             context="insert request log entry")

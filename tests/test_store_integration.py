@@ -19,6 +19,7 @@ from relay.app.request_log import RequestLogSink
 from relay.app.settings import LaneSettings, RelaySettings
 from relay.config import Settings
 from relay.store import StoreOpenError, open_store
+from relay.store.migrations import LATEST_VERSION
 from tests.test_pipeline_and_verifier import PASSAGES, StubRetriever
 from tests.test_standin import MODEL, profile
 
@@ -38,7 +39,9 @@ def settings_for(tmp_path: Path, *, mode: str, store_path: str = ":memory:") -> 
                             profile=path),),
         retrieval={"settings": ("small_fast",)},  # type: ignore[arg-type]
         cache={"mode": mode},  # type: ignore[arg-type]
-        paths={"store_path": store_path})  # type: ignore[arg-type]
+        # V2-03: sqlite mode also opens collections; keep their files out of data/
+        paths={"store_path": store_path, "uploads_dir": tmp_path / "uploads",  # type: ignore[arg-type]
+               "collections_dir": tmp_path / "collections"})
 
 
 def request_record(**final: Any) -> dict[str, Any]:
@@ -112,14 +115,15 @@ async def ask(app: Any, n: int) -> dict[str, Any]:
 async def test_sqlite_mode_opens_the_store_and_logs_every_request(tmp_path: Path) -> None:
     settings = settings_for(tmp_path, mode="sqlite")
     async with compose.open_runtime(settings, env(), retrievers=RETRIEVERS) as runtime:
-        assert runtime.store is not None and runtime.store.schema_version == 1
+        assert runtime.store is not None and runtime.store.schema_version == LATEST_VERSION
         assert runtime.service.cache_mode == "exact"  # the answer cache stays in memory
         first, second = await ask(runtime.app, 1), await ask(runtime.app, 2)
         assert (first["cache_status"], second["cache_status"]) == ("miss", "exact_hit")
         assert runtime.request_log is not None
         await runtime.request_log.flush()
         rows = list(reversed(await runtime.store.request_log.list_recent()))
-        assert any("store: :memory: (schema v1" in line for line in runtime.describe())
+        assert any(f"store: :memory: (schema v{LATEST_VERSION}" in line
+                   for line in runtime.describe())
     assert [(r.status, r.cache_hit, r.verdict) for r in rows] == [
         ("ok", False, "VERIFIED"), ("ok", True, "VERIFIED")]
     assert rows[0].tokens_in and rows[0].question_hash and len(rows[0].question_hash) == 64
@@ -160,7 +164,7 @@ def test_doctor_reports_the_store_in_each_mode(tmp_path: Path) -> None:
     assert code == cli.EXIT_OK and "[INFO] store: not used (cache mode memory)" in text
     code, text = doctor_text(settings_for(tmp_path, mode="sqlite"))
     assert code == cli.EXIT_OK
-    assert "[  OK] store: :memory: opened, migrations applied (schema v1" in text
+    assert f"[  OK] store: :memory: opened, migrations applied (schema v{LATEST_VERSION}" in text
     bad = settings_for(tmp_path, mode="sqlite",
                        store_path=str(tmp_path / "missing" / "relay.sqlite3"))
     code, text = doctor_text(bad)

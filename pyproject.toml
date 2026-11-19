@@ -19,6 +19,7 @@ dependencies = [
     "rank-bm25>=0.2.2",
     "numpy>=1.26",
     "aiosqlite>=0.20",
+    "python-multipart>=0.0.9",
 ]
 
 [project.scripts]

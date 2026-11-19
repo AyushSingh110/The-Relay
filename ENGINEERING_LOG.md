@@ -1138,3 +1138,85 @@
 - **Real Groq calls:** 0. **Network:** loopback, plus the PyPI install of aiosqlite.
 - **Owner approval status:** pending owner review
 - **Next action:** Owner reviews; decides on `request_id` and the persistent cache; then V2-03 on approval.
+
+### Execution Entry
+
+- **Date and time:** 2026-11-19 09:08 IST
+- **Phase identifier:** `v2-03` — Collections and ingestion
+- **Owner decisions recorded (2026-11-18, `docs/DECISIONS.md`):**
+  - Suspected scans are flagged, not rejected.
+  - `/ask` without a `collection_id` keeps the exact v1 path.
+  - Migration 002 as specified.
+- **Task requested and objective:**
+  - Collections and `/v1` ingestion routes (upload or exact arXiv version), with limits and SHA-256 de-duplication.
+  - Background ingest worker with states, retries and crash resume.
+  - Per-collection indexes and an LRU index registry.
+  - Extraction-quality report.
+  - The pipeline takes `collection_id`, with cues from the store.
+  - `v1-papers` auto-registered from the existing v1 index; tests 1–10.
+- **Status:** completed
+- **Files created:**
+  - `src/relay/ingestion/{registry,worker}.py`
+  - `src/relay/retrieval/registry.py`
+  - `src/relay/app/{collections,bootstrap}.py`
+  - `src/relay/app/routes/{__init__,ingestion}.py`
+  - Tests (74 in total):
+    - `tests/test_store_migration_002.py` (5), `test_scope_cues.py` (6), `test_document_registry.py` (4), `test_index_registry.py` (3)
+    - `test_ingest_worker.py` (11), `test_pipeline_collections.py` (3), `test_v1_bootstrap.py` (5)
+    - `test_ingestion_routes.py` (13), `test_ask_collections.py` (4), `test_compose_collections.py` (3), `test_v2_03_review_fixes.py` (17)
+  - `reports/phase-v2-03-collections-and-ingestion.md`
+- **Files modified:**
+  - Store: `src/relay/store/{migrations,repositories}.py`
+  - Orchestrator and retrieval: `src/relay/orchestrator/{pipeline,tools}.py`, `src/relay/retrieval/scope.py`
+  - Service: `src/relay/api/app.py`, `src/relay/app/{compose,settings,request_log}.py`
+  - Configuration: `relay.example.toml`, `pyproject.toml` (`python-multipart`), `.gitignore` (`data/uploads/`, `data/collections/`)
+  - `docs/DECISIONS.md`
+  - Tests: `tests/test_store.py`, `test_store_migrations.py` (version-agnostic), `test_store_integration.py`, `test_v2_02_review_fixes.py` (collection directories in `tmp_path`)
+  - `results.csv` and `evidence/` unchanged.
+- **Engineering decisions ([PROPOSED], details in report §5):**
+  - Collection indexes in `data/collections/`; `data/indexes/` is read only.
+  - `v1-papers` has a fixed id and preset `small_fast`, and reads the v1 index through `index_ref.json`.
+  - Atomic index swap: a new build directory, then `os.replace` of `index_ref.json`.
+  - `attempts` counts failed tries, and an interruption counts as one.
+  - Content-addressed uploads.
+  - Status codes: 202 new; 200 de-duplicated; 202 re-queue for a failed document; 411 without `Content-Length`.
+  - arXiv by exact version: local file first, else a capped download; stamp check on page 1.
+  - `/v1` exists only in sqlite mode; API key stubbed to tenant `dev`; cache key `setting@collection:vN`.
+- **Plugins used:**
+  - `superpowers:test-driven-development` (RED first on every new file).
+  - `superpowers:executing-plans`.
+  - `code-review` (high): 10 findings.
+  - `pr-review-toolkit:silent-failure-hunter` agent: 1 critical, 8 important, 8 minor.
+  - `superpowers:verification-before-completion`.
+  - Both reviews hit the 5-hour usage limit once and were rerun.
+- **Commands executed and observed outputs:**
+  - Full suite after each file → 578, 578, 583, 596, 600 (then 599 + 1 flaky), 603, 615 + 5 failed (contract changes, updated), 620.
+  - Review-fix tests: 17/17 RED for the expected reasons (after fixing 2 test bugs), then green.
+  - E2E (`relay serve`, embedded stand-in, scratch store, loopback only):
+    - `v1-papers` listed at version 1.
+    - New PDF ready in 2.56 s; `/ask` on its collection → VERIFIED, cited answer from the new document (565/52 tokens).
+    - `v1-papers` and the v1 path → identical BLOCKED (661/274).
+    - Isolation question → EARLY_REFUSAL with no provider call.
+    - Unknown collection → 404.
+    - Request log: 4 rows with `collection_id`.
+  - Final: `pytest -q` → `620 passed`; `ruff check .` → `All checks passed!`
+  - `git status --short evidence results.csv` → empty; `results.csv` sha256 `8dfb10df…44efd`.
+  - Secret scan → only v1's committed fake key in `tests/factories.py`.
+- **Errors, root causes, fixes:**
+  - Ruff F811 from fixture imports → local fixtures.
+  - Scripted test answer with an ungrounded number → test fixed (the verifier was right).
+  - `tests/test_standin.py::test_stragglers_are_much_slower` failed in 2 loaded full runs (normal request 156 ms against about 40 ms). It is an untouched v1 timing test; it passed 5/5 alone and in all later full runs. Not edited.
+  - Review findings fixed: C1, I1–I8, CR1, CR2, CR5, CR8, CR10 (report §10).
+  - Ctrl+Break could not be sent to the background server (WinError 87) → `Stop-Process`, after the log was flushed.
+- **Remaining issues:**
+  - `/ask` with a `collection_id` has no tenant or API-key check (V2-05).
+  - v1 refusal wording, `requery_text` cues and verifier cues are still v1 on collections (V2-04; seen live).
+  - Leftovers when the completion transaction itself fails.
+  - Bare 500 for `UnknownPresetError` or store errors on `/ask` resolution.
+  - Deferred minors M1, M3, M4, M5, M8; the embedding model loaded twice; the serve banner does not list `/v1`.
+- **Deviations:**
+  - Plan "reject scans" → flag (owner decision).
+  - Plan file `src/relay/app/jobs.py` → the worker is in `ingestion/worker.py`, per the prompt.
+- **Real Groq calls:** 0. **Network:** loopback only (no downloads were made; the arXiv download path is tested with `MockTransport`).
+- **Owner approval status:** pending owner review
+- **Next action:** Owner reviews the report and rulings; decides whether tenant checks for `/ask` move ahead of V2-05; then V2-04 on approval.

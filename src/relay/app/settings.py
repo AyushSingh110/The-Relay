@@ -110,6 +110,26 @@ class PathSettings(BaseModel):
     index_dir: Path = Path("data/indexes")
     models_dir: Path = Path("data/models")
     store_path: Path = Path("data/relay.sqlite3")  # used from V2-02
+    # V2-03: uploaded PDFs ({sha256}.pdf) and per-collection index files. The v1 indexes in
+    # index_dir are only read: the v1-papers collection points at them.
+    uploads_dir: Path = Path("data/uploads")
+    collections_dir: Path = Path("data/collections")
+
+
+class IngestionSettings(BaseModel):
+    """Upload limits and the ingest worker (V2-03). Active in ``cache.mode = "sqlite"``."""
+
+    model_config = _MODEL
+
+    max_upload_mb: Annotated[float, Field(gt=0.0, le=1024.0)] = 50.0
+    max_pages: PositiveInt = 500
+    poll_interval_s: Annotated[float, Field(gt=0.0)] = 2.0
+    max_attempts: PositiveInt = 3
+    max_loaded_collections: PositiveInt = 8
+
+    @property
+    def max_upload_bytes(self) -> int:
+        return int(self.max_upload_mb * 1024 * 1024)
 
 
 class CacheSettings(BaseModel):
@@ -151,6 +171,7 @@ class RelaySettings(BaseModel):
     paths: PathSettings = PathSettings()
     cache: CacheSettings = CacheSettings()
     retrieval: RetrievalConfig = RetrievalConfig()
+    ingestion: IngestionSettings = IngestionSettings()
 
     @model_validator(mode="after")
     def _unique_lanes(self) -> RelaySettings:
@@ -247,6 +268,7 @@ __all__ = [
     "DEFAULT_CONFIG_FILE",
     "CacheSettings",
     "GuardSettings",
+    "IngestionSettings",
     "LaneSettings",
     "PathSettings",
     "QueueSettings",

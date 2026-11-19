@@ -85,6 +85,7 @@ class ToolGateway:
         *,
         timeout_s: float = DEFAULT_TOOL_TIMEOUT_S,
         clock: MonotonicClock = time.perf_counter_ns,
+        paper_ids: frozenset[str] | None = None,
     ) -> None:
         if not retrievers:
             raise ValueError("at least one retriever is required")
@@ -93,10 +94,19 @@ class ToolGateway:
         self._retrievers = dict(retrievers)
         self._timeout_s = timeout_s
         self._clock = clock
+        # valid paper_filter values: the v1 papers, or a collection's documents (V2-03)
+        self._paper_ids = _PAPER_IDS if paper_ids is None else paper_ids
 
     @property
     def settings(self) -> frozenset[str]:
         return frozenset(self._retrievers)
+
+    def with_retrievers(self, retrievers: Mapping[str, PassageRetriever], *,
+                        paper_ids: frozenset[str] | None = None) -> ToolGateway:
+        """A gateway over other retrievers (a collection's) with the same timeout and clock;
+        ``paper_ids`` are the paper filters it accepts (default: this gateway's)."""
+        return ToolGateway(retrievers, timeout_s=self._timeout_s, clock=self._clock,
+                           paper_ids=self._paper_ids if paper_ids is None else paper_ids)
 
     async def retrieve_passages(self, raw_args: Mapping[str, Any]) -> ToolCall:
         started = self._clock()
@@ -137,7 +147,7 @@ class ToolGateway:
         if args.retrieval_setting not in self._retrievers:
             return f"unknown retrieval_setting {args.retrieval_setting!r}"
         if args.paper_filter is not None:
-            unknown = sorted(set(args.paper_filter) - _PAPER_IDS)
+            unknown = sorted(set(args.paper_filter) - self._paper_ids)
             if not args.paper_filter or unknown:
                 return f"invalid paper_filter {list(args.paper_filter)}"
         return None

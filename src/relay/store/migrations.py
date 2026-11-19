@@ -45,6 +45,12 @@ class MigrationResult:
 
 MIGRATIONS: Final[tuple[Migration, ...]] = (
     Migration(1, "initial schema", SCHEMA_FILE.read_text(encoding="utf-8")),
+    # V2-03 (owner, 2026-11-18): correlate log rows with requests; per-collection rerank.
+    Migration(2, "request_id and rerank", (
+        "ALTER TABLE request_log ADD COLUMN request_id TEXT;\n"
+        "ALTER TABLE collection ADD COLUMN rerank INT DEFAULT 0;\n"
+        "CREATE INDEX idx_request_log_request_id ON request_log(request_id);\n"
+        "CREATE INDEX idx_document_sha256 ON document(collection_id, sha256);")),
 )
 LATEST_VERSION: Final = MIGRATIONS[-1].version
 

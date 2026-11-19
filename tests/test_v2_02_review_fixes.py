@@ -63,7 +63,8 @@ async def test_request_log_counters_are_reported_by_healthz(tmp_path: Path) -> N
         lanes=(LaneSettings(name="s", kind="standin", model=MODEL, embedded=True,
                             profile=path),),
         retrieval={"settings": ("small_fast",)}, cache={"mode": "sqlite"},  # type: ignore[arg-type]
-        paths={"store_path": ":memory:"})  # type: ignore[arg-type]
+        paths={"store_path": ":memory:", "uploads_dir": tmp_path / "uploads",  # type: ignore[arg-type]
+               "collections_dir": tmp_path / "collections"})
     async with compose.open_runtime(settings, Settings(_env_file=None),  # type: ignore[call-arg]
                                     retrievers={"small_fast": StubRetriever(PASSAGES)}) as rt:
         transport = httpx.ASGITransport(app=rt.app)

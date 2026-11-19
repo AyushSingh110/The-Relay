@@ -27,6 +27,9 @@ data/models/
 data/*.sqlite3
 data/*.sqlite3-wal
 data/*.sqlite3-shm
+# v2 uploaded PDFs (content-addressed by SHA-256; user data, not evidence)
+data/uploads/
+data/collections/
 uv.lock
 # NOTE: `results.csv` and everything under `evidence/` are submission evidence
 # and are intentionally TRACKED. Do not add ignore rules for them.

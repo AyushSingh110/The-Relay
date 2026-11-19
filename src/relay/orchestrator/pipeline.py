@@ -12,7 +12,7 @@ from pydantic import BaseModel, ConfigDict, Field, model_validator
 from relay.errors import ContractViolationError, sanitize_error
 from relay.orchestrator.evidence_gate import GateDecision, decide, merge_expansion
 from relay.orchestrator.prompt import PROMPT_VERSION, build_request
-from relay.orchestrator.tools import ToolCallRecord, ToolError, ToolGateway
+from relay.orchestrator.tools import PassageRetriever, ToolCallRecord, ToolError, ToolGateway
 from relay.orchestrator.verifier import CitedPassage, VerificationResult, verify
 from relay.providers.base import (
     ChatProvider,
@@ -27,7 +27,7 @@ from relay.providers.base import (
 from relay.providers.errors import ProviderError
 from relay.providers.probing import CONSERVATIVE_CHARS_PER_TOKEN, status_for_error_code
 from relay.retrieval.hybrid_index import RetrievedPassage
-from relay.retrieval.scope import ScopeDecision, analyze_scope
+from relay.retrieval.scope import ScopeCues, ScopeDecision, analyze_scope
 from relay.schemas import ErrorCode, Status, UsageSource, VerificationVerdict
 from relay.telemetry.spans import ServerSpanTracker
 
@@ -65,6 +65,8 @@ class PipelineRequest(BaseModel):
     request_id: Annotated[str, Field(min_length=1, max_length=128)]
     question: Annotated[str, Field(min_length=1, max_length=MAX_QUESTION_CHARS)]
     retrieval_setting: Annotated[str, Field(pattern=r"^[a-z0-9_]+$")]
+    # V2-03: answer from this collection; None = the v1 three-paper path (unchanged).
+    collection_id: Annotated[str, Field(min_length=1, max_length=64)] | None = None
 
     @model_validator(mode="after")
     def _not_blank(self) -> PipelineRequest:
@@ -304,6 +306,40 @@ class _Run:
         )
 
 
+# --- Collections (V2-03) ---------------------------------------------------------------
+
+
+@dataclass(frozen=True)
+class CollectionResources:
+    """Everything the pipeline needs to answer from one collection."""
+
+    collection_id: str
+    version: int
+    setting_name: str
+    retriever: PassageRetriever
+    top_k: int
+    vocabulary: frozenset[str] | None
+    cues: ScopeCues
+    paper_ids: frozenset[str] = frozenset()  # the documents in the collection's index
+
+
+class CollectionResolver(Protocol):
+    """Resolves a collection id (``relay.app.collections.StoreCollectionResolver``); raises
+    ``CollectionNotFoundError`` / ``CollectionNotReadyError``."""
+
+    async def resolve(self, collection_id: str) -> CollectionResources: ...
+
+
+@dataclass(frozen=True)
+class _Corpus:
+    """What one request answers from: the v1 corpus or a collection."""
+
+    gateway: ToolGateway
+    top_k: Mapping[str, int]
+    vocabulary: frozenset[str] | None
+    cues: ScopeCues | None
+
+
 # --- Pipeline -------------------------------------------------------------------------
 
 
@@ -311,7 +347,8 @@ class Pipeline:
     def __init__(self, *, gateway: ToolGateway, generator: AnswerGenerator,
                  config: PipelineConfig, top_k: Mapping[str, int],
                  vocabulary: frozenset[str] | None = None,
-                 budget: PromptBudget | None = None) -> None:
+                 budget: PromptBudget | None = None,
+                 collections: CollectionResolver | None = None) -> None:
         missing = gateway.settings - set(top_k)
         if missing:
             raise ValueError(f"top_k missing for retrieval settings: {sorted(missing)}")
@@ -321,6 +358,19 @@ class Pipeline:
         self._top_k = dict(top_k)
         self._vocabulary = vocabulary
         self._budget = budget
+        self._collections = collections
+
+    async def _corpus(self, request: PipelineRequest) -> tuple[PipelineRequest, _Corpus]:
+        """The v1 corpus, or the request's collection (its retriever, cues, vocabulary)."""
+        if request.collection_id is None:
+            return request, _Corpus(self._gateway, self._top_k, self._vocabulary, None)
+        if self._collections is None:
+            raise ContractViolationError("this pipeline has no collection resolver")
+        res = await self._collections.resolve(request.collection_id)
+        corpus = _Corpus(self._gateway.with_retrievers({res.setting_name: res.retriever},
+                                                       paper_ids=res.paper_ids),
+                         {res.setting_name: res.top_k}, res.vocabulary, res.cues)
+        return request.model_copy(update={"retrieval_setting": res.setting_name}), corpus
 
     def _build_chat(self, question: str, passages: tuple[RetrievedPassage, ...]) -> ChatRequest:
         return build_request(
@@ -344,17 +394,19 @@ class Pipeline:
 
     async def run(self, request: PipelineRequest, spans: ServerSpanTracker, *,
                   deadline_ns: int | None = None) -> PipelineOutcome:
-        if request.retrieval_setting not in self._gateway.settings:
+        request, corpus = await self._corpus(request)
+        if request.retrieval_setting not in corpus.gateway.settings:
             raise ContractViolationError(
                 f"unknown retrieval_setting {request.retrieval_setting!r}"
             )
         spans.switch("working")
         # Step 1: deterministic scope analysis.
-        run = _Run(request, analyze_scope(request.question, self._vocabulary))
+        run = _Run(request, analyze_scope(request.question, corpus.vocabulary,
+                                          cues=corpus.cues))
 
         # Step 2: the tool call.
         try:
-            call = await self._gateway.retrieve_passages({
+            call = await corpus.gateway.retrieve_passages({
                 "query": request.question,
                 "retrieval_setting": request.retrieval_setting,
                 "include_references": run.scope.asks_references,
@@ -369,7 +421,7 @@ class Pipeline:
         decision = decide(run.scope, passages, loop_count=0)
         run.decisions.append(decision)
         if decision.action == "LOOP_EXPAND":
-            passages = await self._expand(run, decision, passages)
+            passages = await self._expand(run, decision, passages, corpus)
             decision = decide(run.scope, passages, loop_count=1)
             run.decisions.append(decision)
         if decision.action == "EARLY_REFUSAL":
@@ -416,10 +468,11 @@ class Pipeline:
                            passages=passages, spend=spend, trace=audit, degraded=degraded)
 
     async def _expand(self, run: _Run, decision: GateDecision,
-                      passages: tuple[RetrievedPassage, ...]) -> tuple[RetrievedPassage, ...]:
+                      passages: tuple[RetrievedPassage, ...],
+                      corpus: _Corpus) -> tuple[RetrievedPassage, ...]:
         """The single paper-scoped re-query. If it fails, keep the first result."""
         try:
-            call = await self._gateway.retrieve_passages({
+            call = await corpus.gateway.retrieve_passages({
                 "query": decision.requery or run.request.question,
                 "retrieval_setting": run.request.retrieval_setting,
                 "paper_filter": decision.paper_filter,
@@ -430,7 +483,7 @@ class Pipeline:
             return passages
         run.tool_calls.append(call.record)
         return merge_expansion(passages, call.result.passages,
-                               self._top_k[run.request.retrieval_setting])
+                               corpus.top_k[run.request.retrieval_setting])
 
 
 __all__ = [
@@ -439,6 +492,8 @@ __all__ = [
     "SAFE_REFUSAL_MESSAGE",
     "VERSION_MESSAGE",
     "AnswerGenerator",
+    "CollectionResolver",
+    "CollectionResources",
     "GenerationResult",
     "Pipeline",
     "PipelineConfig",

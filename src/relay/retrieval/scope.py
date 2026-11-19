@@ -53,6 +53,26 @@ _QUESTION_WORDS: Final = frozenset(
 )
 
 
+class ScopeCues(BaseModel):
+    """Paper-identifying patterns for one corpus.
+
+    ``strong`` and ``weak`` map a paper id to regex patterns (matched on the casefolded
+    question); ``pinned_versions`` maps a bare arXiv id to the version held. v1 uses the
+    three-paper constants below (``V1_CUES``); a v2 collection derives its own from the
+    documents in the store (``relay.ingestion.registry``).
+    """
+
+    model_config = ConfigDict(frozen=True, strict=True, extra="forbid")
+
+    strong: dict[str, tuple[str, ...]]
+    weak: dict[str, tuple[str, ...]]
+    pinned_versions: dict[str, int]
+
+
+V1_CUES: Final = ScopeCues(strong=dict(STRONG_CUES), weak=dict(WEAK_CUES),
+                           pinned_versions=dict(_PINNED_VERSION))
+
+
 class ScopeDecision(BaseModel):
     model_config = ConfigDict(frozen=True, strict=True, extra="forbid")
 
@@ -79,17 +99,19 @@ def _matches(text: str, patterns: Iterable[str]) -> list[str]:
     return [p for p in patterns if re.search(rf"(?<![a-z0-9]){p}(?![a-z0-9])", text)]
 
 
-def analyze_scope(question: str, vocabulary: frozenset[str] | None = None) -> ScopeDecision:
+def analyze_scope(question: str, vocabulary: frozenset[str] | None = None, *,
+                  cues: ScopeCues | None = None) -> ScopeDecision:
+    corpus = V1_CUES if cues is None else cues
     text = _normalise(question)
     reasons: list[str] = []
     strong: list[str] = []
     weak: list[str] = []
-    for paper_id, patterns in STRONG_CUES.items():
+    for paper_id, patterns in corpus.strong.items():
         hits = _matches(text, patterns)
         if hits:
             strong.append(paper_id)
             reasons.append(f"strong cue for {paper_id}: {hits}")
-    for paper_id, patterns in WEAK_CUES.items():
+    for paper_id, patterns in corpus.weak.items():
         hits = _matches(text, patterns)
         if hits and paper_id not in strong:
             weak.append(paper_id)
@@ -106,7 +128,7 @@ def analyze_scope(question: str, vocabulary: frozenset[str] | None = None) -> Sc
     mismatch = False
     for arxiv_id, version in _ARXIV.findall(text):
         mentions.append(f"{arxiv_id}v{version}" if version else arxiv_id)
-        pinned = _PINNED_VERSION.get(arxiv_id)
+        pinned = corpus.pinned_versions.get(arxiv_id)
         if version and pinned is not None and int(version) != pinned:
             mismatch = True
             reasons.append(f"asks about {arxiv_id}v{version}; corpus holds v{pinned} only")
@@ -151,4 +173,5 @@ def analyze_scope(question: str, vocabulary: frozenset[str] | None = None) -> Sc
     )
 
 
-__all__ = ["STRONG_CUES", "WEAK_CUES", "ScopeDecision", "analyze_scope"]
+__all__ = ["STRONG_CUES", "V1_CUES", "WEAK_CUES", "ScopeCues", "ScopeDecision",
+           "analyze_scope"]

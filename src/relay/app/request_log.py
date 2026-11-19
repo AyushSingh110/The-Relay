@@ -50,6 +50,8 @@ def log_fields(record: Mapping[str, Any]) -> dict[str, Any]:
         raise TypeError("trace record 'final' is not a mapping")
     cache_status = final.get("cache_status")
     return {
+        "request_id": record.get("request_id"),
+        "collection_id": record.get("collection_id"),
         "status": final.get("status"),
         "question_hash": record.get("question_sha256"),
         "ttft_ms": final.get("provider_first_token_ms"),

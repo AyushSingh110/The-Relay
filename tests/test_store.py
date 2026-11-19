@@ -25,7 +25,7 @@ async def store() -> AsyncGenerator[Store]:
 
 async def test_open_store_migrates_and_exposes_every_repository(store: Store) -> None:
     assert store.schema_version == LATEST_VERSION
-    assert store.migration.applied == (1,)
+    assert store.migration.applied == tuple(range(1, LATEST_VERSION + 1))
     assert store.journal_mode == "memory"  # WAL does not apply to :memory:
     tenant = await store.tenants.create("acme")
     collection = await store.collections.create(tenant.id, "papers")

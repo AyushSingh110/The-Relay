@@ -56,9 +56,19 @@ papers_dir = "data/papers"
 index_dir = "data/indexes"
 models_dir = "data/models"
 store_path = "data/relay.sqlite3" # used from V2-02
+uploads_dir = "data/uploads"      # uploaded PDFs, named by SHA-256 (V2-03)
+collections_dir = "data/collections" # per-collection indexes (V2-03)
 
 [cache]
-mode = "memory"                  # "off", "memory"; "sqlite" arrives in V2-02
+mode = "memory"                  # "off", "memory", or "sqlite" (store + collections, V2-03)
+
+# Collections and ingestion (V2-03); active only with cache.mode = "sqlite".
+[ingestion]
+max_upload_mb = 50.0
+max_pages = 500
+poll_interval_s = 2.0            # how often the ingest worker looks for queued documents
+max_attempts = 3                 # a failing document is tried at most this many times
+max_loaded_collections = 8       # collection indexes kept in memory (least recently used out)
 
 [retrieval]
 settings = ["small_fast", "balanced_rerank", "large_wide"]

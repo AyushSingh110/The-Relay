@@ -30,9 +30,11 @@ from relay.control.cache import (
 )
 from relay.control.provider_guard import GuardedGenerator, ProviderGuard, Sleep
 from relay.control.retry import RetryPolicy
-from relay.errors import RunStoreError, sanitize_error
+from relay.errors import ContractViolationError, RunStoreError, sanitize_error
+from relay.ingestion.registry import CollectionNotFoundError
 from relay.orchestrator.pipeline import (
     MAX_QUESTION_CHARS,
+    CollectionResolver,
     Pipeline,
     PipelineConfig,
     PipelineOutcome,
@@ -52,6 +54,7 @@ from relay.providers.base import (
 )
 from relay.providers.probing import CONSERVATIVE_CHARS_PER_TOKEN, status_for_error_code
 from relay.retrieval.hybrid_index import RetrievedPassage
+from relay.retrieval.registry import CollectionNotReadyError
 from relay.schemas import (
     CacheStatus,
     ErrorCode,
@@ -106,9 +109,19 @@ class AskRequest(BaseModel):
 
     request_id: Annotated[str, Field(min_length=1, max_length=128)]
     question: Annotated[str, Field(min_length=1, max_length=MAX_QUESTION_CHARS)]
-    retrieval_setting: Annotated[str, Field(pattern=r"^[a-z0-9_]+$", max_length=64)]
+    # Required on the v1 path; with a collection_id the collection's preset decides it.
+    retrieval_setting: Annotated[str, Field(pattern=r"^[a-z0-9_]+$", max_length=64)] | None = None
     # Milliseconds the server may spend, counted from the request's arrival.
     deadline_ms: Annotated[int, Field(gt=0)] | None = None
+    # V2-03: answer from this collection; None = the v1 three-paper path (unchanged).
+    collection_id: Annotated[str, Field(min_length=1, max_length=64)] | None = None
+
+
+def _setting(ask: AskRequest) -> str:
+    """The resolved retrieval setting (``RelayService`` resolves it before any work)."""
+    if ask.retrieval_setting is None:
+        raise ContractViolationError(f"request {ask.request_id}: retrieval_setting unresolved")
+    return ask.retrieval_setting
 
 
 class PassagePointer(BaseModel):
@@ -282,7 +295,7 @@ def _failure_reply(ask: AskRequest, error_code: ErrorCode, spans: SpanSummary, *
                    cache_status: CacheStatus, depth: int | None = None) -> AskReply:
     """A request that produced nothing and, as far as this reply knows, cost nothing."""
     return AskReply(
-        request_id=ask.request_id, retrieval_setting=ask.retrieval_setting,
+        request_id=ask.request_id, retrieval_setting=_setting(ask),
         status=status_for_error_code(error_code), error_code=error_code,
         cache_status=cache_status, verification_verdict="NOT_RUN", delivered_text=None,
         refused=False, citations=(),
@@ -321,6 +334,31 @@ class TraceSink(Protocol):
     def append_trace(self, record: Mapping[str, Any]) -> None: ...
 
 
+class CollectionDirectory(Protocol):
+    """What the service needs to know about a collection before any work starts
+    (``relay.app.collections.StoreCollectionResolver``)."""
+
+    async def describe(self, collection_id: str) -> tuple[int, str]:
+        """(version, retrieval setting name); raises ``CollectionNotFoundError`` or
+        ``CollectionNotReadyError``."""
+        ...
+
+
+class Collections(CollectionResolver, CollectionDirectory, Protocol):
+    """Both views of the collections: the pipeline's and the service's."""
+
+
+@dataclass(frozen=True)
+class AskTarget:
+    """A request with its retrieval setting resolved, and the key its answers are cached
+    and coalesced under: the setting on the v1 path; the setting, collection and
+    collection version for a collection (a new document bumps the version, so an answer
+    from an older version is never served, and two collections never share answers)."""
+
+    ask: AskRequest
+    cache_setting: str
+
+
 class RelayService:
     """Cache -> SingleFlight -> admission -> pipeline, plus traces. One event loop."""
 
@@ -328,8 +366,10 @@ class RelayService:
                  retrieval_settings: frozenset[str], cache: ExactCache | None,
                  model_id: str, guard: ProviderGuard | None = None,
                  run: TraceSink | None = None,
-                 clock: MonotonicClock = time.perf_counter_ns) -> None:
+                 clock: MonotonicClock = time.perf_counter_ns,
+                 collections: CollectionDirectory | None = None) -> None:
         self.pipeline = pipeline
+        self.collections = collections
         self.queue = queue
         self.retrieval_settings = retrieval_settings
         self.cache = cache
@@ -372,6 +412,7 @@ class RelayService:
                        source_request_id: str | None = None) -> None:
         self._trace({
             "record": "request", "request_id": ask.request_id, "role": role,
+            "collection_id": ask.collection_id,
             "flight_id": flight_id, "source_request_id": source_request_id,
             "question_sha256": question_hash(ask.question), "deadline_ms": ask.deadline_ms,
             "abandoned": abandoned, "final": dict(final),
@@ -383,7 +424,8 @@ class RelayService:
         record: dict[str, Any] = {
             "record": "flight", "flight_id": flight_id, "leader_request_id": ask.request_id,
             "question": ask.question, "question_sha256": question_hash(ask.question),
-            "retrieval_setting": ask.retrieval_setting, "cache_mode": self.cache_mode,
+            "retrieval_setting": _setting(ask), "collection_id": ask.collection_id,
+            "cache_mode": self.cache_mode,
             "end": end, "cached": cached, "error": error, "final": dict(final),
         }
         if outcome is not None:
@@ -400,14 +442,17 @@ class RelayService:
 
     # --- leader work ---
 
-    async def _lead(self, ask: AskRequest, spans: ServerSpanTracker, deadline_ns: int | None,
-                    flight: Flight[_Led], cache_status: CacheStatus) -> _Led:
+    async def _lead(self, target: AskTarget, spans: ServerSpanTracker,
+                    deadline_ns: int | None, flight: Flight[_Led],
+                    cache_status: CacheStatus) -> _Led:
         """Admission and pipeline for one flight. Runs detached from any single client."""
+        ask = target.ask
         flight_id = f"f{next(self._flight_ids):06d}"
         ledger = _CallLedger()
         _LEDGER.set(ledger)
         request = PipelineRequest(request_id=ask.request_id, question=ask.question,
-                                  retrieval_setting=ask.retrieval_setting)
+                                  retrieval_setting=_setting(ask),
+                                  collection_id=ask.collection_id)
         depth: int | None = None
         try:
             async with self.queue.admit(deadline_ns=deadline_ns,
@@ -423,7 +468,7 @@ class RelayService:
             # No waiter is left. Calls already sent may have spent tokens; report them.
             called = ledger.calls > 0
             self._trace_flight(flight_id, ask, end="cancelled", final={
-                "request_id": ask.request_id, "retrieval_setting": ask.retrieval_setting,
+                "request_id": ask.request_id, "retrieval_setting": _setting(ask),
                 "status": "timeout", "error_code": "client_gave_up",
                 "cache_status": cache_status, "verification_verdict": "NOT_RUN",
                 "provider_called": called, "degraded": False,
@@ -457,7 +502,7 @@ class RelayService:
         cached = False
         if self.cache is not None and outcome.delivered_text is not None:
             cached = self.cache.put(
-                ask.question, ask.retrieval_setting,
+                ask.question, target.cache_setting,
                 CachedAnswer(delivered_text=outcome.delivered_text, refused=outcome.refused,
                              citations=outcome.citations,
                              verification_verdict=outcome.verification_verdict,
@@ -474,7 +519,7 @@ class RelayService:
                    hit: CachedAnswer) -> AskReply:
         spans.switch("working")
         reply = AskReply(
-            request_id=ask.request_id, retrieval_setting=ask.retrieval_setting, status="ok",
+            request_id=ask.request_id, retrieval_setting=_setting(ask), status="ok",
             error_code=None, cache_status="exact_hit",
             verification_verdict=hit.verification_verdict, delivered_text=hit.delivered_text,
             refused=hit.refused, citations=hit.citations, message=None, pointers=(),
@@ -486,9 +531,23 @@ class RelayService:
                             source_request_id=hit.source_request_id)
         return reply
 
-    async def ask(self, ask: AskRequest, spans: ServerSpanTracker,
-                  arrived_ns: int) -> AskReply:
-        """Serve one request."""
+    async def target(self, ask: AskRequest) -> AskTarget:
+        """Resolve the request's collection, or keep its v1 setting. Raises
+        ``CollectionNotFoundError`` / ``CollectionNotReadyError`` before any work."""
+        if ask.collection_id is None:
+            return AskTarget(ask, _setting(ask))
+        if self.collections is None:
+            raise ContractViolationError("this service has no collections (it needs the "
+                                         "metadata store, cache.mode = sqlite)")
+        version, setting = await self.collections.describe(ask.collection_id)
+        resolved = ask.model_copy(update={"retrieval_setting": setting})
+        return AskTarget(resolved, f"{setting}@{ask.collection_id}:v{version}")
+
+    async def ask(self, ask: AskRequest, spans: ServerSpanTracker, arrived_ns: int, *,
+                  target: AskTarget | None = None) -> AskReply:
+        """Serve one request (``target`` = the already resolved ``self.target(ask)``)."""
+        target = target if target is not None else await self.target(ask)
+        ask = target.ask
         deadline_ns = (None if ask.deadline_ms is None
                        else arrived_ns + ask.deadline_ms * _NS_PER_MS)
         key: Hashable
@@ -496,11 +555,11 @@ class RelayService:
             led_status: CacheStatus = "off"
             key = ("off", ask.request_id, id(spans))  # unique: nothing is ever coalesced
         else:
-            hit = self.cache.get(ask.question, ask.retrieval_setting)
+            hit = self.cache.get(ask.question, target.cache_setting)
             if hit is not None:
                 return self._serve_hit(ask, spans, hit)
             led_status = "miss"
-            key = (normalise_question(ask.question), ask.retrieval_setting)
+            key = (normalise_question(ask.question), target.cache_setting)
 
         leading = not self.flights.in_flight(key)
         my_status: CacheStatus = led_status if leading else "coalesced"
@@ -509,7 +568,7 @@ class RelayService:
                   else (deadline_ns - self.clock()) / _NS_PER_S)
         try:
             result = await self.flights.do(
-                key, lambda flight: self._lead(ask, spans, deadline_ns, flight, led_status),
+                key, lambda flight: self._lead(target, spans, deadline_ns, flight, led_status),
                 follower_timeout_s=wait_s,
             )
         except TimeoutError:
@@ -522,7 +581,7 @@ class RelayService:
             # A leader's tracker belongs to its flight, which may still be running.
             summary = spans.snapshot() if leading else spans.finish()
             final: dict[str, Any] = {
-                "request_id": ask.request_id, "retrieval_setting": ask.retrieval_setting,
+                "request_id": ask.request_id, "retrieval_setting": _setting(ask),
                 "status": "timeout", "error_code": "client_gave_up",
                 "cache_status": my_status, "verification_verdict": "NOT_RUN",
                 **summary.model_dump(),
@@ -575,7 +634,8 @@ def _invalid(details: list[dict[str, Any]]) -> JSONResponse:
     return JSONResponse({"error": "invalid_request", "details": details}, status_code=422)
 
 
-def _parse(raw: bytes, settings: frozenset[str]) -> AskRequest | JSONResponse:
+def _parse(raw: bytes, settings: frozenset[str], *,
+           collections: bool = False) -> AskRequest | JSONResponse:
     try:
         ask = AskRequest.model_validate_json(raw)
     except ValidationError as exc:
@@ -584,6 +644,14 @@ def _parse(raw: bytes, settings: frozenset[str]) -> AskRequest | JSONResponse:
                          for err in exc.errors()])
     if not ask.question.strip():
         return _invalid([{"loc": ["question"], "type": "blank"}])
+    if ask.collection_id is not None:
+        if ask.retrieval_setting is not None:  # the collection's preset decides it
+            return _invalid([{"loc": ["retrieval_setting"], "type": "set_by_collection"}])
+        if not collections:
+            return _invalid([{"loc": ["collection_id"], "type": "collections_disabled"}])
+        return ask
+    if ask.retrieval_setting is None:
+        return _invalid([{"loc": ["retrieval_setting"], "type": "missing"}])
     if ask.retrieval_setting not in settings:
         return _invalid([{"loc": ["retrieval_setting"], "type": "unknown_setting",
                           "allowed": sorted(settings)}])
@@ -602,10 +670,20 @@ def build_app(service: RelayService) -> FastAPI:
     async def ask(request: Request) -> Response:
         arrived_ns = service.clock()
         spans = ServerSpanTracker(service.clock)
-        parsed = _parse(await request.body(), service.retrieval_settings)
+        parsed = _parse(await request.body(), service.retrieval_settings,
+                        collections=service.collections is not None)
         if isinstance(parsed, JSONResponse):
             return parsed
-        serve = asyncio.create_task(service.ask(parsed, spans, arrived_ns))
+        try:
+            target = await service.target(parsed)
+        except CollectionNotFoundError:
+            return JSONResponse({"error": "collection_not_found",
+                                 "message": "no such collection"}, status_code=404)
+        except CollectionNotReadyError:
+            return JSONResponse({"error": "collection_not_ready",
+                                 "message": "the collection has no indexed documents yet"},
+                                status_code=409)
+        serve = asyncio.create_task(service.ask(parsed, spans, arrived_ns, target=target))
         gone = asyncio.create_task(_client_disconnected(request))
         try:
             await asyncio.wait({serve, gone}, return_when=asyncio.FIRST_COMPLETED)
@@ -631,13 +709,15 @@ def create_app(*, provider: ChatProvider, retrievers: Mapping[str, PassageRetrie
                cache_mode: CacheMode = "exact", retry: RetryPolicy | None = None,
                vocabulary: frozenset[str] | None = None, run: TraceSink | None = None,
                tool_timeout_s: float = DEFAULT_TOOL_TIMEOUT_S, sleep: Sleep = asyncio.sleep,
-               clock: MonotonicClock = time.perf_counter_ns) -> FastAPI:
+               clock: MonotonicClock = time.perf_counter_ns,
+               collections: Collections | None = None) -> FastAPI:
     """Wire pipeline + ProviderGuard + admission + exact cache + SingleFlight into an app."""
     gateway = ToolGateway(retrievers, timeout_s=tool_timeout_s, clock=clock)
     generator = GuardedGenerator(MeteredProvider(provider), guard, retry, sleep=sleep,
                                  clock=clock)
     pipeline = Pipeline(gateway=gateway, generator=generator, config=pipeline_config,
-                        top_k=top_k, vocabulary=vocabulary, budget=guard)
+                        top_k=top_k, vocabulary=vocabulary, budget=guard,
+                        collections=collections)
     cache = None
     if cache_mode == "exact":
         cache = ExactCache(CacheScope(corpus_sha256=corpus_sha256,
@@ -646,13 +726,16 @@ def create_app(*, provider: ChatProvider, retrievers: Mapping[str, PassageRetrie
     service = RelayService(pipeline=pipeline, queue=queue,
                            retrieval_settings=gateway.settings, cache=cache,
                            model_id=pipeline_config.model_id, guard=guard, run=run,
-                           clock=clock)
+                           clock=clock, collections=collections)
     return build_app(service)
 
 
 __all__ = [
     "AskReply",
     "AskRequest",
+    "AskTarget",
+    "CollectionDirectory",
+    "Collections",
     "MeteredProvider",
     "PassagePointer",
     "RelayService",
