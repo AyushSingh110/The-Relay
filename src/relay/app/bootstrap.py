@@ -23,6 +23,7 @@ from typing import Final
 from relay.errors import ConfigurationError
 from relay.ingestion.arxiv_fetcher import load_corpus_manifest
 from relay.ingestion.registry import arxiv_source
+from relay.ingestion.v1_corpus import v1_document_cues
 from relay.retrieval.hybrid_index import INDEX_MANIFEST
 from relay.retrieval.registry import INDEX_REF_FILE
 from relay.store import Store
@@ -81,11 +82,17 @@ async def register_v1_papers(store: Store, *, papers_dir: Path, index_dir: Path,
             DEV_TENANT_ID, V1_COLLECTION_NAME, retrieval_preset=V1_PRESET,
             collection_id=V1_COLLECTION_ID)
     for paper in papers:
-        if await store.documents.find_by_sha256(collection.id, paper.sha256) is not None:
+        curated = v1_document_cues(paper.paper_id)
+        cues = None if curated is None else curated.model_dump_json()
+        existing = await store.documents.find_by_sha256(collection.id, paper.sha256)
+        if existing is not None:
+            if cues is not None and existing.cues != cues:  # older store, or older cues
+                await store.documents.set_cues(existing.id, cues)
             continue
         document = await store.documents.create(
             collection.id, source=arxiv_source(paper.arxiv_id, paper.version),
-            sha256=paper.sha256, title=paper.title, pages=paper.page_count, status="ready")
+            sha256=paper.sha256, title=paper.title, pages=paper.page_count, status="ready",
+            cues=cues)
         await store.ingest_jobs.create(document.id, state="ready")
     _write_reference(collections_dir, _index_reference(index_dir, collections_dir))
     if collection.version == 0:

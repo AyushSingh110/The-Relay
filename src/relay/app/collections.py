@@ -23,10 +23,11 @@ from typing import Generic, TypeVar
 import numpy as np
 
 from relay.ingestion.registry import CollectionNotFoundError, DocumentRegistry
-from relay.orchestrator.pipeline import CollectionResources
+from relay.orchestrator.pipeline import CollectionResources, CorpusSafety
+from relay.orchestrator.prompt import prompt_version
+from relay.retrieval.cues import CueSet
 from relay.retrieval.embedder import EMBEDDING_MODEL, RERANK_MODEL, Embedder, Reranker
 from relay.retrieval.registry import CollectionNotReadyError, IndexRegistry
-from relay.retrieval.scope import ScopeCues
 from relay.store import Store
 
 T = TypeVar("T")
@@ -91,7 +92,8 @@ class StoreCollectionResolver:
         self._store = store
         self._indexes = indexes
         self._documents = DocumentRegistry(store.documents, store.collections)
-        self._cues: dict[str, tuple[int, ScopeCues]] = {}
+        # collection id -> (version, tenant fingerprint, its corpus safety)
+        self._safety: dict[str, tuple[int, str, CorpusSafety]] = {}
 
     @property
     def documents(self) -> DocumentRegistry:
@@ -103,27 +105,42 @@ class StoreCollectionResolver:
             raise CollectionNotFoundError(f"collection {collection_id!r} does not exist")
         return collection.version
 
-    async def describe(self, collection_id: str) -> tuple[int, str]:
-        """(version, retrieval setting name); version 0 means nothing is indexed yet."""
+    async def _corpus_safety(self, collection_id: str, version: int) -> tuple[str, CorpusSafety]:
+        """The collection's scope/gate/verifier/messages, rebuilt only when the collection
+        or another collection of its tenant (whose names are foreign here) has changed."""
+        fingerprint = await self._documents.tenant_fingerprint(collection_id)
+        cached = self._safety.get(collection_id)
+        if cached is not None and cached[:2] == (version, fingerprint):
+            return fingerprint, cached[2]
+        cues: CueSet = await self._documents.get_cues(collection_id)
+        foreign = await self._documents.foreign_cues(collection_id)
+        safety = CorpusSafety.for_cues(cues, foreign=foreign)
+        self._safety[collection_id] = (version, fingerprint, safety)
+        return fingerprint, safety
+
+    async def describe(self, collection_id: str) -> tuple[int, str, str]:
+        """(version, retrieval setting name, cache tag). The tag holds the prompt version
+        and the tenant fingerprint: a cached answer is reused only while the corpus, its
+        prompt and the foreign names it was verified against are all unchanged."""
         version = await self.version(collection_id)
         if version == 0:
             raise CollectionNotReadyError(f"collection {collection_id!r} has no indexed "
                                           "documents yet")
         await asyncio.to_thread(self._indexes.index_dir, collection_id)  # files present?
-        return version, (await self._documents.retrieval_setting(collection_id)).name
+        fingerprint, safety = await self._corpus_safety(collection_id, version)
+        setting = (await self._documents.retrieval_setting(collection_id)).name
+        return version, setting, f"{prompt_version(safety.cues)}:{fingerprint}"
 
     async def resolve(self, collection_id: str) -> CollectionResources:
         version = await self.version(collection_id)
         setting = await self._documents.retrieval_setting(collection_id)
         loaded = await self._indexes.aload(collection_id, version, setting)
-        cached = self._cues.get(collection_id)
-        if cached is None or cached[0] != version:
-            cached = (version, await self._documents.get_cues(collection_id))
-            self._cues[collection_id] = cached
+        _, safety = await self._corpus_safety(collection_id, version)
         return CollectionResources(collection_id=collection_id, version=version,
                                    setting_name=setting.name, retriever=loaded.retriever,
                                    top_k=setting.top_k, vocabulary=loaded.vocabulary,
-                                   cues=cached[1], paper_ids=loaded.paper_ids)
+                                   cues=safety.cues, paper_ids=loaded.paper_ids,
+                                   foreign=(), safety=safety)
 
 
 __all__ = ["LazyEmbedder", "LazyReranker", "StoreCollectionResolver"]

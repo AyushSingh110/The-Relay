@@ -1,31 +1,22 @@
-"""Deterministic scope analysis (pipeline step 1, ARCHITECTURE.md section 6)."""
+"""Deterministic scope analysis (pipeline step 1, ARCHITECTURE.md section 6).
+
+``ScopeAnalyser`` works on one corpus's ``CueSet`` (``relay.retrieval.cues``): a collection's
+documents, or the v1 corpus (``relay.ingestion.v1_corpus``), which ``analyze_scope`` uses
+when no cue set is given. No paper is named in this module (V2-04).
+"""
 
 from __future__ import annotations
 
 import re
-import unicodedata
-from collections.abc import Iterable
+from collections.abc import Iterable, Mapping
 from typing import Final
 
 from pydantic import BaseModel, ConfigDict
 
-from relay.ingestion.arxiv_fetcher import PAPERS
+from relay.ingestion.v1_corpus import V1_CUE_SET
+from relay.retrieval.cues import CueSet, bounded, normalise
 from relay.retrieval.hybrid_index import tokenize
 
-ATTENTION, MOSHI, HNET = (p.paper_id for p in PAPERS)
-
-STRONG_CUES: Final[dict[str, tuple[str, ...]]] = {
-    ATTENTION: (r"attention is all you need", r"vaswani", r"1706\.03762"),
-    MOSHI: (r"moshi", r"mimi", r"helium", r"kyutai", r"inner monologue", r"2410\.00037"),
-    HNET: (r"h-?net", r"dynamic chunking", r"2507\.07955", r"hierarchical sequence modell?ing"),
-}
-WEAK_CUES: Final[dict[str, tuple[str, ...]]] = {
-    ATTENTION: (r"transformers?", r"self-attention", r"multi-head attention",
-                r"positional encodings?", r"machine translation", r"wmt", r"bleu"),
-    MOSHI: (r"speech", r"audio", r"dialogues?", r"full-duplex", r"rvq", r"codec", r"voice"),
-    HNET: (r"chunk(?:s|ing)?", r"byte-level", r"tokeni[sz]er-free", r"tokeni[sz]ation",
-           r"routing module", r"dechunk\w*"),
-}
 _COMPARISON = re.compile(
     r"\b(compare[sd]?|comparison|differ(?:s|ence|ences|ent)?|versus|vs\.?|contrast|"
     r"both|similarit(?:y|ies)|in common|relative to)\b"
@@ -38,10 +29,9 @@ _IDENTIFIERS = (
     re.compile(r"\b\w+[_^]\w+\b"),  # d_model, 10^20
     re.compile(r"\b\d+(?:\.\d+)?\s?(?:hz|khz|kbps|bps|ms|s|m|b|k|%)(?![a-z])", re.IGNORECASE),
     re.compile(r"\b[A-Z][A-Z0-9]{1,}(?:-[A-Z0-9]+)*\b"),  # RVQ, BLEU, WMT
-    re.compile(r"\b[A-Za-z]+-[A-Za-z0-9]+(?:-[A-Za-z0-9]+)*\b"),  # H-Net, RQ-Transformer
+    re.compile(r"\b[A-Za-z]+-[A-Za-z0-9]+(?:-[A-Za-z0-9]+)*\b"),  # X-Net, RQ-Transformer
     re.compile(r"\b\d+(?:\.\d+)+\b"),  # 28.4, 0.1
 )
-_PINNED_VERSION: Final = {p.arxiv_id: p.version for p in PAPERS}
 OUT_OF_CORPUS_COVERAGE: Final = 0.5
 # Question phrasing words: excluded from coverage (they say nothing about the topic).
 _QUESTION_WORDS: Final = frozenset(
@@ -51,26 +41,6 @@ _QUESTION_WORDS: Final = frozenset(
         "ways",
     ]
 )
-
-
-class ScopeCues(BaseModel):
-    """Paper-identifying patterns for one corpus.
-
-    ``strong`` and ``weak`` map a paper id to regex patterns (matched on the casefolded
-    question); ``pinned_versions`` maps a bare arXiv id to the version held. v1 uses the
-    three-paper constants below (``V1_CUES``); a v2 collection derives its own from the
-    documents in the store (``relay.ingestion.registry``).
-    """
-
-    model_config = ConfigDict(frozen=True, strict=True, extra="forbid")
-
-    strong: dict[str, tuple[str, ...]]
-    weak: dict[str, tuple[str, ...]]
-    pinned_versions: dict[str, int]
-
-
-V1_CUES: Final = ScopeCues(strong=dict(STRONG_CUES), weak=dict(WEAK_CUES),
-                           pinned_versions=dict(_PINNED_VERSION))
 
 
 class ScopeDecision(BaseModel):
@@ -91,87 +61,109 @@ class ScopeDecision(BaseModel):
     reasons: tuple[str, ...]
 
 
-def _normalise(text: str) -> str:
-    return " ".join(unicodedata.normalize("NFKC", text).casefold().split())
+Compiled = tuple[tuple[str, re.Pattern[str]], ...]
 
 
-def _matches(text: str, patterns: Iterable[str]) -> list[str]:
-    return [p for p in patterns if re.search(rf"(?<![a-z0-9]){p}(?![a-z0-9])", text)]
+def _compile(cues: Mapping[str, tuple[str, ...]]) -> dict[str, Compiled]:
+    return {paper_id: tuple((p, bounded(p)) for p in patterns)
+            for paper_id, patterns in cues.items()}
+
+
+def _matches(text: str, patterns: Iterable[tuple[str, re.Pattern[str]]]) -> list[str]:
+    return [source for source, compiled in patterns if compiled.search(text)]
+
+
+class ScopeAnalyser:
+    """Scope analysis for one corpus. The cue set is read once, at construction."""
+
+    def __init__(self, cue_set: CueSet) -> None:
+        self.cue_set = cue_set
+        self._strong: Mapping[str, Compiled] = _compile(cue_set.strong_cues())
+        self._weak: Mapping[str, Compiled] = _compile(cue_set.weak_cues())
+        self._pinned: Mapping[str, int] = cue_set.pinned_versions()
+
+    def analyze(self, question: str, vocabulary: frozenset[str] | None = None) -> ScopeDecision:
+        text = normalise(question)
+        reasons: list[str] = []
+        strong: list[str] = []
+        weak: list[str] = []
+        for paper_id, patterns in self._strong.items():
+            hits = _matches(text, patterns)
+            if hits:
+                strong.append(paper_id)
+                reasons.append(f"strong cue for {paper_id}: {hits}")
+        for paper_id, patterns in self._weak.items():
+            hits = _matches(text, patterns)
+            if hits and paper_id not in strong:
+                weak.append(paper_id)
+                reasons.append(f"weak (shared-vocabulary) cue for {paper_id}: {hits}")
+
+        comparison = bool(_COMPARISON.search(text)) or len(strong) >= 2
+        if comparison:
+            reasons.append("comparison intent" if _COMPARISON.search(text)
+                           else "several papers named")
+        asks_references = bool(_REFERENCES.search(text))
+        if asks_references:
+            reasons.append("question is about references/citations")
+
+        mentions: list[str] = []
+        mismatch = False
+        for arxiv_id, version in _ARXIV.findall(text):
+            mentions.append(f"{arxiv_id}v{version}" if version else arxiv_id)
+            pinned = self._pinned.get(arxiv_id)
+            if version and pinned is not None and int(version) != pinned:
+                mismatch = True
+                reasons.append(f"asks about {arxiv_id}v{version}; corpus holds v{pinned} only")
+
+        identifiers: list[str] = []
+        for pattern in _IDENTIFIERS:
+            for match in pattern.findall(question):
+                token = match if isinstance(match, str) else match[0]
+                if token not in identifiers:
+                    identifiers.append(token)
+
+        if len(strong) == 1:
+            suggested: tuple[str, ...] | None = (strong[0],)
+        elif len(strong) >= 2:
+            suggested = tuple(sorted(strong))
+        else:
+            suggested = None
+
+        terms = tuple(t for t in dict.fromkeys(tokenize(question)) if t not in _QUESTION_WORDS)
+        coverage: float | None = None
+        if vocabulary is not None and terms:
+            coverage = round(sum(1 for t in terms if t in vocabulary) / len(terms), 4)
+        out_signal = (
+            not strong and not weak and coverage is not None
+            and coverage < OUT_OF_CORPUS_COVERAGE
+        )
+        if out_signal:
+            reasons.append(f"no paper cues and low corpus term coverage ({coverage})")
+        return ScopeDecision(
+            question=question,
+            strong_papers=tuple(sorted(strong)),
+            weak_papers=tuple(sorted(weak)),
+            suggested_paper_filter=suggested,
+            comparison=comparison,
+            asks_references=asks_references,
+            identifiers=tuple(identifiers),
+            version_mentions=tuple(mentions),
+            version_mismatch=mismatch,
+            content_terms=terms,
+            corpus_term_coverage=coverage,
+            out_of_corpus_signal=out_signal,
+            reasons=tuple(reasons),
+        )
+
+
+_V1_ANALYSER: Final = ScopeAnalyser(V1_CUE_SET)
 
 
 def analyze_scope(question: str, vocabulary: frozenset[str] | None = None, *,
-                  cues: ScopeCues | None = None) -> ScopeDecision:
-    corpus = V1_CUES if cues is None else cues
-    text = _normalise(question)
-    reasons: list[str] = []
-    strong: list[str] = []
-    weak: list[str] = []
-    for paper_id, patterns in corpus.strong.items():
-        hits = _matches(text, patterns)
-        if hits:
-            strong.append(paper_id)
-            reasons.append(f"strong cue for {paper_id}: {hits}")
-    for paper_id, patterns in corpus.weak.items():
-        hits = _matches(text, patterns)
-        if hits and paper_id not in strong:
-            weak.append(paper_id)
-            reasons.append(f"weak (shared-vocabulary) cue for {paper_id}: {hits}")
-
-    comparison = bool(_COMPARISON.search(text)) or len(strong) >= 2
-    if comparison:
-        reasons.append("comparison intent" if _COMPARISON.search(text) else "several papers named")
-    asks_references = bool(_REFERENCES.search(text))
-    if asks_references:
-        reasons.append("question is about references/citations")
-
-    mentions: list[str] = []
-    mismatch = False
-    for arxiv_id, version in _ARXIV.findall(text):
-        mentions.append(f"{arxiv_id}v{version}" if version else arxiv_id)
-        pinned = corpus.pinned_versions.get(arxiv_id)
-        if version and pinned is not None and int(version) != pinned:
-            mismatch = True
-            reasons.append(f"asks about {arxiv_id}v{version}; corpus holds v{pinned} only")
-
-    identifiers: list[str] = []
-    for pattern in _IDENTIFIERS:
-        for match in pattern.findall(question):
-            token = match if isinstance(match, str) else match[0]
-            if token not in identifiers:
-                identifiers.append(token)
-
-    if len(strong) == 1:
-        suggested: tuple[str, ...] | None = (strong[0],)
-    elif len(strong) >= 2:
-        suggested = tuple(sorted(strong))
-    else:
-        suggested = None
-
-    terms = tuple(t for t in dict.fromkeys(tokenize(question)) if t not in _QUESTION_WORDS)
-    coverage: float | None = None
-    if vocabulary is not None and terms:
-        coverage = round(sum(1 for t in terms if t in vocabulary) / len(terms), 4)
-    out_signal = (
-        not strong and not weak and coverage is not None and coverage < OUT_OF_CORPUS_COVERAGE
-    )
-    if out_signal:
-        reasons.append(f"no paper cues and low corpus term coverage ({coverage})")
-    return ScopeDecision(
-        question=question,
-        strong_papers=tuple(sorted(strong)),
-        weak_papers=tuple(sorted(weak)),
-        suggested_paper_filter=suggested,
-        comparison=comparison,
-        asks_references=asks_references,
-        identifiers=tuple(identifiers),
-        version_mentions=tuple(mentions),
-        version_mismatch=mismatch,
-        content_terms=terms,
-        corpus_term_coverage=coverage,
-        out_of_corpus_signal=out_signal,
-        reasons=tuple(reasons),
-    )
+                  cues: CueSet | None = None) -> ScopeDecision:
+    """``ScopeAnalyser(cues).analyze``; without ``cues``, the v1 corpus."""
+    analyser = _V1_ANALYSER if cues is None else ScopeAnalyser(cues)
+    return analyser.analyze(question, vocabulary)
 
 
-__all__ = ["STRONG_CUES", "V1_CUES", "WEAK_CUES", "ScopeCues", "ScopeDecision",
-           "analyze_scope"]
+__all__ = ["OUT_OF_CORPUS_COVERAGE", "ScopeAnalyser", "ScopeDecision", "analyze_scope"]

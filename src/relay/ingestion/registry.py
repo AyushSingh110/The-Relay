@@ -3,10 +3,12 @@
 v1 identified its three papers by constants in the code. A v2 collection's identity comes
 from its ``document`` rows: ``DocumentRegistry`` turns them into
 
-- **scope cues** for the scope analyser (``relay.retrieval.scope.ScopeCues``): each ready
-  document contributes its title, the short name before a colon in its title (for example
-  "Moshi"), and its arXiv identifier if it came from arXiv; arXiv sources also pin their
-  version;
+- the collection's **cue set** (``relay.retrieval.cues.CueSet``, V2-04) for the scope
+  analyser, evidence gate, verifier and messages. Each ready document contributes its cues:
+  the curated v1 cues for the three v1 papers (``relay.ingestion.v1_corpus``), otherwise
+  cues derived from its title, the short name before a colon in its title, and its arXiv
+  identifier (``relay.retrieval.cues.derive_document_cues``). A collection holding exactly
+  the three v1 papers gets the v1 cue set itself, so its wording matches v1;
 - the collection's **retrieval setting**: the preset named in ``collection.retrieval_preset``
   with reranking switched on when ``collection.rerank`` is set (migration 002).
 
@@ -19,22 +21,23 @@ Only ``ready`` documents count: a document still being ingested has no passages 
 
 from __future__ import annotations
 
+import hashlib
+import logging
 import re
-import unicodedata
+from collections.abc import Sequence
 from typing import Final
 
+from pydantic import ValidationError
+
 from relay.errors import RelayError
+from relay.ingestion.v1_corpus import V1_CUE_SET, V1_DOCUMENTS, v1_document_cues
+from relay.retrieval.cues import CueSet, DocumentCues, derive_document_cues
 from relay.retrieval.hybrid_index import RETRIEVAL_SETTINGS, RetrievalSetting
-from relay.retrieval.scope import ScopeCues
 from relay.store.repositories import CollectionRepo, Document, DocumentRepo
 
+logger = logging.getLogger(__name__)
+
 ARXIV_SOURCE: Final = re.compile(r"^arxiv:(\d{4}\.\d{4,5})v(\d+)$")
-SHORT_NAME_MAX_WORDS: Final = 4
-# A title is a cue only if it is specific enough not to match ordinary questions: an
-# upload titled "paper" or "a" would otherwise mark every question as about that document.
-TITLE_MIN_WORDS: Final = 2
-TITLE_MIN_CHARS: Final = 8
-SHORT_NAME_MIN_CHARS: Final = 4
 
 
 class CollectionNotFoundError(RelayError):
@@ -59,25 +62,49 @@ def document_paper_id(document: Document) -> str:
     return document.id if arxiv is None else f"{arxiv[0]}v{arxiv[1]}"
 
 
-def _normalise(text: str) -> str:
-    """Same normalisation the scope analyser applies to questions."""
-    return " ".join(unicodedata.normalize("NFKC", text).casefold().split())
+def _stored_cues(document: Document, paper_id: str) -> DocumentCues | None:
+    if document.cues is None:
+        return None
+    try:
+        stored = DocumentCues.model_validate_json(document.cues)
+    except ValidationError:
+        logger.warning("document %s has unreadable cues; deriving them instead", document.id)
+        return None
+    if stored.paper_id != paper_id:
+        logger.warning("document %s has cues for another paper id; deriving them instead",
+                       document.id)
+        return None
+    return stored
+
+
+def cues_for_document(document: Document) -> DocumentCues:
+    """The cues of one document: the stored cues (migration 003) when readable, else the
+    curated cues of a v1 paper, else cues derived from its title and arXiv id."""
+    paper_id = document_paper_id(document)
+    stored = _stored_cues(document, paper_id)
+    if stored is not None:
+        return stored
+    curated = v1_document_cues(paper_id)
+    if curated is not None:
+        return curated
+    arxiv = parse_arxiv_source(document.source)
+    return derive_document_cues(paper_id, title=document.title,
+                                arxiv_id=None if arxiv is None else arxiv[0],
+                                version=None if arxiv is None else arxiv[1])
 
 
 def document_cues(document: Document) -> tuple[str, ...]:
-    """Regex patterns that name this document in a question."""
-    patterns: list[str] = []
-    title = _normalise(document.title or "")
-    if len(title.split()) >= TITLE_MIN_WORDS and len(title) >= TITLE_MIN_CHARS:
-        patterns.append(re.escape(title))
-    head = title.split(":", 1)[0].strip()
-    if (head != title and len(head) >= SHORT_NAME_MIN_CHARS
-            and len(head.split()) <= SHORT_NAME_MAX_WORDS):
-        patterns.append(re.escape(head))
-    arxiv = parse_arxiv_source(document.source)
-    if arxiv is not None:
-        patterns.append(re.escape(arxiv[0]))
-    return tuple(dict.fromkeys(patterns))
+    """The regex patterns that name this document in a question."""
+    return cues_for_document(document).strong
+
+
+def cue_set_for(documents: Sequence[DocumentCues]) -> CueSet:
+    """The cue set of a collection's documents, ordered by paper id. Exactly the three v1
+    papers give the v1 cue set (v1 wording); anything else is worded as "documents"."""
+    ordered = tuple(sorted(documents, key=lambda d: d.paper_id))
+    if ordered == V1_DOCUMENTS:
+        return V1_CUE_SET
+    return CueSet(documents=ordered)
 
 
 class DocumentRegistry:
@@ -91,17 +118,41 @@ class DocumentRegistry:
         documents = await self._documents.list_for_collection(collection_id)
         return [d for d in documents if d.status == "ready"]
 
-    async def get_cues(self, collection_id: str) -> ScopeCues:
-        strong: dict[str, tuple[str, ...]] = {}
-        pinned: dict[str, int] = {}
-        for document in await self._ready_documents(collection_id):
-            patterns = document_cues(document)
-            if patterns:
-                strong[document_paper_id(document)] = patterns
-            arxiv = parse_arxiv_source(document.source)
-            if arxiv is not None:
-                pinned[arxiv[0]] = arxiv[1]
-        return ScopeCues(strong=strong, weak={}, pinned_versions=pinned)
+    async def get_cues(self, collection_id: str) -> CueSet:
+        """The cue set of the collection's ready documents."""
+        documents = await self._ready_documents(collection_id)
+        unique = {cues.paper_id: cues for cues in map(cues_for_document, documents)}
+        return cue_set_for(list(unique.values()))
+
+    async def foreign_cues(self, collection_id: str) -> tuple[DocumentCues, ...]:
+        """Cues of the tenant's ready documents in its OTHER collections, minus documents
+        this collection also holds: the names the verifier blocks here (isolation)."""
+        collection = await self._collections.get_by_id(collection_id)
+        if collection is None:
+            raise CollectionNotFoundError(f"collection {collection_id!r} does not exist")
+        mine = await self._ready_documents(collection_id)
+        own = {document_paper_id(d) for d in mine}
+        same_content = {d.sha256 for d in mine}  # the same PDF uploaded twice
+        foreign: dict[str, DocumentCues] = {}
+        for other in await self._collections.list_for_tenant(collection.tenant_id):
+            if other.id == collection_id:
+                continue
+            for document in await self._ready_documents(other.id):
+                if (document_paper_id(document) not in own
+                        and document.sha256 not in same_content):
+                    cues = cues_for_document(document)
+                    foreign.setdefault(cues.paper_id, cues)
+        return tuple(foreign[paper_id] for paper_id in sorted(foreign))
+
+    async def tenant_fingerprint(self, collection_id: str) -> str:
+        """Changes whenever any collection of the collection's tenant changes (each change
+        bumps a version): what the foreign names, and so verification, depend on."""
+        collection = await self._collections.get_by_id(collection_id)
+        if collection is None:
+            raise CollectionNotFoundError(f"collection {collection_id!r} does not exist")
+        state = sorted((c.id, c.version) for c in
+                       await self._collections.list_for_tenant(collection.tenant_id))
+        return hashlib.sha256(repr(state).encode("utf-8")).hexdigest()[:16]
 
     async def paper_ids(self, collection_id: str) -> tuple[str, ...]:
         return tuple(sorted(document_paper_id(d)
@@ -126,4 +177,5 @@ def retrieval_setting_for(preset: str, rerank: bool) -> RetrievalSetting:
 
 
 __all__ = ["CollectionNotFoundError", "DocumentRegistry", "UnknownPresetError", "arxiv_source",
-           "document_cues", "document_paper_id", "parse_arxiv_source", "retrieval_setting_for"]
+           "cue_set_for", "cues_for_document", "document_cues", "document_paper_id",
+           "parse_arxiv_source", "retrieval_setting_for"]

@@ -18,7 +18,7 @@ async def store() -> AsyncGenerator[Store]:
 
 
 def test_migration_002_is_the_next_numbered_migration() -> None:
-    assert LATEST_VERSION == 2 and MIGRATIONS[1].version == 2
+    assert LATEST_VERSION >= 2 and MIGRATIONS[1].version == 2
     assert "ALTER TABLE request_log ADD COLUMN request_id TEXT" in MIGRATIONS[1].sql
     assert "ALTER TABLE collection ADD COLUMN rerank INT DEFAULT 0" in MIGRATIONS[1].sql
 

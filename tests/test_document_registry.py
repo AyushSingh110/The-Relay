@@ -7,6 +7,7 @@ from collections.abc import AsyncGenerator
 import pytest
 
 from relay.ingestion.registry import DocumentRegistry, document_paper_id
+from relay.ingestion.v1_corpus import v1_document_cues
 from relay.retrieval.scope import analyze_scope
 from relay.store import Store, open_store
 
@@ -32,10 +33,11 @@ async def test_cues_come_from_ready_documents_only(store: Store) -> None:
     await store.documents.create(cid, source="upload", sha256="c", title="Not Yet Indexed",
                                  status="queued")
     cues = await DocumentRegistry(store.documents, store.collections).get_cues(cid)
-    assert set(cues.strong) == {"2410.00037v1", upload.id}
+    assert set(cues.strong_cues()) == {"2410.00037v1", upload.id}
     assert document_paper_id(moshi) == "2410.00037v1" and document_paper_id(upload) == upload.id
-    assert cues.pinned_versions == {"2410.00037": 1}
-    assert cues.weak == {}
+    assert cues.pinned_versions() == {"2410.00037": 1}
+    # a v1 paper keeps its curated v1 cues in any collection (V2-04), topics included
+    assert cues.weak_cues() == {"2410.00037v1": v1_document_cues("2410.00037v1").weak}
     assert analyze_scope("How does Moshi work?", cues=cues).strong_papers == ("2410.00037v1",)
     assert analyze_scope("Explain retrieval-augmented generation.",
                          cues=cues).strong_papers == (upload.id,)

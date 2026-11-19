@@ -97,7 +97,7 @@ async def test_no_request_sees_the_new_version_without_the_new_document(
     monkeypatch.setattr(env.store.documents, "update_status", racing_update)
     await env.worker().run_once()
     cues = (await res.resolve(cid)).cues
-    assert {first, doc} <= set(cues.strong)
+    assert {first, doc} <= set(cues.strong_cues())
 
 
 async def test_completing_an_ingest_is_atomic(env: Env) -> None:

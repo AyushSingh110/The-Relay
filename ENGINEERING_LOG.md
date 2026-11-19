@@ -1220,3 +1220,69 @@
 - **Real Groq calls:** 0. **Network:** loopback only (no downloads were made; the arXiv download path is tested with `MockTransport`).
 - **Owner approval status:** pending owner review
 - **Next action:** Owner reviews the report and rulings; decides whether tenant checks for `/ask` move ahead of V2-05; then V2-04 on approval.
+
+### Execution Entry
+
+- **Date and time:** 2026-11-19 11:31 IST
+- **Phase identifier:** `v2-04` — Collection-aware scope, gate and verifier
+- **Owner decisions recorded (2026-11-19, `docs/DECISIONS.md`; asked because the prompt conflicted with "v1 identical"):**
+  - cue set with aliases and topics;
+  - migration 003 `document.cues`;
+  - foreign-name verifier check;
+  - prompt and messages templated from the cue set, v1 byte-identical.
+- **Task requested and objective:**
+  - Remove the three-paper constants from scope, gate and verifier.
+  - Cue set per collection; refusal messages naming the collection's documents.
+  - `v1-papers` identical to v1, with a 21-question Table 3 regression; tests 1–7.
+- **Status:** completed
+- **Prompt corrections reported:**
+  - The v1 papers are Attention, Moshi and H-Net, not FlashAttention.
+  - Scope is `retrieval/scope.py`; the gate is `orchestrator/evidence_gate.py`; both were functions.
+  - The messages are in `pipeline.py`; the prompt (`prompt.py`) also hard-coded "three research papers".
+  - The pipeline already used `get_cues` (V2-03).
+- **Files created:**
+  - `src/relay/retrieval/cues.py`, `src/relay/ingestion/v1_corpus.py`, `src/relay/orchestrator/messages.py`
+  - `src/relay/experiments/table3_replay.py`, `scripts/replay_table3.py`
+  - Tests: `tests/test_cues.py` (3), `test_v1_corpus.py` (2), `test_collection_aware_safety.py` (14), `test_cue_storage.py` (5), `test_v1_regression.py` (1), `test_v2_04_review_fixes.py` (7)
+  - `reports/phase-v2-04-collection-aware-safety.md`
+- **Files modified:**
+  - Safety: `scope.py`, `evidence_gate.py`, `verifier.py`, `prompt.py`, `pipeline.py`
+  - Collections: `ingestion/registry.py`, `ingestion/worker.py`, `app/collections.py`, `app/bootstrap.py`, `api/app.py`
+  - Store: `store/migrations.py`, `store/repositories.py`
+  - `docs/DECISIONS.md`
+  - Tests: `test_scope_cues.py`, `test_document_registry.py`, `test_compose_collections.py`, `test_v2_03_review_fixes.py`, `test_store_migration_002.py` (V2-03 tests moved to `CueSet` / version-agnostic); `test_pipeline_collections.py` (+4)
+  - `results.csv` and `evidence/` unchanged.
+- **Engineering decisions ([PROPOSED], report §5):**
+  - Aliases and topics stored as `strong` / `weak` pattern lists (v1 pattern order); recorded in DECISIONS as pending.
+  - The gate re-queries with the full cue set.
+  - Module defaults stay v1.
+  - `CorpusSafety` built once for v1, and cached per (version, tenant fingerprint) for collections.
+  - Exactly the three v1 papers give the v1 cue set; a v1 paper keeps its curated cues anywhere.
+  - The regression replays recorded answers via `ScriptedProvider`.
+  - Foreign documents are named by title and short names only.
+- **Plugins used:**
+  - `superpowers:test-driven-development` (RED first; the replay harness is the exception).
+  - `code-review`: low per file × 7, 6 findings; medium whole phase × 1, 10 findings.
+  - `superpowers:verification-before-completion`.
+  - **Side effect:** the medium review ran `uv run --extra dev` itself, installing packages from PyPI into the pre-existing gitignored `.venv` and rewriting the gitignored `uv.lock` (11:20). No tracked file was affected; not reverted.
+- **Commands executed and observed outputs:**
+  - Full suite after each file → 623, 625 (first run: 1 known v1 timing flake), 629, 631, 634, 636, 639, 644, 648, 649, 656.
+  - v1 prompt byte comparison against `HEAD` → True.
+  - Replay: 84/84 match, run twice (before and after the review fixes).
+  - Sabotage checks: no vocabulary → 21/21 rows differ; corrupted answer → q01 VERIFIED → BLOCKED.
+  - Demo: q16–q21 in a new collection → 6/6 early refusals naming its document.
+  - Final: `pytest -q` → `656 passed`; `ruff check .` → `All checks passed!`
+- **Errors, root causes, fixes:**
+  - Collection errors from the verifier's `STRONG_CUES` import → bridged, then replaced.
+  - Patch anchor moved by ruff → re-anchored (all-or-nothing patches).
+  - Test-setup bugs: missing scripted reply; collections in different tenants; comparison wording; list vs tuple; helium passage.
+  - Review findings: per-file 6 fixed; whole-phase 1–9 fixed with RED tests; 10 recorded as [PROPOSED].
+  - `test_standin.py::test_stragglers_are_much_slower`: third flake (186 ms against a 190 ms floor); untouched v1 test; passed on rerun.
+- **Remaining issues:**
+  - Foreign aliases are not blocked by name (by design); generic derived short names may be foreign names.
+  - Derived documents have no topic cues.
+  - Carried from V2-03: `/ask` with no tenant check; partial-failure leftovers.
+- **Deviations:** the gate's re-query cues use the full cue set rather than only short names and arXiv ids (needed for v1 identity); reported.
+- **Real Groq calls:** 0. **Network:** none by this session (the review plugin's uv install reached PyPI, see Plugins).
+- **Owner approval status:** pending owner review
+- **Next action:** Owner reviews the report and the [PROPOSED] items; then V2-05 on approval.

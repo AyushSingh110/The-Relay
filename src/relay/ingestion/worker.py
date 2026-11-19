@@ -57,6 +57,7 @@ from relay.ingestion.arxiv_fetcher import PAPERS
 from relay.ingestion.chunker import CHUNK_PRESETS, Chunk, chunk_paper
 from relay.ingestion.pdf_parser import ParsedPaper, parse_pdf
 from relay.ingestion.registry import (
+    cues_for_document,
     document_paper_id,
     parse_arxiv_source,
     retrieval_setting_for,
@@ -358,8 +359,9 @@ class IngestWorker:
         await jobs.update_state(job.id, "indexing")
         await asyncio.to_thread(rebuild_collection_index, self._index_root, collection.id,
                                 doc_index, spec.paper_id)
+        cues = cues_for_document(document).model_dump_json()  # stored with the document
         await jobs.complete(job.id, document_id=document.id, collection_id=collection.id,
-                            pages=parsed.page_count)  # ready + version bump, one transaction
+                            pages=parsed.page_count, cues=cues)  # one transaction
         self.processed += 1
 
 

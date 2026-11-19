@@ -1,16 +1,23 @@
-"""Evidence gate (pipeline step 3): a deterministic branch and one bounded loop."""
+"""Evidence gate (pipeline step 3): a deterministic branch and one bounded loop.
+
+``EvidenceGate`` works on one corpus's ``CueSet``: its pinned arXiv versions (for the
+version refusal) and its document cues (for choosing the re-query sentence: a sentence is
+kept when it names a missing document by title, short name, arXiv id or topic). The
+module functions use the v1 corpus. No paper is named in this module (V2-04).
+"""
 
 from __future__ import annotations
 
 import re
-from collections.abc import Sequence
+from collections.abc import Callable, Mapping, Sequence
 from typing import Final, Literal
 
 from pydantic import BaseModel, ConfigDict
 
-from relay.ingestion.arxiv_fetcher import PAPERS
+from relay.ingestion.v1_corpus import V1_CUE_SET
+from relay.retrieval.cues import CueSet
 from relay.retrieval.hybrid_index import RetrievedPassage
-from relay.retrieval.scope import ScopeDecision, analyze_scope
+from relay.retrieval.scope import ScopeAnalyser, ScopeDecision
 
 # [PROPOSED] Calibrated on P04B: off-topic scored <= -8.5, answerable >= +0.22.
 RERANK_REFUSAL_SCORE: Final = -5.0
@@ -26,7 +33,6 @@ GateReason = Literal[
     "rerank_evidence_below_threshold",
 ]
 _SENTENCE_END = re.compile(r"(?<=[.?!])\s+")
-_PINNED: Final = {p.arxiv_id: p.paper_id for p in PAPERS}
 
 
 class GateDecision(BaseModel):
@@ -48,33 +54,62 @@ def expected_papers(scope: ScopeDecision) -> tuple[str, ...]:
     return tuple(sorted(papers))
 
 
-def requery_text(question: str, papers: Sequence[str]) -> str:
-    """Deterministically narrow the question to the part naming the missing paper(s)."""
-    wanted = set(papers)
-    sentences = [s.strip() for s in _SENTENCE_END.split(question.strip()) if s.strip()]
-    if len(sentences) < 2:
-        return question
-    chosen = []
-    for sentence in sentences:
-        scope = analyze_scope(sentence)
-        if wanted & (set(scope.strong_papers) | set(scope.weak_papers)):
-            chosen.append(sentence)
-    return " ".join(chosen) if chosen else question
-
-
 def _best_rerank(passages: Sequence[RetrievedPassage]) -> float | None:
     scores = [p.rerank_score for p in passages if p.rerank_score is not None]
     return max(scores) if scores else None
 
 
+class EvidenceGate:
+    """The gate for one corpus. The cue set is read once, at construction."""
+
+    def __init__(self, cue_set: CueSet, *, analyser: ScopeAnalyser | None = None) -> None:
+        self.cue_set = cue_set
+        # re-query cues: the same document cues as scope analysis (shared when given)
+        self._analyser = ScopeAnalyser(cue_set) if analyser is None else analyser
+        self._pinned: Mapping[str, str] = cue_set.pinned_papers()
+
+    def requery_text(self, question: str, papers: Sequence[str]) -> str:
+        """Deterministically narrow the question to the part naming the missing paper(s)."""
+        wanted = set(papers)
+        sentences = [s.strip() for s in _SENTENCE_END.split(question.strip()) if s.strip()]
+        if len(sentences) < 2:
+            return question
+        chosen = []
+        for sentence in sentences:
+            scope = self._analyser.analyze(sentence)
+            if wanted & (set(scope.strong_papers) | set(scope.weak_papers)):
+                chosen.append(sentence)
+        return " ".join(chosen) if chosen else question
+
+    def decide(self, scope: ScopeDecision, passages: Sequence[RetrievedPassage], *,
+               loop_count: int) -> GateDecision:
+        return _decide(scope, passages, loop_count=loop_count, pinned=self._pinned,
+                       requery=self.requery_text)
+
+
+_V1_GATE: Final = EvidenceGate(V1_CUE_SET)
+
+
+def requery_text(question: str, papers: Sequence[str]) -> str:
+    """``EvidenceGate.requery_text`` for the v1 corpus."""
+    return _V1_GATE.requery_text(question, papers)
+
+
 def decide(scope: ScopeDecision, passages: Sequence[RetrievedPassage], *,
            loop_count: int) -> GateDecision:
+    """``EvidenceGate.decide`` for the v1 corpus."""
+    return _V1_GATE.decide(scope, passages, loop_count=loop_count)
+
+
+def _decide(scope: ScopeDecision, passages: Sequence[RetrievedPassage], *, loop_count: int,
+            pinned: Mapping[str, str],
+            requery: Callable[[str, Sequence[str]], str]) -> GateDecision:
     if scope.version_mismatch:
-        pinned = sorted({_PINNED[m.split("v")[0]] for m in scope.version_mentions
-                         if m.split("v")[0] in _PINNED})
+        held = sorted({pinned[m.split("v")[0]] for m in scope.version_mentions
+                       if m.split("v")[0] in pinned})
         return GateDecision(
             action="EARLY_REFUSAL", reason="version_not_in_corpus", loop_count=loop_count,
-            detail=f"asked about {list(scope.version_mentions)}; corpus holds {pinned}",
+            detail=f"asked about {list(scope.version_mentions)}; corpus holds {held}",
         )
     if not passages:
         return GateDecision(action="EARLY_REFUSAL", reason="no_passages", loop_count=loop_count)
@@ -96,7 +131,7 @@ def decide(scope: ScopeDecision, passages: Sequence[RetrievedPassage], *,
         if missing:
             return GateDecision(
                 action="LOOP_EXPAND", reason="missing_paper_scope", loop_count=loop_count,
-                paper_filter=missing, requery=requery_text(scope.question, missing),
+                paper_filter=missing, requery=requery(scope.question, missing),
                 detail=f"no passage from {list(missing)} in the first result",
             )
     return GateDecision(action="SUFFICIENT", reason="evidence_found", loop_count=loop_count)
@@ -126,6 +161,7 @@ def merge_expansion(original: Sequence[RetrievedPassage],
 __all__ = [
     "MAX_LOOPS",
     "RERANK_REFUSAL_SCORE",
+    "EvidenceGate",
     "GateDecision",
     "decide",
     "expansion_size",

@@ -338,9 +338,9 @@ class CollectionDirectory(Protocol):
     """What the service needs to know about a collection before any work starts
     (``relay.app.collections.StoreCollectionResolver``)."""
 
-    async def describe(self, collection_id: str) -> tuple[int, str]:
-        """(version, retrieval setting name); raises ``CollectionNotFoundError`` or
-        ``CollectionNotReadyError``."""
+    async def describe(self, collection_id: str) -> tuple[int, str, str]:
+        """(version, retrieval setting name, cache tag); raises ``CollectionNotFoundError``
+        or ``CollectionNotReadyError``."""
         ...
 
 
@@ -539,9 +539,9 @@ class RelayService:
         if self.collections is None:
             raise ContractViolationError("this service has no collections (it needs the "
                                          "metadata store, cache.mode = sqlite)")
-        version, setting = await self.collections.describe(ask.collection_id)
+        version, setting, tag = await self.collections.describe(ask.collection_id)
         resolved = ask.model_copy(update={"retrieval_setting": setting})
-        return AskTarget(resolved, f"{setting}@{ask.collection_id}:v{version}")
+        return AskTarget(resolved, f"{setting}@{ask.collection_id}:v{version}:{tag}")
 
     async def ask(self, ask: AskRequest, spans: ServerSpanTracker, arrived_ns: int, *,
                   target: AskTarget | None = None) -> AskReply:

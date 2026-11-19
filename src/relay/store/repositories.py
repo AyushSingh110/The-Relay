@@ -100,6 +100,7 @@ class Document:
     pages: int | None
     status: str
     created_at: str
+    cues: str | None = None  # JSON of relay.retrieval.cues.DocumentCues (migration 003)
 
 
 @dataclass(frozen=True, slots=True)
@@ -308,21 +309,23 @@ class CollectionRepo(_Repo):
         return int(row[0])
 
 
-_DOCUMENT_COLUMNS: Final = "id, collection_id, source, sha256, title, pages, status, created_at"
+_DOCUMENT_COLUMNS: Final = ("id, collection_id, source, sha256, title, pages, status, "
+                             "created_at, cues")
 
 
 class DocumentRepo(_Repo):
     async def create(self, collection_id: str, *, source: str, sha256: str,
                      title: str | None = None, pages: int | None = None,
-                     status: str = "pending", document_id: str | None = None) -> Document:
+                     status: str = "pending", document_id: str | None = None,
+                     cues: str | None = None) -> Document:
         _check(status, DOCUMENT_STATUSES, "document status")
         document = Document(id=document_id or self._ids(), collection_id=collection_id,
                             source=source, sha256=sha256, title=title, pages=pages,
-                            status=status, created_at=self._now())
+                            status=status, created_at=self._now(), cues=cues)
         await self._write(
-            f"INSERT INTO document ({_DOCUMENT_COLUMNS}) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+            f"INSERT INTO document ({_DOCUMENT_COLUMNS}) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
             (document.id, collection_id, source, sha256, title, pages, status,
-             document.created_at),
+             document.created_at, cues),
             context=f"create document: collection {collection_id!r} does not exist")
         return document
 
@@ -338,8 +341,8 @@ class DocumentRepo(_Repo):
         job = IngestJob(id=job_id or self._ids(), document_id=document.id, state="queued",
                         attempts=0, error_class=None, updated_at=now)
         await self._write_many([
-            (f"INSERT INTO document ({_DOCUMENT_COLUMNS}) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
-             (document.id, collection_id, source, sha256, title, pages, "queued", now)),
+            (f"INSERT INTO document ({_DOCUMENT_COLUMNS}) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+             (document.id, collection_id, source, sha256, title, pages, "queued", now, None)),
             (f"INSERT INTO ingest_job ({_JOB_COLUMNS}) VALUES (?, ?, ?, ?, ?, ?)",
              (job.id, document.id, "queued", 0, None, now)),
         ], context=f"queue document: collection {collection_id!r} does not exist")
@@ -376,6 +379,13 @@ class DocumentRepo(_Repo):
                                "WHERE collection_id = ? ORDER BY created_at, rowid",
                                (collection_id,))
         return [Document(*row) for row in rows]
+
+    async def set_cues(self, document_id: str, cues: str | None) -> None:
+        """Store the document's cues (JSON of ``DocumentCues``), or clear them."""
+        changed = await self._write("UPDATE document SET cues = ? WHERE id = ?",
+                                    (cues, document_id), context="set document cues")
+        if changed != 1:
+            raise NotFoundError(f"document {document_id!r} does not exist")
 
     async def update_status(self, document_id: str, status: str, *,
                             pages: int | None = None) -> Document:
@@ -423,15 +433,16 @@ class IngestJobRepo(_Repo):
         return job
 
     async def complete(self, job_id: str, *, document_id: str, collection_id: str,
-                       pages: int | None) -> int:
+                       pages: int | None, cues: str | None = None) -> int:
         """Finish an ingest in ONE transaction: the document becomes ``ready``, the job
         ``ready``, and the collection version is bumped (returned). A request therefore
         never sees the new version without the new document, or the reverse."""
         async with write_lock(self._conn):
             try:
                 cursor = await self._conn.execute(
-                    "UPDATE document SET status = 'ready', pages = COALESCE(?, pages) "
-                    "WHERE id = ? AND collection_id = ?", (pages, document_id, collection_id))
+                    "UPDATE document SET status = 'ready', pages = COALESCE(?, pages), "
+                    "cues = COALESCE(?, cues) WHERE id = ? AND collection_id = ?",
+                    (pages, cues, document_id, collection_id))
                 documents = cursor.rowcount
                 await cursor.close()
                 cursor = await self._conn.execute(

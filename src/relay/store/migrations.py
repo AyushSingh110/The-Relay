@@ -51,6 +51,8 @@ MIGRATIONS: Final[tuple[Migration, ...]] = (
         "ALTER TABLE collection ADD COLUMN rerank INT DEFAULT 0;\n"
         "CREATE INDEX idx_request_log_request_id ON request_log(request_id);\n"
         "CREATE INDEX idx_document_sha256 ON document(collection_id, sha256);")),
+    # V2-04 (owner, 2026-11-19): each document's scope cues, as JSON (DocumentCues).
+    Migration(3, "document cues", "ALTER TABLE document ADD COLUMN cues TEXT;"),
 )
 LATEST_VERSION: Final = MIGRATIONS[-1].version
 

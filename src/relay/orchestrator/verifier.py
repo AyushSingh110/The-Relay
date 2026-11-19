@@ -1,18 +1,27 @@
-"""Deterministic answer verifier (pipeline step 5; ARCHITECTURE.md section 7.3)."""
+"""Deterministic answer verifier (pipeline step 5; ARCHITECTURE.md section 7.3).
+
+``Verifier`` works on one corpus's ``CueSet`` (V2-04). Its paper-name check uses the names
+of the corpus's documents (their non-numeric strong cues: titles, short names, aliases)
+and, for isolation between collections, the names of ``foreign`` documents: the tenant's
+documents outside this collection. A sentence that names a document but cites no passage
+from it is blocked as ``paper_mismatch``. ``verify`` uses the v1 corpus. No paper is named
+in this module.
+"""
 
 from __future__ import annotations
 
 import re
 import unicodedata
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence
 from decimal import Decimal, InvalidOperation
 from typing import Final, Literal
 
 from pydantic import BaseModel, ConfigDict
 
+from relay.ingestion.v1_corpus import V1_CUE_SET
 from relay.orchestrator.prompt import passage_metadata
+from relay.retrieval.cues import CueSet, DocumentCues, bounded
 from relay.retrieval.hybrid_index import RetrievedPassage
-from relay.retrieval.scope import STRONG_CUES
 
 Verdict = Literal["VERIFIED", "REFUSAL_VERIFIED", "BLOCKED"]
 Check = Literal["a", "b", "c", "d", "e"]
@@ -52,10 +61,7 @@ _ID_ALNUM = re.compile(r"(?<![A-Za-z0-9_^{])[A-Za-z]+-?\d+[A-Za-z0-9]*(?![A-Za-z
 _ARXIV = re.compile(r"(?<![\d.])(\d{4}\.\d{4,5})(?:v(\d+))?(?![\d])")
 _PAGE = re.compile(r"\b(?:pp?\.|pages?)\s*(\d{1,3})(?:\s*[-–—]\s*(\d{1,3}))?", re.IGNORECASE)
 _STRIP_CHARS = str.maketrans("", "", "{}\\$*`")
-_NAME_CUES: Final = {
-    paper_id: tuple(p for p in patterns if not re.search(r"\d", p))
-    for paper_id, patterns in STRONG_CUES.items()
-}
+NameCues = tuple[re.Pattern[str], ...]
 
 
 class VerifierFailure(BaseModel):
@@ -179,15 +185,16 @@ def _is_lead_in(body: str, is_last: bool) -> bool:
 
 
 def _metadata_failures(index: int, body: str, cited: Sequence[RetrievedPassage],
-                       texts: Sequence[str]) -> list[VerifierFailure]:
+                       texts: Sequence[str],
+                       name_cues: Mapping[str, NameCues]) -> list[VerifierFailure]:
     failures: list[VerifierFailure] = []
     lowered = _canon(body)
     cited_papers = {p.paper_id for p in cited}
-    for paper_id, patterns in _NAME_CUES.items():
+    for paper_id, patterns in name_cues.items():
         if paper_id in cited_papers:
             continue
         for pattern in patterns:
-            hit = re.search(rf"(?<![a-z0-9]){pattern}(?![a-z0-9])", lowered)
+            hit = pattern.search(lowered)
             if hit and not any(hit.group(0) in text for text in texts):
                 failures.append(VerifierFailure(
                     check="c", code="paper_mismatch", sentence=index,
@@ -251,8 +258,44 @@ def _blocked(failures: Sequence[VerifierFailure], sentences: int = 0,
                               sentences=sentences, claim_sentences=claims)
 
 
+class Verifier:
+    """The verifier for one corpus. The cue sets are read (and compiled) once.
+
+    Own documents are named by all their non-numeric strong cues (v1 behaviour). A foreign
+    document is named only by its title and short names, never its aliases or topics (an
+    alias can be an ordinary word in another collection), and a name that one of this
+    corpus's own documents also uses is never treated as foreign."""
+
+    def __init__(self, cue_set: CueSet, *, foreign: Sequence[DocumentCues] = ()) -> None:
+        self.cue_set = cue_set
+        names: dict[str, tuple[str, ...]] = dict(cue_set.name_cues())
+        own = {p for d in cue_set.documents for p in (*d.strong, *d.name_patterns())}
+        for document in foreign:
+            if document.paper_id in cue_set.paper_ids or document.paper_id in names:
+                continue
+            patterns = tuple(p for p in document.name_patterns() if p not in own)
+            if patterns:
+                names[document.paper_id] = patterns
+        self._names: Mapping[str, NameCues] = {
+            paper_id: tuple(bounded(p) for p in patterns) for paper_id, patterns in names.items()}
+        self._titles: Mapping[str, str] = cue_set.titles_by_paper()
+
+    def verify(self, answer: str, passages: Sequence[RetrievedPassage]) -> VerificationResult:
+        """Check a buffered answer against the passages that were supplied to the model."""
+        return _verify(answer, passages, name_cues=self._names, titles=self._titles)
+
+
+_V1_VERIFIER: Final = Verifier(V1_CUE_SET)
+
+
 def verify(answer: str, passages: Sequence[RetrievedPassage]) -> VerificationResult:
-    """Check a buffered answer against the passages that were supplied to the model."""
+    """``Verifier.verify`` for the v1 corpus."""
+    return _V1_VERIFIER.verify(answer, passages)
+
+
+def _verify(answer: str, passages: Sequence[RetrievedPassage], *,
+            name_cues: Mapping[str, NameCues],
+            titles: Mapping[str, str]) -> VerificationResult:
     if _MARKER.search(answer):
         if _WORD_CHAR.search(_MARKER.sub("", answer)):
             return _blocked([VerifierFailure(
@@ -270,7 +313,7 @@ def verify(answer: str, passages: Sequence[RetrievedPassage]) -> VerificationRes
                                          detail="the answer cites no passage")], len(units))
 
     haystack_by_tag = {
-        tag: _canon(f"{passage_metadata(p)}\n{p.text}")
+        tag: _canon(f"{passage_metadata(p, titles)}\n{p.text}")
         for tag, p in enumerate(passages, start=1)
     }
     text_by_tag = {tag: _canon(p.text) for tag, p in enumerate(passages, start=1)}
@@ -300,7 +343,8 @@ def verify(answer: str, passages: Sequence[RetrievedPassage]) -> VerificationRes
                 ))
             continue
         cited = [passages[t - 1] for t in valid]
-        failures += _metadata_failures(index, body, cited, [text_by_tag[t] for t in valid])
+        failures += _metadata_failures(index, body, cited, [text_by_tag[t] for t in valid],
+                                       name_cues)
         failures += _grounding_failures(index, body, [haystack_by_tag[t] for t in valid])
 
     if failures:
@@ -317,6 +361,7 @@ def verify(answer: str, passages: Sequence[RetrievedPassage]) -> VerificationRes
 __all__ = [
     "CitedPassage",
     "VerificationResult",
+    "Verifier",
     "VerifierFailure",
     "split_sentences",
     "verify",

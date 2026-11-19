@@ -136,5 +136,6 @@ async def test_the_v1_papers_are_queryable_through_the_collection_path(tmp_path:
             manifest.extraction or {})["chunk_sets"]["small_fast"]["sha256"]
         passages = resources.retriever.retrieve("d_model of the encoder").passages
         assert {p.paper_id for p in passages} <= {p.paper_id for p in manifest.papers}
-        assert resources.cues.strong.keys() == {p.paper_id for p in manifest.papers}
+        assert set(resources.cues.paper_ids) == {p.paper_id for p in manifest.papers}
+        assert resources.cues.noun == "papers"  # exactly the v1 papers: the v1 cue set
     assert not (tmp_path / "collections" / V1_COLLECTION_ID / INDEX_MANIFEST).exists()

@@ -1,13 +1,16 @@
-"""V2-03 tests: per-collection scope cues for the (v1) scope analyser. Pure functions."""
+"""V2-03 tests (V2-04 model): per-collection cue sets for the scope analyser."""
 
 from __future__ import annotations
 
 import pytest
 
-from relay.retrieval.scope import V1_CUES, ScopeCues, analyze_scope
+from relay.ingestion.v1_corpus import V1_CUE_SET as V1_CUES
+from relay.retrieval.cues import CueSet, DocumentCues
+from relay.retrieval.scope import analyze_scope
 
-RAG = ScopeCues(strong={"doc-rag": (r"retrieval-augmented generation", r"2005\.11401")},
-                weak={}, pinned_versions={"2005.11401": 4})
+RAG = CueSet(documents=(DocumentCues(
+    paper_id="doc-rag", display_name="RAG", arxiv_id="2005.11401", version=4,
+    strong=(r"retrieval-augmented generation", r"2005\.11401")),))
 
 
 @pytest.mark.parametrize("question", [

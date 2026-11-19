@@ -10,10 +10,12 @@ from typing import Annotated, Final, Literal, Protocol
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from relay.errors import ContractViolationError, sanitize_error
-from relay.orchestrator.evidence_gate import GateDecision, decide, merge_expansion
-from relay.orchestrator.prompt import PROMPT_VERSION, build_request
+from relay.ingestion.v1_corpus import V1_CUE_SET
+from relay.orchestrator.evidence_gate import EvidenceGate, GateDecision, merge_expansion
+from relay.orchestrator.messages import RefusalMessages, refusal_messages
+from relay.orchestrator.prompt import PROMPT_VERSION, build_request, prompt_version
 from relay.orchestrator.tools import PassageRetriever, ToolCallRecord, ToolError, ToolGateway
-from relay.orchestrator.verifier import CitedPassage, VerificationResult, verify
+from relay.orchestrator.verifier import CitedPassage, VerificationResult, Verifier
 from relay.providers.base import (
     ChatProvider,
     ChatRequest,
@@ -26,31 +28,22 @@ from relay.providers.base import (
 )
 from relay.providers.errors import ProviderError
 from relay.providers.probing import CONSERVATIVE_CHARS_PER_TOKEN, status_for_error_code
+from relay.retrieval.cues import CueSet, DocumentCues
 from relay.retrieval.hybrid_index import RetrievedPassage
-from relay.retrieval.scope import ScopeCues, ScopeDecision, analyze_scope
+from relay.retrieval.scope import ScopeAnalyser, ScopeDecision
 from relay.schemas import ErrorCode, Status, UsageSource, VerificationVerdict
 from relay.telemetry.spans import ServerSpanTracker
 
 DEFAULT_MAX_COMPLETION_TOKENS: Final = 512  # [PROPOSED]; P02's 256 was never reached
 MAX_QUESTION_CHARS: Final = 2000
 
-LLM_REFUSAL_MESSAGE: Final = (
-    "I can't answer this from the three papers in the library: the passages I found do not "
-    "contain the information needed."
-)
-OUT_OF_CORPUS_MESSAGE: Final = (
-    "I can only answer from three papers (\"Attention Is All You Need\", arXiv:1706.03762v7; "
-    "Moshi, arXiv:2410.00037v1; H-Net, arXiv:2507.07955v2), and they do not cover this "
-    "question."
-)
-VERSION_MESSAGE: Final = (
-    "I can only answer from the exact paper versions in the library (arXiv:1706.03762v7, "
-    "arXiv:2410.00037v1, arXiv:2507.07955v2), not from other versions of these papers."
-)
-SAFE_REFUSAL_MESSAGE: Final = (
-    "I could not produce an answer that I can verify against the papers, so I am not "
-    "answering rather than risk an unsupported claim."
-)
+# The v1 messages, rendered from the v1 cue set (byte-identical to v1; see
+# tests/test_collection_aware_safety.py). A collection's messages name its own documents.
+_V1_MESSAGES: Final = refusal_messages(V1_CUE_SET)
+LLM_REFUSAL_MESSAGE: Final = _V1_MESSAGES.llm_refusal
+OUT_OF_CORPUS_MESSAGE: Final = _V1_MESSAGES.out_of_corpus
+VERSION_MESSAGE: Final = _V1_MESSAGES.version
+SAFE_REFUSAL_MESSAGE: Final = _V1_MESSAGES.safe_refusal
 
 OutcomeKind = Literal["answer", "llm_refusal", "early_refusal", "safe_refusal", "failed"]
 _STRICT = ConfigDict(frozen=True, strict=True, extra="forbid")
@@ -270,6 +263,7 @@ class _Run:
 
     request: PipelineRequest
     scope: ScopeDecision
+    prompt_version: str = PROMPT_VERSION
     tool_calls: list[ToolCallRecord] = field(default_factory=list)
     decisions: list[GateDecision] = field(default_factory=list)
 
@@ -278,7 +272,7 @@ class _Run:
               verification: VerificationResult | None = None,
               provider_error: str | None = None) -> PipelineTrace:
         return PipelineTrace(
-            prompt_version=PROMPT_VERSION, scope=self.scope,
+            prompt_version=self.prompt_version, scope=self.scope,
             gate_decisions=tuple(self.decisions), tool_calls=tuple(self.tool_calls),
             loop_count=sum(1 for d in self.decisions if d.action == "LOOP_EXPAND"),
             prompt_chars=prompt_chars, raw_answer=raw_answer, finish_reason=finish_reason,
@@ -319,8 +313,35 @@ class CollectionResources:
     retriever: PassageRetriever
     top_k: int
     vocabulary: frozenset[str] | None
-    cues: ScopeCues
+    cues: CueSet
     paper_ids: frozenset[str] = frozenset()  # the documents in the collection's index
+    # the tenant's documents in other collections: their names are blocked (isolation)
+    foreign: tuple[DocumentCues, ...] = ()
+    safety: CorpusSafety | None = None  # prebuilt by the resolver (cached); else built here
+
+
+@dataclass(frozen=True)
+class CorpusSafety:
+    """The v1 safety logic, bound to one corpus's cue set (V2-04): scope analysis, the
+    evidence gate, the verifier (with foreign names), the refusal messages and the prompt.
+
+    The v1 path builds it once, when the pipeline is created. A collection request builds
+    it per request from the resolver's cue set (cached per collection version) and the
+    tenant's foreign documents (read per request, since other collections change)."""
+
+    cues: CueSet
+    analyser: ScopeAnalyser
+    gate: EvidenceGate
+    verifier: Verifier
+    messages: RefusalMessages
+    prompt_version: str
+
+    @classmethod
+    def for_cues(cls, cues: CueSet, *, foreign: tuple[DocumentCues, ...] = ()) -> CorpusSafety:
+        analyser = ScopeAnalyser(cues)
+        return cls(cues=cues, analyser=analyser, gate=EvidenceGate(cues, analyser=analyser),
+                   verifier=Verifier(cues, foreign=foreign), messages=refusal_messages(cues),
+                   prompt_version=prompt_version(cues))
 
 
 class CollectionResolver(Protocol):
@@ -337,7 +358,7 @@ class _Corpus:
     gateway: ToolGateway
     top_k: Mapping[str, int]
     vocabulary: frozenset[str] | None
-    cues: ScopeCues | None
+    safety: CorpusSafety
 
 
 # --- Pipeline -------------------------------------------------------------------------
@@ -359,37 +380,42 @@ class Pipeline:
         self._vocabulary = vocabulary
         self._budget = budget
         self._collections = collections
+        self._v1_safety = CorpusSafety.for_cues(V1_CUE_SET)
 
     async def _corpus(self, request: PipelineRequest) -> tuple[PipelineRequest, _Corpus]:
         """The v1 corpus, or the request's collection (its retriever, cues, vocabulary)."""
         if request.collection_id is None:
-            return request, _Corpus(self._gateway, self._top_k, self._vocabulary, None)
+            return request, _Corpus(self._gateway, self._top_k, self._vocabulary,
+                                    self._v1_safety)
         if self._collections is None:
             raise ContractViolationError("this pipeline has no collection resolver")
         res = await self._collections.resolve(request.collection_id)
         corpus = _Corpus(self._gateway.with_retrievers({res.setting_name: res.retriever},
                                                        paper_ids=res.paper_ids),
-                         {res.setting_name: res.top_k}, res.vocabulary, res.cues)
+                         {res.setting_name: res.top_k}, res.vocabulary,
+                         res.safety if res.safety is not None
+                         else CorpusSafety.for_cues(res.cues, foreign=res.foreign))
         return request.model_copy(update={"retrieval_setting": res.setting_name}), corpus
 
-    def _build_chat(self, question: str, passages: tuple[RetrievedPassage, ...]) -> ChatRequest:
+    def _build_chat(self, question: str, passages: tuple[RetrievedPassage, ...],
+                    cues: CueSet) -> ChatRequest:
         return build_request(
             question, passages, model=self._config.model_id,
             max_completion_tokens=self._config.max_completion_tokens,
             temperature=self._config.temperature,
-            reasoning_effort=self._config.reasoning_effort,
+            reasoning_effort=self._config.reasoning_effort, cues=cues,
         )
 
     def _fit_to_budget(self, question: str, passages: tuple[RetrievedPassage, ...],
-                       ) -> tuple[ChatRequest, tuple[RetrievedPassage, ...], bool]:
+                       cues: CueSet) -> tuple[ChatRequest, tuple[RetrievedPassage, ...], bool]:
         """Drop the lowest-ranked passages while token headroom is too tight (degraded)."""
-        chat = self._build_chat(question, passages)
+        chat = self._build_chat(question, passages, cues)
         if self._budget is None:
             return chat, passages, False
         kept = passages
         while len(kept) > 1 and not self._budget.fits(chat):
             kept = kept[:-1]
-            chat = self._build_chat(question, kept)
+            chat = self._build_chat(question, kept, cues)
         return chat, kept, len(kept) < len(passages)
 
     async def run(self, request: PipelineRequest, spans: ServerSpanTracker, *,
@@ -401,8 +427,9 @@ class Pipeline:
             )
         spans.switch("working")
         # Step 1: deterministic scope analysis.
-        run = _Run(request, analyze_scope(request.question, corpus.vocabulary,
-                                          cues=corpus.cues))
+        safety = corpus.safety
+        run = _Run(request, safety.analyser.analyze(request.question, corpus.vocabulary),
+                   prompt_version=safety.prompt_version)
 
         # Step 2: the tool call.
         try:
@@ -418,20 +445,21 @@ class Pipeline:
         passages = call.result.passages
 
         # Step 3: evidence gate, with at most one paper-scoped re-query.
-        decision = decide(run.scope, passages, loop_count=0)
+        decision = safety.gate.decide(run.scope, passages, loop_count=0)
         run.decisions.append(decision)
         if decision.action == "LOOP_EXPAND":
             passages = await self._expand(run, decision, passages, corpus)
-            decision = decide(run.scope, passages, loop_count=1)
+            decision = safety.gate.decide(run.scope, passages, loop_count=1)
             run.decisions.append(decision)
         if decision.action == "EARLY_REFUSAL":
-            message = (VERSION_MESSAGE if decision.reason == "version_not_in_corpus"
-                       else OUT_OF_CORPUS_MESSAGE)
+            message = (safety.messages.version if decision.reason == "version_not_in_corpus"
+                       else safety.messages.out_of_corpus)
             return run.outcome("early_refusal", verdict="EARLY_REFUSAL",
                                delivered_text=message, refused=True, passages=passages)
 
         # Step 4: the only LLM call, buffered.
-        chat, passages, degraded = self._fit_to_budget(request.question, passages)
+        chat, passages, degraded = self._fit_to_budget(request.question, passages,
+                                                       safety.cues)
         generated = await self._generator.generate(chat, spans, deadline_ns=deadline_ns)
         spend = _spend(generated, chat)
         if generated.error is not None:
@@ -447,7 +475,7 @@ class Pipeline:
             raise RuntimeError("generator returned neither a completion nor an error")
 
         # Step 5: verify before anything is delivered.
-        verification = verify(completion.content, passages)
+        verification = safety.verifier.verify(completion.content, passages)
         audit = run.trace(
             prompt_chars=chat.prompt_chars, raw_answer=completion.content,
             finish_reason=completion.finish_reason, reasoning_chars=len(completion.reasoning),
@@ -460,11 +488,11 @@ class Pipeline:
                                spend=spend, trace=audit, degraded=degraded)
         if verification.verdict == "REFUSAL_VERIFIED":
             return run.outcome("llm_refusal", verdict="REFUSAL_VERIFIED",
-                               delivered_text=LLM_REFUSAL_MESSAGE, refused=True,
+                               delivered_text=safety.messages.llm_refusal, refused=True,
                                passages=passages, spend=spend, trace=audit, degraded=degraded)
         return run.outcome("safe_refusal", verdict="BLOCKED",
                            error_code="citation_verification_failed",
-                           delivered_text=SAFE_REFUSAL_MESSAGE, refused=True,
+                           delivered_text=safety.messages.safe_refusal, refused=True,
                            passages=passages, spend=spend, trace=audit, degraded=degraded)
 
     async def _expand(self, run: _Run, decision: GateDecision,
@@ -493,6 +521,7 @@ __all__ = [
     "VERSION_MESSAGE",
     "AnswerGenerator",
     "CollectionResolver",
+    "CorpusSafety",
     "CollectionResources",
     "GenerationResult",
     "Pipeline",
