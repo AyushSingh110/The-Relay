@@ -13,6 +13,7 @@ from __future__ import annotations
 import re
 import unicodedata
 from collections.abc import Mapping, Sequence
+from dataclasses import dataclass
 from decimal import Decimal, InvalidOperation
 from typing import Final, Literal
 
@@ -284,8 +285,23 @@ class Verifier:
         """Check a buffered answer against the passages that were supplied to the model."""
         return _verify(answer, passages, name_cues=self._names, titles=self._titles)
 
+    def sentence_checker(self, passages: Sequence[RetrievedPassage]) -> SentenceChecker:
+        """Per-sentence checks with this corpus's names and titles (streaming, V2-05)."""
+        return SentenceChecker(passages, name_cues=self._names, titles=self._titles)
+
 
 _V1_VERIFIER: Final = Verifier(V1_CUE_SET)
+
+
+# Shared with the streaming splitter, which must treat tags and the marker exactly alike.
+LEADING_TAGS: Final = _LEADING_TAGS
+WORD_CHAR: Final = _WORD_CHAR
+REFUSAL_MARKER_PATTERN: Final = _MARKER
+
+
+def is_refusal_marker(text: str) -> bool:
+    """True when ``text`` contains the model's refusal marker."""
+    return _MARKER.search(text) is not None
 
 
 def verify(answer: str, passages: Sequence[RetrievedPassage]) -> VerificationResult:
@@ -312,57 +328,89 @@ def _verify(answer: str, passages: Sequence[RetrievedPassage], *,
         return _blocked([VerifierFailure(check="a", code="no_citations", sentence=None,
                                          detail="the answer cites no passage")], len(units))
 
-    haystack_by_tag = {
-        tag: _canon(f"{passage_metadata(p, titles)}\n{p.text}")
-        for tag, p in enumerate(passages, start=1)
-    }
-    text_by_tag = {tag: _canon(p.text) for tag, p in enumerate(passages, start=1)}
+    checker = SentenceChecker(passages, name_cues=name_cues, titles=titles)
     failures: list[VerifierFailure] = []
     cited_order: list[int] = []
     claims = 0
     for index, unit in enumerate(units, start=1):
+        check = checker.check(unit, index=index, is_last=index == len(units))
+        failures += check.failures
+        cited_order.extend(t for t in check.tags if t not in cited_order)
+        claims += check.claim
+
+    if failures:
+        return _blocked(failures, len(units), claims)
+    return VerificationResult(verdict="VERIFIED", failures=(),
+                              citations=checker.citations(cited_order),
+                              sentences=len(units), claim_sentences=claims)
+
+
+@dataclass(frozen=True)
+class UnitCheck:
+    """The checks of one sentence-like unit (L1 structure, L2 literal grounding)."""
+
+    failures: tuple[VerifierFailure, ...]
+    tags: tuple[int, ...]  # the valid passage tags it cites, in order
+    claim: bool  # False for a lead-in or a unit with no words (nothing to check)
+
+
+class SentenceChecker:
+    """Per-sentence checks against fixed passages: the single implementation used by the
+    whole-answer verifier and by the streaming verifier (one sentence at a time)."""
+
+    def __init__(self, passages: Sequence[RetrievedPassage], *,
+                 name_cues: Mapping[str, NameCues], titles: Mapping[str, str]) -> None:
+        self._passages = tuple(passages)
+        self._names = name_cues
+        self._haystacks = {tag: _canon(f"{passage_metadata(p, titles)}\n{p.text}")
+                           for tag, p in enumerate(self._passages, start=1)}
+        self._texts = {tag: _canon(p.text) for tag, p in enumerate(self._passages, start=1)}
+
+    def check(self, unit: str, *, index: int, is_last: bool) -> UnitCheck:
+        failures: list[VerifierFailure] = []
         tags = _tags(unit)
         body = _TAG.sub(" ", unit).strip()
-        unknown = sorted({t for t in tags if t not in haystack_by_tag})
+        unknown = sorted({t for t in tags if t not in self._haystacks})
         if unknown:
             failures.append(VerifierFailure(
                 check="b", code="unknown_passage_tag", sentence=index,
                 detail=f"tags {['P' + str(t) for t in unknown]} were not supplied "
-                       f"(valid: P1..P{len(passages)})",
+                       f"(valid: P1..P{len(self._passages)})",
             ))
-        valid = [t for t in dict.fromkeys(tags) if t in haystack_by_tag]
-        cited_order.extend(t for t in valid if t not in cited_order)
-        if not _WORD_CHAR.search(body) or _is_lead_in(body, index == len(units)):
-            continue
-        claims += 1
+        valid = tuple(t for t in dict.fromkeys(tags) if t in self._haystacks)
+        if not _WORD_CHAR.search(body) or _is_lead_in(body, is_last):
+            return UnitCheck(tuple(failures), valid, claim=False)
         if not valid:
             if not unknown:
                 failures.append(VerifierFailure(
                     check="a", code="uncited_sentence", sentence=index,
                     detail=f"no citation: {body[:120]!r}",
                 ))
-            continue
-        cited = [passages[t - 1] for t in valid]
-        failures += _metadata_failures(index, body, cited, [text_by_tag[t] for t in valid],
-                                       name_cues)
-        failures += _grounding_failures(index, body, [haystack_by_tag[t] for t in valid])
+            return UnitCheck(tuple(failures), valid, claim=True)
+        cited = [self._passages[t - 1] for t in valid]
+        failures += _metadata_failures(index, body, cited, [self._texts[t] for t in valid],
+                                       self._names)
+        failures += _grounding_failures(index, body, [self._haystacks[t] for t in valid])
+        return UnitCheck(tuple(failures), valid, claim=True)
 
-    if failures:
-        return _blocked(failures, len(units), claims)
-    citations = tuple(
-        CitedPassage(tag=t, chunk_id=passages[t - 1].chunk_id, paper_id=passages[t - 1].paper_id,
-                     page_start=passages[t - 1].page_start, page_end=passages[t - 1].page_end)
-        for t in cited_order
-    )
-    return VerificationResult(verdict="VERIFIED", failures=(), citations=citations,
-                              sentences=len(units), claim_sentences=claims)
+    def citations(self, tags: Sequence[int]) -> tuple[CitedPassage, ...]:
+        return tuple(
+            CitedPassage(tag=t, chunk_id=p.chunk_id, paper_id=p.paper_id,
+                         page_start=p.page_start, page_end=p.page_end)
+            for t in tags for p in (self._passages[t - 1],))
 
 
 __all__ = [
     "CitedPassage",
+    "SentenceChecker",
+    "UnitCheck",
     "VerificationResult",
     "Verifier",
     "VerifierFailure",
+    "LEADING_TAGS",
+    "REFUSAL_MARKER_PATTERN",
+    "WORD_CHAR",
+    "is_refusal_marker",
     "split_sentences",
     "verify",
 ]

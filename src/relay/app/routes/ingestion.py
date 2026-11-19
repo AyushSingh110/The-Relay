@@ -72,6 +72,7 @@ class CreateCollection(BaseModel):
     tenant_id: Annotated[str, Field(min_length=1, max_length=64)]
     retrieval_preset: Annotated[str, Field(max_length=64)] = "small_fast"
     rerank: bool = False
+    buffered: bool = False  # V2-05: POST /v1/ask answers in one piece for this collection
 
 
 class ArxivDocument(BaseModel):
@@ -196,6 +197,7 @@ def fetch_arxiv_pdf(paper_id: str, *, transport: httpx.BaseTransport | None = No
 def _collection_view(c: Collection) -> dict[str, Any]:
     return {"id": c.id, "name": c.name, "version": c.version,
             "retrieval_preset": c.retrieval_preset, "rerank": c.rerank,
+            "buffered": c.buffered,
             "created_at": c.created_at}
 
 
@@ -316,7 +318,7 @@ def ingestion_router(ctx: IngestionContext) -> APIRouter:
                                    "this tenant already has a collection with that name")
                 collection = await store.collections.create(
                     tenant, body.name, retrieval_preset=body.retrieval_preset,
-                    rerank=body.rerank)
+                    rerank=body.rerank, buffered=body.buffered)
         except Rejected as exc:
             return _error(exc.status, exc.code, str(exc))
         except ValidationError as exc:

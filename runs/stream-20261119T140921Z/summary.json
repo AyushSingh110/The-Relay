@@ -1,0 +1,85 @@
+{
+  "requests": 10,
+  "http_200": 10,
+  "first_status_ms": {
+    "n": 10,
+    "p50": 24.3,
+    "p95": 35.5,
+    "max": 35.524
+  },
+  "first_sentence_ms": {
+    "n": 9,
+    "p50": 492.4,
+    "p95": 583.4,
+    "max": 583.406
+  },
+  "total_ms": {
+    "n": 10,
+    "p50": 633.1,
+    "p95": 723.9,
+    "max": 723.939
+  },
+  "provider_first_token_ms": {
+    "n": 10,
+    "p50": 327.2,
+    "p95": 395.7,
+    "max": 395.714
+  },
+  "max_gap_ms": 484.618,
+  "verdicts": {
+    "BLOCKED": 1,
+    "VERIFIED": 9
+  },
+  "stopped": {
+    "uncited": 1
+  },
+  "partial": 0,
+  "partial_rate": 0.0,
+  "with_sentences": 9,
+  "scenario": {
+    "name": "steady_streaming_c1",
+    "concurrency": 1,
+    "rounds": 10,
+    "round_gap_s": 7.0,
+    "warmup_rounds": 1
+  },
+  "warmup": {
+    "requests": 1,
+    "http_200": 1,
+    "first_status_ms": {
+      "n": 1,
+      "p50": 35.3,
+      "p95": 35.3,
+      "max": 35.301
+    },
+    "first_sentence_ms": {
+      "n": 1,
+      "p50": 872.6,
+      "p95": 872.6,
+      "max": 872.589
+    },
+    "total_ms": {
+      "n": 1,
+      "p50": 1071.5,
+      "p95": 1071.5,
+      "max": 1071.502
+    },
+    "provider_first_token_ms": {
+      "n": 1,
+      "p50": 729.8,
+      "p95": 729.8,
+      "max": 729.779
+    },
+    "max_gap_ms": 482.725,
+    "verdicts": {
+      "VERIFIED": 1
+    },
+    "stopped": {},
+    "partial": 0,
+    "partial_rate": 0.0,
+    "with_sentences": 1
+  },
+  "v1_steady_total_p50_ms": 701.1,
+  "target_first_sentence_p50_ms": 350.55,
+  "meets_target": false
+}

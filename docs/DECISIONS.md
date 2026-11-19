@@ -24,3 +24,6 @@ Owner decisions for v2 work, newest last. Each entry records what was decided, b
   - `weak` holds the topics.
 
   Plain `title`, `short_names` and arXiv id fields sit alongside them. The reason is exact v1 pattern order: v1 interleaves the arXiv id among H-Net's aliases, and the order appears in recorded scope reasons. Stored patterns are validated (they must compile) and refreshed for v1 papers at start-up. A foreign document is named only by its title and short names, never by its aliases or topics. (Proposed by Claude Code, 2026-11-19.)
+- **V2-05:** The partial-answer rate on the v1 questions is measured by **replaying the 63 recorded Table 3 answers** through the streaming path (splitter, per-sentence verifier, final pass). There are no real calls; the stand-in's rate is reported separately (owner, 2026-11-19).
+- **V2-05:** Property tests use a **seeded random generator, with no new dependency** (Hypothesis is not added) (owner, 2026-11-19).
+- **V2-05:** `POST /v1/ask` without a `collection_id` answers from the caller's **`v1-papers` collection** (owner, 2026-11-19).

@@ -114,6 +114,12 @@ class AdmissionQueue:
     def active(self) -> int:
         return self._active
 
+    def _position(self, waiter: asyncio.Future[None]) -> int:
+        try:
+            return self._waiters.index(waiter) + 1
+        except ValueError:
+            return 0  # admitted, or gone
+
     def _release(self) -> None:
         self._active -= 1
         while self._waiters:
@@ -125,8 +131,13 @@ class AdmissionQueue:
 
     @asynccontextmanager
     async def admit(self, *, deadline_ns: int | None = None,
-                    is_connected: Callable[[], bool] | None = None) -> AsyncGenerator[Ticket]:
-        """Hold a service slot for the ``async with`` body, or raise to shed the request."""
+                    is_connected: Callable[[], bool] | None = None,
+                    on_queued: Callable[[Callable[[], int]], None] | None = None,
+                    ) -> AsyncGenerator[Ticket]:
+        """Hold a service slot for the ``async with`` body, or raise to shed the request.
+
+        ``on_queued`` (V2-05) is called once if the request has to wait, with a function that
+        returns its live 1-based position in the queue (0 once it is no longer waiting)."""
         entered = self._clock()
         depth_at_entry = self.depth
         if self._active < self.max_active and not self._waiters:
@@ -145,6 +156,12 @@ class AdmissionQueue:
             waiter: asyncio.Future[None] = asyncio.get_running_loop().create_future()
             self._waiters.append(waiter)
             self.peak_depth = max(self.peak_depth, self.depth)
+            if on_queued is not None:
+                try:
+                    on_queued(lambda: self._position(waiter))
+                except BaseException:
+                    self._waiters.remove(waiter)  # leave no ghost behind
+                    raise
             try:
                 await waiter
             except asyncio.CancelledError:

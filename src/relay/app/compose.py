@@ -26,6 +26,7 @@ from typing import Final
 from fastapi import FastAPI
 
 from relay.api.app import RelayService, create_app
+from relay.api.routes.ask_v1 import AskV1Context, ask_v1_router
 from relay.app.bootstrap import V1_PRESET, ensure_dev_tenant, register_v1_papers
 from relay.app.collections import LazyEmbedder, LazyReranker, StoreCollectionResolver
 from relay.app.request_log import RequestLogSink
@@ -77,6 +78,7 @@ class Runtime:
     collections: StoreCollectionResolver | None = None
     ingest_worker: IngestWorker | None = None
     notes: tuple[str, ...] = ()
+    ask_v1: AskV1Context | None = None  # POST /v1/ask (V2-05), sqlite mode
 
     @property
     def service(self) -> RelayService:
@@ -291,14 +293,19 @@ async def open_runtime(settings: RelaySettings, env: Settings, *,
             cache_mode=mode, vocabulary=vocabulary, run=sink,  # type: ignore[arg-type]
             collections=None if collections is None else collections.resolver,
         )
-        if collections is not None:
+        ask_v1: AskV1Context | None = None
+        if collections is not None and store is not None:
             app.include_router(ingestion_router(collections.routes))
+            ask_v1 = AskV1Context(service=app.state.relay, store=store)
+            app.include_router(ask_v1_router(ask_v1))
+            stack.push_async_callback(ask_v1.aclose)  # runs first: before provider and store
         yield Runtime(app=app, lane=lane, source=source, provider_url=url,
                       capacity=capacity, real_call_cap=real_cap, store=store,
                       request_log=sink,
                       collections=None if collections is None else collections.resolver,
                       ingest_worker=None if collections is None else collections.worker,
-                      notes=() if collections is None else (collections.note,))
+                      notes=() if collections is None else (collections.note,),
+                      ask_v1=ask_v1)
 
 
 __all__ = ["Runtime", "cache_mode", "capacity_derivation", "corpus_sha256", "guard_config",

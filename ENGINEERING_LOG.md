@@ -1286,3 +1286,75 @@
 - **Real Groq calls:** 0. **Network:** none by this session (the review plugin's uv install reached PyPI, see Plugins).
 - **Owner approval status:** pending owner review
 - **Next action:** Owner reviews the report and the [PROPOSED] items; then V2-05 on approval.
+
+### Execution Entry
+
+- **Date and time:** 2026-11-19 20:12 IST
+- **Phase identifier:** `v2-05` — Verified streaming
+- **Owner decisions recorded (2026-11-19, `docs/DECISIONS.md`):**
+  - Partial-answer rate measured by replaying the Table 3 answers through the streaming path.
+  - Seeded property tests; no Hypothesis.
+  - `/v1/ask` defaults to `v1-papers`.
+- **Task requested and objective:**
+  - Sentence-by-sentence verified streaming on a new `POST /v1/ask` (SSE: `accepted`, `status`, `sources`, `sentence`, `stopped`, `final`).
+  - Keepalive; replay-buffer coalescing; buffered fallback per collection; never cache partial answers.
+  - Harness first-status and first-sentence times; `steady_streaming`; partial-answer rate.
+- **Status:** completed. One done-criterion is not met (the latency target; see below).
+- **Files created:**
+  - `src/relay/orchestrator/streaming.py`
+  - `src/relay/api/routes/{__init__,ask_v1}.py`
+  - `src/relay/experiments/streaming_load.py`
+  - `scripts/run_streaming_load.py`
+  - Tests (62 new):
+    - `test_streaming` (9), `test_guard_streaming` (3), `test_pipeline_streaming` (6), `test_store_migration_004` (2), `test_admission_position` (2)
+    - `test_ask_v1` (11), `test_ask_v1_review_fixes` (7), `test_compose_streaming` (2), `test_streaming_load` (4)
+    - `test_v2_05_review_fixes` (8), `test_v2_05_silent_failure_fixes` (7), `test_v1_regression` (+1)
+  - `runs/stream-20261119T143748Z` (canonical), plus 2 superseded runs and 1 concurrency-1 diagnostic
+  - `reports/phase-v2-05-verified-streaming.md`
+- **Files modified:**
+  - Orchestration and control: `verifier.py` (`SentenceChecker` extracted, behaviour unchanged), `pipeline.py`, `provider_guard.py`, `admission.py`
+  - Service: `api/app.py`, `app/compose.py`, `app/routes/ingestion.py`
+  - Store: `store/{migrations,repositories}.py` (migration 004 `collection.buffered`)
+  - Replay: `experiments/table3_replay.py`, `scripts/replay_table3.py`
+  - `docs/DECISIONS.md`, `tests/test_v1_regression.py`
+  - `results.csv` and `evidence/` unchanged.
+- **Engineering decisions ([PROPOSED], report §5):**
+  - `stopped` then `final`; keepalive every 4 s.
+  - The splitter releases only sentences that can no longer change.
+  - No retry after forwarded content.
+  - Partial outcomes follow v1's status/delivery rule; lead-ins are held until their item verifies.
+  - The cache stores verified answers and refusals; refusals replay as a message.
+  - `/v1/ask` coalescing is separate from `/ask`.
+  - `steady_streaming`: 1 warm-up round reported apart, `max_completion_tokens` 256, sized for 5 concurrent.
+  - `conversation_id` is validated but not used yet.
+- **Plugins used:**
+  - `superpowers:test-driven-development`.
+  - `code-review`: low × 9, medium × 1, high × 1.
+  - `pr-review-toolkit:silent-failure-hunter`.
+  - `superpowers:verification-before-completion`.
+  - Seeded property tests (no new dependency).
+- **Commands executed and observed outputs:**
+  - Full suite after each file → 665 … 718.
+  - Final: `pytest -q` → `718 passed`; `ruff check .` → `All checks passed!`
+  - Table 3 buffered replay → 84/84.
+  - Streaming replay → 63/63 + 21/21; partial 1/55 (1.8 %), q02 small_fast.
+  - Canonical `steady_streaming` (stand-in, 15 requests):
+    - accepted p50 94.0 ms; provider first token p50 435.8 ms;
+    - first sentence p50 649.0 ms (p95 890.8); total p50 832.9 ms;
+    - longest silence 628 ms; 0 missing finals; stand-in partial 1/15.
+  - Concurrency-1 diagnostic: first token 327.2 ms; first sentence 492.4 ms.
+- **Errors, root causes, fixes:**
+  - Splitter instability (a run of tags) → fixed.
+  - Hanging test → time-bounded.
+  - Partial outcomes and v1's delivery invariant → ruling.
+  - Test bugs: Moshi in a geology collection; `pct` fraction; the warm-up text.
+  - Shell escapes mangled → Edit tool.
+  - Review findings fixed: per file, route 7, whole phase 8 + 1 minor, silent-failure 6 (report §10).
+- **Remaining issues:**
+  - The latency target (350.6 ms) is not met on the stand-in: its first token alone is 435.8 ms at 5 concurrent and 327 ms alone.
+  - Deferred minors (report §11).
+  - Real-model streaming latency is unmeasured (a ≤15-call spot check needs owner confirmation).
+- **Deviations:** none from ARCH_V2 §6. Its own goal (first verified sentence under 2.5 s at the median) is met.
+- **Real Groq calls:** 0. **Network:** loopback only.
+- **Owner approval status:** pending owner review
+- **Next action:** Owner reviews the latency result and rulings 4, 5 and 9, and decides on a live spot check; then V2-06.

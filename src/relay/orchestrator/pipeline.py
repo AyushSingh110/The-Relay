@@ -2,10 +2,11 @@
 
 from __future__ import annotations
 
+import asyncio
 import math
-from collections.abc import AsyncIterator, Mapping
+from collections.abc import AsyncIterator, Callable, Mapping
 from dataclasses import dataclass, field
-from typing import Annotated, Final, Literal, Protocol
+from typing import Annotated, Any, Final, Literal, Protocol
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
@@ -14,6 +15,7 @@ from relay.ingestion.v1_corpus import V1_CUE_SET
 from relay.orchestrator.evidence_gate import EvidenceGate, GateDecision, merge_expansion
 from relay.orchestrator.messages import RefusalMessages, refusal_messages
 from relay.orchestrator.prompt import PROMPT_VERSION, build_request, prompt_version
+from relay.orchestrator.streaming import SentenceStream, StoppedEvent, StreamingVerifier
 from relay.orchestrator.tools import PassageRetriever, ToolCallRecord, ToolError, ToolGateway
 from relay.orchestrator.verifier import CitedPassage, VerificationResult, Verifier
 from relay.providers.base import (
@@ -45,7 +47,9 @@ OUT_OF_CORPUS_MESSAGE: Final = _V1_MESSAGES.out_of_corpus
 VERSION_MESSAGE: Final = _V1_MESSAGES.version
 SAFE_REFUSAL_MESSAGE: Final = _V1_MESSAGES.safe_refusal
 
-OutcomeKind = Literal["answer", "llm_refusal", "early_refusal", "safe_refusal", "failed"]
+# "partial" (V2-05 streaming): verified sentences were delivered, then the answer stopped.
+OutcomeKind = Literal["answer", "llm_refusal", "early_refusal", "safe_refusal", "failed",
+                      "partial"]
 _STRICT = ConfigDict(frozen=True, strict=True, extra="forbid")
 
 
@@ -77,6 +81,16 @@ class PipelineConfig(BaseModel):
     reasoning_effort: str | None = None
 
 
+class StreamStop(BaseModel):
+    """Why a streamed answer stopped (V2-05): the failed check, not only its class."""
+
+    model_config = _STRICT
+
+    reason_class: str
+    sentence_index: int | None
+    failure_codes: tuple[str, ...]
+
+
 class PipelineTrace(BaseModel):
     """Everything needed to audit one request (goes to the run's traces, not results.csv)."""
 
@@ -94,6 +108,7 @@ class PipelineTrace(BaseModel):
     reasoning_chars: int = 0
     verification: VerificationResult | None = None
     provider_error: str | None = None
+    stream_stop: StreamStop | None = None  # streaming only: the sentence that failed
 
 
 class PipelineOutcome(BaseModel):
@@ -177,11 +192,16 @@ class GenerationResult:
             raise ValueError("a completion needs at least one provider attempt")
 
 
+ContentSink = Callable[[str], None]
+
+
 class AnswerGenerator(Protocol):
     async def generate(
         self, request: ChatRequest, spans: ServerSpanTracker, *,
-        deadline_ns: int | None = None,
-    ) -> GenerationResult: ...
+        deadline_ns: int | None = None, on_content: ContentSink | None = None,
+    ) -> GenerationResult:
+        """``on_content`` (V2-05 streaming) receives each content piece as it arrives."""
+        ...
 
 
 class PromptBudget(Protocol):
@@ -197,7 +217,8 @@ class SingleCallGenerator:
         self._provider = provider
 
     async def generate(self, request: ChatRequest, spans: ServerSpanTracker, *,
-                       deadline_ns: int | None = None) -> GenerationResult:
+                       deadline_ns: int | None = None,
+                       on_content: ContentSink | None = None) -> GenerationResult:
         opened = False
         received = 0
 
@@ -209,6 +230,8 @@ class SingleCallGenerator:
                 elif isinstance(event, ContentDelta):
                     if event.text:
                         spans.mark_provider_first_token()
+                        if on_content is not None:
+                            on_content(event.text)
                     received += len(event.text)
                 elif isinstance(event, ReasoningDelta):
                     received += len(event.text)
@@ -270,7 +293,8 @@ class _Run:
     def trace(self, *, prompt_chars: int | None = None, raw_answer: str | None = None,
               finish_reason: str | None = None, reasoning_chars: int = 0,
               verification: VerificationResult | None = None,
-              provider_error: str | None = None) -> PipelineTrace:
+              provider_error: str | None = None,
+              stream_stop: StreamStop | None = None) -> PipelineTrace:
         return PipelineTrace(
             prompt_version=self.prompt_version, scope=self.scope,
             gate_decisions=tuple(self.decisions), tool_calls=tuple(self.tool_calls),
@@ -278,6 +302,7 @@ class _Run:
             prompt_chars=prompt_chars, raw_answer=raw_answer, finish_reason=finish_reason,
             truncated=finish_reason == "length", reasoning_chars=reasoning_chars,
             verification=verification, provider_error=provider_error,
+            stream_stop=stream_stop,
         )
 
     def outcome(self, kind: OutcomeKind, *, status: Status = "ok",
@@ -361,6 +386,105 @@ class _Corpus:
     safety: CorpusSafety
 
 
+# --- Streaming plumbing (V2-05) ---------------------------------------------------------
+
+
+@dataclass
+class StreamPlan:
+    """What steps 1-3 decided for one request: an early outcome, or the prompt to run."""
+
+    run: _Run
+    safety: CorpusSafety
+    passages: tuple[RetrievedPassage, ...]
+    early: PipelineOutcome | None = None
+    chat: ChatRequest | None = None
+    degraded: bool = False
+    streaming_verifier: StreamingVerifier = field(init=False)
+
+    def __post_init__(self) -> None:
+        self.streaming_verifier = StreamingVerifier(self.safety.verifier)
+
+    @property
+    def request(self) -> PipelineRequest:
+        return self.run.request
+
+
+_END: Final = object()
+
+
+class TokenStream:
+    """The model's content pieces as an async iterator. The model call runs in its own
+    task; ``aclose`` cancels it (generation stops; what was spent is estimated)."""
+
+    def __init__(self, generator: AnswerGenerator, chat: ChatRequest,
+                 spans: ServerSpanTracker, deadline_ns: int | None) -> None:
+        self._generator = generator
+        self._chat = chat
+        self._spans = spans
+        self._deadline_ns = deadline_ns
+        self._queue: asyncio.Queue[object] = asyncio.Queue()
+        self._task: asyncio.Task[GenerationResult] | None = None
+        self.received_chars = 0
+        self.cancelled = False
+
+    def _push(self, text: str) -> None:
+        self.received_chars += len(text)
+        self._queue.put_nowait(text)
+
+    async def _produce(self) -> GenerationResult:
+        try:
+            return await self._generator.generate(self._chat, self._spans,
+                                                  deadline_ns=self._deadline_ns,
+                                                  on_content=self._push)
+        finally:
+            self._queue.put_nowait(_END)
+
+    def __aiter__(self) -> AsyncIterator[str]:
+        return self._iterate()
+
+    async def _iterate(self) -> AsyncIterator[str]:
+        if self._task is None:
+            self._task = asyncio.create_task(self._produce(), name="relay-generation")
+        while True:
+            item = await self._queue.get()
+            if item is _END:
+                break
+            yield str(item)
+        await self._task  # an unexpected generator exception surfaces here
+
+    async def aclose(self) -> None:
+        if self._task is not None and not self._task.done():
+            self.cancelled = True
+            self._task.cancel()
+            try:
+                await self._task
+            except asyncio.CancelledError:
+                current = asyncio.current_task()
+                if current is not None and current.cancelling():
+                    raise  # the caller itself is being cancelled: let that through
+
+    @property
+    def failed(self) -> bool:
+        """The model call ended with a provider error (its output is incomplete)."""
+        result = self.result
+        return result is not None and result.error is not None
+
+    @property
+    def result(self) -> GenerationResult | None:
+        """The generation result; None while running or when it was cancelled."""
+        if self._task is None or not self._task.done() or self._task.cancelled():
+            return None
+        return self._task.result()
+
+
+def _merged_citations(sentences: tuple[Any, ...]) -> tuple[CitedPassage, ...]:
+    seen: dict[int, CitedPassage] = {}
+    for sentence in sentences:
+        for citation in sentence.citations:
+            seen.setdefault(citation.tag, citation)
+    return tuple(seen.values())
+
+
 # --- Pipeline -------------------------------------------------------------------------
 
 
@@ -420,46 +544,23 @@ class Pipeline:
 
     async def run(self, request: PipelineRequest, spans: ServerSpanTracker, *,
                   deadline_ns: int | None = None) -> PipelineOutcome:
-        request, corpus = await self._corpus(request)
-        if request.retrieval_setting not in corpus.gateway.settings:
-            raise ContractViolationError(
-                f"unknown retrieval_setting {request.retrieval_setting!r}"
-            )
-        spans.switch("working")
-        # Step 1: deterministic scope analysis.
-        safety = corpus.safety
-        run = _Run(request, safety.analyser.analyze(request.question, corpus.vocabulary),
-                   prompt_version=safety.prompt_version)
+        """The buffered path: steps 1-3, one model call, the whole-answer verifier."""
+        plan = await self._prepare(request, spans)
+        if plan.early is not None:
+            return plan.early
+        return await self.complete_buffered(plan, spans, deadline_ns=deadline_ns)
 
-        # Step 2: the tool call.
-        try:
-            call = await corpus.gateway.retrieve_passages({
-                "query": request.question,
-                "retrieval_setting": request.retrieval_setting,
-                "include_references": run.scope.asks_references,
-            })
-        except ToolError as exc:
-            run.tool_calls.append(exc.record)
-            return run.outcome("failed", status="error", error_code="internal_error")
-        run.tool_calls.append(call.record)
-        passages = call.result.passages
-
-        # Step 3: evidence gate, with at most one paper-scoped re-query.
-        decision = safety.gate.decide(run.scope, passages, loop_count=0)
-        run.decisions.append(decision)
-        if decision.action == "LOOP_EXPAND":
-            passages = await self._expand(run, decision, passages, corpus)
-            decision = safety.gate.decide(run.scope, passages, loop_count=1)
-            run.decisions.append(decision)
-        if decision.action == "EARLY_REFUSAL":
-            message = (safety.messages.version if decision.reason == "version_not_in_corpus"
-                       else safety.messages.out_of_corpus)
-            return run.outcome("early_refusal", verdict="EARLY_REFUSAL",
-                               delivered_text=message, refused=True, passages=passages)
+    async def complete_buffered(self, plan: StreamPlan, spans: ServerSpanTracker, *,
+                                deadline_ns: int | None = None) -> PipelineOutcome:
+        """Steps 4-5 of ``run`` on a prepared plan (``POST /v1/ask`` buffered mode)."""
+        if plan.early is not None:
+            return plan.early
+        run, safety, passages, degraded = plan.run, plan.safety, plan.passages, plan.degraded
+        chat = plan.chat
+        if chat is None:  # set whenever there is no early outcome
+            raise RuntimeError("a plan without an early outcome has no prompt")
 
         # Step 4: the only LLM call, buffered.
-        chat, passages, degraded = self._fit_to_budget(request.question, passages,
-                                                       safety.cues)
         generated = await self._generator.generate(chat, spans, deadline_ns=deadline_ns)
         spend = _spend(generated, chat)
         if generated.error is not None:
@@ -495,6 +596,135 @@ class Pipeline:
                            delivered_text=safety.messages.safe_refusal, refused=True,
                            passages=passages, spend=spend, trace=audit, degraded=degraded)
 
+    # --- Streaming mode (V2-05) ----------------------------------------------------------
+
+    async def prepare_streaming(self, request: PipelineRequest,
+                                spans: ServerSpanTracker) -> StreamPlan:
+        """Steps 1-3 (scope, retrieval, gate) and the prompt, exactly as ``run`` does."""
+        return await self._prepare(request, spans)
+
+    def run_streaming(self, plan: StreamPlan, spans: ServerSpanTracker, *,
+                      deadline_ns: int | None = None) -> TokenStream:
+        """The model call as a token stream. Closing it (``aclose``) cancels generation.
+        Verification is not done here: ``SentenceStream`` checks each sentence and
+        ``complete_streaming`` runs the whole-answer pass."""
+        if plan.chat is None:
+            raise ContractViolationError("this plan ended early; there is nothing to generate")
+        return TokenStream(self._generator, plan.chat, spans, deadline_ns)
+
+    async def complete_streaming(self, plan: StreamPlan, tokens: TokenStream,
+                                 stream: SentenceStream, *, stop: StoppedEvent | None,
+                                 refused: bool) -> PipelineOutcome:
+        """The outcome of a streamed answer. When every sentence passed, the v1 whole-answer
+        verifier runs as the final pass; only then is the answer ``VERIFIED``."""
+        run, safety, passages, chat = plan.run, plan.safety, plan.passages, plan.chat
+        if chat is None:
+            raise ContractViolationError("this plan ended early; there is nothing to complete")
+        await tokens.aclose()
+        result = tokens.result
+        if result is None:  # cancelled after a failed sentence: estimate what was spent
+            spend = _Spend(provider_called=True, tokens_in=_estimate_tokens(chat.prompt_chars),
+                           tokens_out=_estimate_tokens(tokens.received_chars),
+                           usage_source="estimated", model_id=chat.model)
+        else:
+            spend = _spend(result, chat)
+        released = tuple(stream.sentences)
+        delivered = " ".join(s.text for s in released) or None
+        citations = _merged_citations(released)
+        completion = None if result is None else result.completion
+        audit_args: dict[str, object] = {
+            "prompt_chars": chat.prompt_chars, "raw_answer": stream.text or None,
+            "finish_reason": None if completion is None else completion.finish_reason,
+            "reasoning_chars": 0 if completion is None else len(completion.reasoning)}
+        common = {"passages": passages, "spend": spend, "degraded": plan.degraded}
+        # A partial that ends in a failure (client gone, provider error) records the failure
+        # status and no delivered text (v1's rule: status ok exactly when text is delivered);
+        # the sentences already streamed stay with the client and in the trace.
+        if stop is None and not refused and not stream.completed:
+            # The consumer stopped reading (the client left): never a complete answer.
+            return run.outcome("partial" if released else "failed",
+                               status=status_for_error_code("client_gave_up"),
+                               error_code="client_gave_up",
+                               trace=run.trace(**audit_args),  # type: ignore[arg-type]
+                               **common)  # type: ignore[arg-type]
+        if result is not None and result.error is not None:
+            code = result.error.error_code
+            trace = run.trace(**audit_args, provider_error=sanitize_error(result.error))  # type: ignore[arg-type]
+            return run.outcome("partial" if released else "failed",
+                               status=status_for_error_code(code), error_code=code,
+                               trace=trace, **common)  # type: ignore[arg-type]
+        # the whole-answer pass; skipped when a sentence already failed
+        verification = None if stop is not None else safety.verifier.verify(stream.text,
+                                                                             passages)
+        stream_stop = None if stop is None else StreamStop(
+            reason_class=stop.reason_class, sentence_index=stop.sentence_index,
+            failure_codes=tuple(f.code for f in stop.failures))
+        trace = run.trace(**audit_args, verification=verification,  # type: ignore[arg-type]
+                          stream_stop=stream_stop)
+        if verification is not None and verification.verdict == "VERIFIED" and stop is None:
+            return run.outcome("answer", verdict="VERIFIED", delivered_text=stream.text.strip(),
+                               citations=verification.citations, trace=trace,
+                               **common)  # type: ignore[arg-type]
+        if refused and verification is not None and verification.verdict == "REFUSAL_VERIFIED":
+            return run.outcome("llm_refusal", verdict="REFUSAL_VERIFIED",
+                               delivered_text=safety.messages.llm_refusal, refused=True,
+                               trace=trace, **common)  # type: ignore[arg-type]
+        if released:  # stopped mid-answer, or the final pass failed after every sentence
+            return run.outcome("partial", verdict="BLOCKED",
+                               error_code="citation_verification_failed",
+                               delivered_text=delivered, citations=citations, trace=trace,
+                               **common)  # type: ignore[arg-type]
+        return run.outcome("safe_refusal", verdict="BLOCKED",
+                           error_code="citation_verification_failed",
+                           delivered_text=safety.messages.safe_refusal, refused=True,
+                           trace=trace, **common)  # type: ignore[arg-type]
+
+    async def _prepare(self, request: PipelineRequest, spans: ServerSpanTracker) -> StreamPlan:
+        """Steps 1-3 and the prompt, shared by the buffered and the streaming paths."""
+        request, corpus = await self._corpus(request)
+        if request.retrieval_setting not in corpus.gateway.settings:
+            raise ContractViolationError(
+                f"unknown retrieval_setting {request.retrieval_setting!r}"
+            )
+        spans.switch("working")
+        # Step 1: deterministic scope analysis.
+        safety = corpus.safety
+        run = _Run(request, safety.analyser.analyze(request.question, corpus.vocabulary),
+                   prompt_version=safety.prompt_version)
+
+        # Step 2: the tool call.
+        try:
+            call = await corpus.gateway.retrieve_passages({
+                "query": request.question,
+                "retrieval_setting": request.retrieval_setting,
+                "include_references": run.scope.asks_references,
+            })
+        except ToolError as exc:
+            run.tool_calls.append(exc.record)
+            return StreamPlan(run, safety, (), early=run.outcome(
+                "failed", status="error", error_code="internal_error"))
+        run.tool_calls.append(call.record)
+        passages = call.result.passages
+
+        # Step 3: evidence gate, with at most one paper-scoped re-query.
+        decision = safety.gate.decide(run.scope, passages, loop_count=0)
+        run.decisions.append(decision)
+        if decision.action == "LOOP_EXPAND":
+            passages = await self._expand(run, decision, passages, corpus)
+            decision = safety.gate.decide(run.scope, passages, loop_count=1)
+            run.decisions.append(decision)
+        if decision.action == "EARLY_REFUSAL":
+            message = (safety.messages.version if decision.reason == "version_not_in_corpus"
+                       else safety.messages.out_of_corpus)
+            return StreamPlan(run, safety, passages, early=run.outcome(
+                "early_refusal", verdict="EARLY_REFUSAL", delivered_text=message,
+                refused=True, passages=passages))
+
+        # The prompt (step 4's input), trimmed to the token headroom when needed.
+        chat, passages, degraded = self._fit_to_budget(request.question, passages,
+                                                       safety.cues)
+        return StreamPlan(run, safety, passages, chat=chat, degraded=degraded)
+
     async def _expand(self, run: _Run, decision: GateDecision,
                       passages: tuple[RetrievedPassage, ...],
                       corpus: _Corpus) -> tuple[RetrievedPassage, ...]:
@@ -520,8 +750,12 @@ __all__ = [
     "SAFE_REFUSAL_MESSAGE",
     "VERSION_MESSAGE",
     "AnswerGenerator",
+    "ContentSink",
     "CollectionResolver",
     "CorpusSafety",
+    "StreamPlan",
+    "StreamStop",
+    "TokenStream",
     "CollectionResources",
     "GenerationResult",
     "Pipeline",

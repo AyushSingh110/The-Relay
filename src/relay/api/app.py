@@ -397,6 +397,10 @@ class RelayService:
 
     # --- traces ---
 
+    def record_trace(self, record: Mapping[str, Any]) -> None:
+        """Send one trace record to the sink (also used by ``POST /v1/ask``)."""
+        self._trace(dict(record))
+
     def _trace(self, record: dict[str, Any]) -> None:
         if self._run is None:
             return

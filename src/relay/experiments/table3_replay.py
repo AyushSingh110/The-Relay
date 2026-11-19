@@ -169,6 +169,86 @@ async def replay(rows: Sequence[RecordedRow], build: PipelineFactory, *, path: R
     return results
 
 
+# --- Streaming replay (V2-05) ---------------------------------------------------------
+
+STREAM_PIECE_CHARS: Final = 4  # about one token per piece
+
+
+def streamed_reply(row: RecordedRow) -> list[ScriptedReply]:
+    """The recorded answer, cut into token-sized pieces (failures as in ``recorded_reply``)."""
+    if row.raw_answer is None:
+        return recorded_reply(row)
+    text = row.raw_answer
+    pieces = tuple(text[i:i + STREAM_PIECE_CHARS] for i in range(0, len(text),
+                                                                 STREAM_PIECE_CHARS))
+    return [ScriptedReply(content_chunks=pieces, finish_reason=row.finish_reason or "stop")]
+
+
+@dataclass(frozen=True)
+class StreamingReplayResult:
+    row: RecordedRow
+    kind: str
+    verdict: str
+    sentences: int  # verified sentences released to the client
+    stopped: str | None  # reason class when the stream stopped
+    partial: bool  # sentences were released, then the answer stopped
+    error: str | None = None
+
+    @property
+    def agrees(self) -> bool:
+        """Streaming reaches v1's verdict: verified answers stream fully, refusals stay
+        refusals, and an answer v1 blocked is never verified."""
+        return self.error is None and self.verdict == self.row.verdict
+
+
+async def replay_streaming(rows: Sequence[RecordedRow], build: PipelineFactory, *,
+                           collection_id: str | None = None) -> list[StreamingReplayResult]:
+    from relay.orchestrator.streaming import SentenceStream, StoppedEvent, StreamRefusal
+
+    results = []
+    for n, row in enumerate(rows, start=1):
+        pipeline = build(ScriptedProvider(streamed_reply(row)))
+        spans = ServerSpanTracker()
+        request = PipelineRequest(request_id=f"stream-replay-{n:03d}", question=row.question,
+                                  retrieval_setting=row.setting, collection_id=collection_id)
+        try:
+            plan = await pipeline.prepare_streaming(request, spans)
+            if plan.early is not None:
+                results.append(StreamingReplayResult(row, plan.early.kind,
+                                                     plan.early.verification_verdict, 0,
+                                                     None, False))
+                continue
+            tokens = pipeline.run_streaming(plan, spans)
+            stream = SentenceStream(tokens, plan.passages, plan.streaming_verifier)
+            events = [event async for event in stream]
+            stop = next((e for e in events if isinstance(e, StoppedEvent)), None)
+            refused = any(isinstance(e, StreamRefusal) for e in events)
+            outcome = await pipeline.complete_streaming(plan, tokens, stream, stop=stop,
+                                                        refused=refused)
+        except Exception as exc:  # reported in the table; never hidden
+            results.append(StreamingReplayResult(row, "-", "-", 0, None, False,
+                                                 error=type(exc).__name__))
+            continue
+        released = len(stream.sentences)
+        reason = (stop.reason_class if stop is not None else
+                  "final_verification_failed" if outcome.verification_verdict == "BLOCKED"
+                  else None)
+        results.append(StreamingReplayResult(
+            row, outcome.kind, outcome.verification_verdict, released, reason,
+            partial=released > 0 and outcome.kind != "answer"))
+    return results
+
+
+def streaming_table(results: Sequence[StreamingReplayResult]) -> str:
+    lines = ["| Question | Setting | v1 verdict | Streamed verdict | Sentences released | "
+             "Stopped | Partial | Agrees |", "| :-- | :-- | :-- | :-- | --: | :-- | :-- | :-- |"]
+    for r in results:
+        lines.append(f"| {r.row.question_id} | {r.row.setting} | {r.row.verdict} | "
+                     f"{r.verdict} | {r.sentences} | {r.stopped or '—'} | "
+                     f"{'yes' if r.partial else 'no'} | {'yes' if r.agrees else '**no**'} |")
+    return "\n".join(lines)
+
+
 def markdown_table(results: Sequence[ReplayResult]) -> str:
     lines = ["| Question | Setting | Path | v1 verdict | Replay verdict | Match | Differences |",
              "| :-- | :-- | :-- | :-- | :-- | :-- | :-- |"]
@@ -179,5 +259,6 @@ def markdown_table(results: Sequence[ReplayResult]) -> str:
     return "\n".join(lines)
 
 
-__all__ = ["TABLE3_RUN", "RecordedRow", "ReplayResult", "load_rows", "markdown_table",
-           "pipeline_factory", "recorded_reply", "replay"]
+__all__ = ["TABLE3_RUN", "RecordedRow", "ReplayResult", "StreamingReplayResult", "load_rows",
+           "markdown_table", "pipeline_factory", "recorded_reply", "replay",
+           "replay_streaming", "streamed_reply", "streaming_table"]

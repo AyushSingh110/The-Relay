@@ -14,7 +14,12 @@ from typing import Annotated, Any, Final, Literal
 from pydantic import BaseModel, ConfigDict, Field
 
 from relay.control.retry import RetryPolicy
-from relay.orchestrator.pipeline import GenerationResult, SingleCallGenerator, TokenTotals
+from relay.orchestrator.pipeline import (
+    ContentSink,
+    GenerationResult,
+    SingleCallGenerator,
+    TokenTotals,
+)
 from relay.providers.base import ChatProvider, ChatRequest, TokenUsage
 from relay.providers.errors import (
     ProviderConnectionError,
@@ -421,8 +426,20 @@ class GuardedGenerator:
         self._clock = clock
 
     async def generate(self, request: ChatRequest, spans: ServerSpanTracker, *,
-                       deadline_ns: int | None = None) -> GenerationResult:
+                       deadline_ns: int | None = None,
+                       on_content: ContentSink | None = None) -> GenerationResult:
+        """With ``on_content`` (streaming), content is forwarded as it arrives, and an
+        attempt that already forwarded content is never retried: the client has seen it,
+        and a retry would produce a different answer."""
         self._retry.budget.record_first_attempt()
+        forwarded = False
+
+        def forward(text: str) -> None:
+            nonlocal forwarded
+            forwarded = True
+            if on_content is not None:
+                on_content(text)
+
         attempts = 0
         tokens_in = tokens_out = 0
         sources: set[UsageSource] = set()
@@ -445,7 +462,8 @@ class GuardedGenerator:
                 return finish(GenerationResult(None, refusal, False, 0, attempts=0))
             attempts += 1
             try:
-                result = await self._call.generate(request, spans)
+                result = await self._call.generate(
+                    request, spans, on_content=None if on_content is None else forward)
             except BaseException:
                 # Cancelled mid-call: tokens may have been spent, so the reservation stays charged.
                 self._guard.settle(permit, usage=None, stream_opened=True)
@@ -461,7 +479,7 @@ class GuardedGenerator:
             if meta is not None:
                 self._guard.sync_headers(meta.rate_limits)
             self._guard.record_result(result.error)
-            if result.error is None:
+            if result.error is None or forwarded:
                 return finish(result)
             remaining = None if deadline_ns is None else (deadline_ns - self._clock()) / _NS
             decision = self._retry.decide(result.error, attempt=attempts, remaining_s=remaining)

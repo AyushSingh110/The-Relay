@@ -61,3 +61,23 @@ async def test_v1_papers_and_the_v1_path_reproduce_every_table3_verdict(
         collection = await replay(rows, build, path="v1-papers", collection_id=V1_COLLECTION_ID)
     failed = [r for r in v1 + collection if not r.matches]
     assert failed == [], "\n" + markdown_table(failed)
+
+
+async def test_streaming_the_table3_answers_agrees_with_every_v1_verdict(
+        tmp_path: Path) -> None:
+    """V2-05: the recorded answers, streamed token by token through the per-sentence
+    verifier and the final pass, give v1's verdict on every small_fast row."""
+    from relay.experiments.eval_runner import load_retrievers
+    from relay.experiments.table3_replay import replay_streaming
+
+    rows = [r for r in load_rows(RUN) if r.setting == "small_fast"]
+    retrievers, vocabulary = load_retrievers(SETTINGS, papers_dir=PAPERS, indexes_dir=INDEXES,
+                                             models_dir=MODELS)
+    top_k = {name: RETRIEVAL_SETTINGS[name].top_k for name in retrievers}
+    results = await replay_streaming(
+        rows, pipeline_factory(retrievers, top_k, vocabulary, model_id="qwen/qwen3.8-27b"))
+    assert len(results) == 21
+    disagreements = [r for r in results if not r.agrees]
+    assert disagreements == [], disagreements
+    blocked = [r for r in results if r.row.verdict == "BLOCKED"]
+    assert blocked and all(r.verdict == "BLOCKED" for r in blocked)

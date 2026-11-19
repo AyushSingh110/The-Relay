@@ -53,6 +53,9 @@ MIGRATIONS: Final[tuple[Migration, ...]] = (
         "CREATE INDEX idx_document_sha256 ON document(collection_id, sha256);")),
     # V2-04 (owner, 2026-11-19): each document's scope cues, as JSON (DocumentCues).
     Migration(3, "document cues", "ALTER TABLE document ADD COLUMN cues TEXT;"),
+    # V2-05 (owner prompt): a collection can switch POST /v1/ask back to buffered mode.
+    Migration(4, "collection buffered",
+              "ALTER TABLE collection ADD COLUMN buffered INT DEFAULT 0;"),
 )
 LATEST_VERSION: Final = MIGRATIONS[-1].version
 

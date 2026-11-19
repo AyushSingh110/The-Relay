@@ -88,6 +88,7 @@ class Collection:
     version: int
     created_at: str
     rerank: bool = False
+    buffered: bool = False  # V2-05: /v1/ask answers in one piece (migration 004)
 
 
 @dataclass(frozen=True, slots=True)
@@ -254,25 +255,27 @@ class TenantRepo(_Repo):
 
 
 _COLLECTION_COLUMNS: Final = ("id, tenant_id, name, retrieval_preset, version, created_at, "
-                              "rerank")
+                              "rerank, buffered")
 
 
 def _collection(row: tuple[Any, ...]) -> Collection:
     values = list(row)
     values[6] = bool(values[6])  # rerank is stored as 0/1 (NULL on pre-002 rows -> False)
+    values[7] = bool(values[7])  # buffered: 0/1 (NULL on pre-004 rows -> False)
     return Collection(*values)
 
 
 class CollectionRepo(_Repo):
     async def create(self, tenant_id: str, name: str, *, retrieval_preset: str = "small_fast",
-                     rerank: bool = False, collection_id: str | None = None) -> Collection:
+                     rerank: bool = False, collection_id: str | None = None,
+                     buffered: bool = False) -> Collection:
         collection = Collection(id=collection_id or self._ids(), tenant_id=tenant_id,
                                 name=name, retrieval_preset=retrieval_preset, version=0,
-                                created_at=self._now(), rerank=rerank)
+                                created_at=self._now(), rerank=rerank, buffered=buffered)
         await self._write(
-            f"INSERT INTO collection ({_COLLECTION_COLUMNS}) VALUES (?, ?, ?, ?, ?, ?, ?)",
+            f"INSERT INTO collection ({_COLLECTION_COLUMNS}) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
             (collection.id, tenant_id, name, retrieval_preset, 0, collection.created_at,
-             int(rerank)),
+             int(rerank), int(buffered)),
             context=f"create collection: tenant {tenant_id!r} does not exist")
         return collection
 
