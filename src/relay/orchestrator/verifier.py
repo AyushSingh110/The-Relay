@@ -10,12 +10,15 @@ in this module.
 
 from __future__ import annotations
 
+import json
+import math
 import re
 import unicodedata
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from decimal import Decimal, InvalidOperation
-from typing import Final, Literal
+from pathlib import Path
+from typing import Final, Literal, Protocol
 
 from pydantic import BaseModel, ConfigDict
 
@@ -25,7 +28,7 @@ from relay.retrieval.cues import CueSet, DocumentCues, bounded
 from relay.retrieval.hybrid_index import RetrievedPassage
 
 Verdict = Literal["VERIFIED", "REFUSAL_VERIFIED", "BLOCKED"]
-Check = Literal["a", "b", "c", "d", "e"]
+Check = Literal["a", "b", "c", "d", "e", "f"]  # f: L3 refusal form (V2-07)
 FailureCode = Literal[
     "empty_answer",
     "no_citations",
@@ -37,6 +40,7 @@ FailureCode = Literal[
     "ungrounded_number",
     "ungrounded_identifier",
     "refusal_with_content",
+    "refusal_as_claim",
 ]
 
 LEAD_IN_MAX_WORDS: Final = 15
@@ -54,6 +58,38 @@ _ABBREVIATIONS: Final = frozenset(
 )
 _INITIAL = re.compile(r"^[A-Z]\.$")
 _WORD_CHAR = re.compile(r"[A-Za-z0-9]")
+
+# L3 (V2-07): a sentence saying the passages do not contain something is a refusal, not a
+# claim, whatever it cites. Every branch names the retrieved sources explicitly ("the
+# (provided) passages / documents / excerpts"); "context" and "text" count only with a
+# qualifier ("the provided context") or before a reporting verb ("the context does not
+# specify"), so claims such as "X cannot be determined from context in advance", "not
+# addressed in the context of this architecture" or "no information is provided to the
+# decoder" are not mistaken for refusals.
+_QUALIFIER = r"(?:provided|given|supplied|retrieved|cited|available|above)\s+"
+_NOUN = r"(?:passages?|documents?|excerpts?)"
+_SUBJECT = rf"\bthe\s+(?:{_QUALIFIER})?{_NOUN}(?:\s+(?:provided|given|supplied|above))?"
+_SOURCE = rf"(?:the\s+(?:{_QUALIFIER})?{_NOUN}\b|the\s+{_QUALIFIER}(?:context|texts?)\b)"
+_REPORTS = (r"(?:state|specif(?:y|ies)|mention|provide|contain|include|say|give|report"
+            r"|describe|discuss|address|explain|indicate|offer|detail|cover)s?")
+_PARTICIPLE = (r"(?:mentioned|stated|provided|specified|given|reported|described|discussed"
+               r"|addressed|found|included|covered|detailed|explained|indicated)")
+_REFUSAL_FORM = re.compile("|".join((
+    rf"{_SUBJECT}\s+(?:do|does|did)\s*n[o']t\b",
+    rf"{_SUBJECT}\s+contains?\s+no\b",
+    rf"\bthe\s+(?:{_QUALIFIER})?passages?(?:\s+(?:provided|given))?\s+(?:cannot|can't|can\s+not)\b",
+    rf"\bthe\s+(?:{_QUALIFIER})?(?:context|texts?)\s+(?:do|does|did)\s*n[o']t\s+(?:\w+ly\s+)?"
+    rf"{_REPORTS}\b",
+    rf"\bnot\s+(?:\w+ly\s+)?{_PARTICIPLE}\s+(?:in|by|within)\s+{_SOURCE}",
+    rf"\b(?:do|does|did)\s+not\s+appear\s+(?:in|within)\s+{_SOURCE}",
+    r"\bno\s+information\s+(?:is\s+|was\s+)?(?:provided|given|available)\s+"
+    r"(?:about|on|regarding|concerning|for)\b",
+    rf"\bthere(?:\s+is|'s)\s+no\s+(?:information|mention|data|details?|indication)\s+"
+    rf"(?:in|within)\s+{_SOURCE}",
+    rf"\bnone\s+of\s+{_SOURCE}",
+    rf"\bcannot\s+be\s+determined\s+from\s+{_SOURCE}",
+    rf"\b(?:based\s+on|from|according\s+to)\s+{_SOURCE}\s*,?\s*it\s+is\s+not\s+possible\b",
+)), re.IGNORECASE)
 
 _THOUSANDS = re.compile(r"(?<=\d),(?=\d{3}(?!\d))")
 _NUMBER = re.compile(r"\d+(?:\.\d+)?")
@@ -300,6 +336,70 @@ WORD_CHAR: Final = _WORD_CHAR
 REFUSAL_MARKER_PATTERN: Final = _MARKER
 
 
+# --- L4: entailment (advisory, V2-07) --------------------------------------------------
+
+
+class EntailmentScore(Protocol):
+    """Anything that scores how well a passage supports a sentence (0.0 to 1.0)."""
+
+    def score(self, sentence: str, passage: str) -> float: ...
+
+
+def entailment_probability(logits: Sequence[float], index: int) -> float:
+    """The softmax probability of class ``index`` (numerically stable)."""
+    top = max(logits)
+    weights = [math.exp(x - top) for x in logits]
+    return weights[index] / sum(weights)
+
+
+class EntailmentScorer:
+    """L4: P(the passage entails the sentence) from a local ONNX NLI cross-encoder
+    (owner-approved model; onnxruntime + tokenizers, already installed via fastembed).
+
+    ``model_dir`` holds ``config.json`` (its ``id2label`` gives the entailment class),
+    ``tokenizer.json`` and ``model_file``. Loading takes a few seconds: build it once at
+    start-up. ``score`` is blocking CPU work: call it from a worker thread. One ONNX session
+    is safe to share between threads."""
+
+    MAX_TOKENS: Final = 512
+
+    def __init__(self, model_dir: Path, *, model_file: str = "onnx/model.onnx",
+                 threads: int = 1) -> None:
+        import onnxruntime  # heavy: imported only when L4 is used
+        from tokenizers import Tokenizer
+
+        config = json.loads((model_dir / "config.json").read_text(encoding="utf-8"))
+        labels = {int(k): str(v).lower() for k, v in config["id2label"].items()}
+        found = [i for i, name in labels.items() if name.startswith("entail")]
+        if len(found) != 1:
+            raise ValueError(f"{model_dir}: no single entailment label in {labels}")
+        self.entailment_index = found[0]
+        self._tokenizer = Tokenizer.from_file(str(model_dir / "tokenizer.json"))
+        self._tokenizer.enable_truncation(max_length=self.MAX_TOKENS)
+        options = onnxruntime.SessionOptions()
+        options.intra_op_num_threads = threads
+        self._session = onnxruntime.InferenceSession(
+            str(model_dir / model_file), sess_options=options,
+            providers=["CPUExecutionProvider"])
+        self._inputs = {i.name for i in self._session.get_inputs()}
+
+    def score(self, sentence: str, passage: str) -> float:
+        import numpy as np
+
+        encoding = self._tokenizer.encode(passage, sentence)  # premise, hypothesis
+        feed = {"input_ids": encoding.ids, "attention_mask": encoding.attention_mask,
+                "token_type_ids": encoding.type_ids}
+        arrays = {name: np.array([values], dtype=np.int64)
+                  for name, values in feed.items() if name in self._inputs}
+        logits = self._session.run(None, arrays)[0][0]
+        return float(entailment_probability([float(x) for x in logits], self.entailment_index))
+
+
+def is_refusal_form(text: str) -> bool:
+    """L3: the sentence says the passages do not contain the answer (a refusal in prose)."""
+    return _REFUSAL_FORM.search(_TAG.sub(" ", text)) is not None
+
+
 def is_refusal_marker(text: str) -> bool:
     """True when ``text`` contains the model's refusal marker."""
     return _MARKER.search(text) is not None
@@ -325,16 +425,22 @@ def _verify(answer: str, passages: Sequence[RetrievedPassage], *,
     if not units:
         return _blocked([VerifierFailure(check="a", code="empty_answer", sentence=None,
                                          detail="the answer has no content")])
+    checker = SentenceChecker(passages, name_cues=name_cues, titles=titles)
+    checks = [checker.check(unit, index=index, is_last=index == len(units))
+              for index, unit in enumerate(units, start=1)]
+    # L3: an answer made only of refusal-shaped sentences is a refusal in prose (owner
+    # decision 2026-11-20); one among claims fails like any other sentence (BLOCKED).
+    if any(c.refusal for c in checks) and not any(c.claim for c in checks):
+        return VerificationResult(verdict="REFUSAL_VERIFIED", failures=(), citations=(),
+                                  sentences=len(units), claim_sentences=0)
     if not any(_tags(unit) for unit in units):
         return _blocked([VerifierFailure(check="a", code="no_citations", sentence=None,
                                          detail="the answer cites no passage")], len(units))
 
-    checker = SentenceChecker(passages, name_cues=name_cues, titles=titles)
     failures: list[VerifierFailure] = []
     cited_order: list[int] = []
     claims = 0
-    for index, unit in enumerate(units, start=1):
-        check = checker.check(unit, index=index, is_last=index == len(units))
+    for check in checks:
         failures += check.failures
         cited_order.extend(t for t in check.tags if t not in cited_order)
         claims += check.claim
@@ -348,11 +454,13 @@ def _verify(answer: str, passages: Sequence[RetrievedPassage], *,
 
 @dataclass(frozen=True)
 class UnitCheck:
-    """The checks of one sentence-like unit (L1 structure, L2 literal grounding)."""
+    """The checks of one sentence-like unit (L1 structure, L2 literal grounding, L3 refusal
+    form)."""
 
     failures: tuple[VerifierFailure, ...]
     tags: tuple[int, ...]  # the valid passage tags it cites, in order
-    claim: bool  # False for a lead-in or a unit with no words (nothing to check)
+    claim: bool  # False for a lead-in, a unit with no words, or a refusal (nothing to check)
+    refusal: bool = False  # L3: the unit says the passages do not contain the answer
 
 
 class SentenceChecker:
@@ -379,7 +487,14 @@ class SentenceChecker:
                        f"(valid: P1..P{len(self._passages)})",
             ))
         valid = tuple(t for t in dict.fromkeys(tags) if t in self._haystacks)
-        if not _WORD_CHAR.search(body) or _is_lead_in(body, is_last):
+        if not _WORD_CHAR.search(body):
+            return UnitCheck(tuple(failures), valid, claim=False)
+        if _REFUSAL_FORM.search(body):  # L3: a refusal, whatever it cites (it is no claim)
+            return UnitCheck((VerifierFailure(
+                check="f", code="refusal_as_claim", sentence=index,
+                detail=f"refusal-shaped sentence: {body[:120]!r}"),), valid, claim=False,
+                refusal=True)
+        if _is_lead_in(body, is_last):
             return UnitCheck(tuple(failures), valid, claim=False)
         if not valid:
             if not unknown:
@@ -403,6 +518,8 @@ class SentenceChecker:
 
 __all__ = [
     "CitedPassage",
+    "EntailmentScore",
+    "EntailmentScorer",
     "SentenceChecker",
     "UnitCheck",
     "VerificationResult",
@@ -412,6 +529,8 @@ __all__ = [
     "REFUSAL_MARKER_PATTERN",
     "TAG_PATTERN",
     "WORD_CHAR",
+    "entailment_probability",
+    "is_refusal_form",
     "is_refusal_marker",
     "split_sentences",
     "verify",

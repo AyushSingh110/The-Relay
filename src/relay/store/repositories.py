@@ -89,6 +89,7 @@ class Collection:
     created_at: str
     rerank: bool = False
     buffered: bool = False  # V2-05: /v1/ask answers in one piece (migration 004)
+    l4_enabled: bool = True  # V2-07: score sentences with L4, advisory (migration 005)
 
 
 @dataclass(frozen=True, slots=True)
@@ -255,27 +256,30 @@ class TenantRepo(_Repo):
 
 
 _COLLECTION_COLUMNS: Final = ("id, tenant_id, name, retrieval_preset, version, created_at, "
-                              "rerank, buffered")
+                              "rerank, buffered, l4_enabled")
 
 
 def _collection(row: tuple[Any, ...]) -> Collection:
     values = list(row)
     values[6] = bool(values[6])  # rerank is stored as 0/1 (NULL on pre-002 rows -> False)
     values[7] = bool(values[7])  # buffered: 0/1 (NULL on pre-004 rows -> False)
+    values[8] = values[8] is None or bool(values[8])  # l4_enabled: NULL (pre-005) -> True
     return Collection(*values)
 
 
 class CollectionRepo(_Repo):
     async def create(self, tenant_id: str, name: str, *, retrieval_preset: str = "small_fast",
                      rerank: bool = False, collection_id: str | None = None,
-                     buffered: bool = False) -> Collection:
+                     buffered: bool = False, l4_enabled: bool = True) -> Collection:
         collection = Collection(id=collection_id or self._ids(), tenant_id=tenant_id,
                                 name=name, retrieval_preset=retrieval_preset, version=0,
-                                created_at=self._now(), rerank=rerank, buffered=buffered)
+                                created_at=self._now(), rerank=rerank, buffered=buffered,
+                                l4_enabled=l4_enabled)
         await self._write(
-            f"INSERT INTO collection ({_COLLECTION_COLUMNS}) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+            f"INSERT INTO collection ({_COLLECTION_COLUMNS}) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
             (collection.id, tenant_id, name, retrieval_preset, 0, collection.created_at,
-             int(rerank), int(buffered)),
+             int(rerank), int(buffered), int(l4_enabled)),
             context=f"create collection: tenant {tenant_id!r} does not exist")
         return collection
 

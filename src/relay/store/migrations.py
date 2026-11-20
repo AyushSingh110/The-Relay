@@ -56,6 +56,9 @@ MIGRATIONS: Final[tuple[Migration, ...]] = (
     # V2-05 (owner prompt): a collection can switch POST /v1/ask back to buffered mode.
     Migration(4, "collection buffered",
               "ALTER TABLE collection ADD COLUMN buffered INT DEFAULT 0;"),
+    # V2-07 (owner prompt): per-collection switch for the advisory L4 entailment score.
+    Migration(5, "collection l4_enabled",
+              "ALTER TABLE collection ADD COLUMN l4_enabled INT DEFAULT 1;"),
 )
 LATEST_VERSION: Final = MIGRATIONS[-1].version
 

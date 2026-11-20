@@ -42,11 +42,12 @@ from relay.control.admission import (
 )
 from relay.control.cache import corpus_digest
 from relay.control.provider_guard import GuardConfig, ProviderGuard
-from relay.errors import ConfigurationError
+from relay.errors import ConfigurationError, sanitize_error
 from relay.ingestion.arxiv_fetcher import load_corpus_manifest
 from relay.ingestion.worker import FileLocator, IngestWorker
 from relay.orchestrator.pipeline import PipelineConfig
 from relay.orchestrator.tools import PassageRetriever
+from relay.orchestrator.verifier import EntailmentScore, EntailmentScorer
 from relay.providers.base import ChatProvider, RealCallBudget
 from relay.providers.http_provider import HttpOpenAIProvider
 from relay.retrieval.embedder import Embedder, Reranker
@@ -222,6 +223,23 @@ async def _open_collections(settings: RelaySettings, store: Store, *,
     return _Collections(StoreCollectionResolver(store, indexes), worker, routes, note)
 
 
+async def _open_l4(settings: RelaySettings) -> tuple[EntailmentScore | None, str]:
+    """Load the L4 entailment model once (in a worker thread), or report why L4 is off."""
+    v = settings.verifier
+    if not (v.l4_model_dir / "config.json").is_file() \
+            or not (v.l4_model_dir / v.l4_model_file).is_file():
+        return None, (f"L4 entailment: off (no model in {v.l4_model_dir}; run "
+                      "scripts/download_l4_model.py)")
+    try:
+        scorer = await asyncio.to_thread(EntailmentScorer, v.l4_model_dir,
+                                         model_file=v.l4_model_file, threads=v.l4_threads)
+    except Exception as exc:  # advisory: onnxruntime/tokenizers raise their own error types
+        logger.warning("L4 entailment model could not be loaded: %s", sanitize_error(exc))
+        return None, f"L4 entailment: off (the model could not be loaded: {type(exc).__name__})"
+    return scorer, (f"L4 entailment: on, advisory ({v.l4_model_dir.name}/{v.l4_model_file}, "
+                    f"{v.l4_threads} thread(s) per call)")
+
+
 @asynccontextmanager
 async def open_runtime(settings: RelaySettings, env: Settings, *,
                        retrievers: Mapping[str, PassageRetriever] | None = None,
@@ -294,6 +312,7 @@ async def open_runtime(settings: RelaySettings, env: Settings, *,
             cache_mode=mode, vocabulary=vocabulary, run=sink,  # type: ignore[arg-type]
             collections=None if collections is None else collections.resolver,
         )
+        app.state.relay.entailment, l4_note = await _open_l4(settings)
         ask_v1: AskV1Context | None = None
         if collections is not None and store is not None:
             app.include_router(ingestion_router(collections.routes))
@@ -306,7 +325,8 @@ async def open_runtime(settings: RelaySettings, env: Settings, *,
                       request_log=sink,
                       collections=None if collections is None else collections.resolver,
                       ingest_worker=None if collections is None else collections.worker,
-                      notes=() if collections is None else (collections.note,),
+                      notes=(l4_note,) if collections is None
+                      else (collections.note, l4_note),
                       ask_v1=ask_v1)
 
 

@@ -1,0 +1,4012 @@
+{
+ "status": "proposed by Claude Code, unreviewed (owner decision 2026-11-20); review before any L4 threshold is set",
+ "source_run": "evidence/experiments/exp-20261113T064542Z-c482696 (read only)",
+ "rubric": {
+  "supported": "every factual element is stated in or follows directly from the cited passage text",
+  "partially_supported": "the core claim is supported, but a detail (number, qualifier, comparison, attribution, extra claim) is not",
+  "not_supported": "the main claim is not stated in or entailed by the cited text, or contradicts it"
+ },
+ "method": "four independent labelling passes, one per quarter of the items, each reading only the sentence and the full text of its cited passages (no L4 scores); 10 further (sentence, passage) pairs (x001-x010), where a sentence recurs with a different cited chunk, labelled by the same rubric in a second pass",
+ "counts": {
+  "supported": 182,
+  "partially_supported": 21,
+  "not_supported": 4
+ },
+ "labels": [
+  {
+   "id": "s001",
+   "sentence": "The authors introduced the Transformer to eschew recurrence and rely entirely on an attention mechanism to draw global dependencies between input and output  .",
+   "tags": [
+    1
+   ],
+   "cited": [
+    "P1 attention pp. 2-2"
+   ],
+   "occurrences": [
+    "q01/small_fast#1",
+    "q01/balanced_rerank#1",
+    "q01/large_wide#1"
+   ],
+   "label": "supported",
+   "reason": "Passage states Transformer eschews recurrence, relying entirely on attention to draw global dependencies between input and output.",
+   "unsupported_part": null,
+   "chunk_ids": [
+    "1706.03762v7_p2_c1"
+   ]
+  },
+  {
+   "id": "s002",
+   "sentence": "Recurrent neural networks factor computation along symbol positions, generating hidden states sequentially based on previous states  .",
+   "tags": [
+    3
+   ],
+   "cited": [
+    "P3 attention pp. 2-2"
+   ],
+   "occurrences": [
+    "q01/small_fast#2",
+    "q01/balanced_rerank#2"
+   ],
+   "label": "supported",
+   "reason": "Passage: recurrent models factor computation along symbol positions, generating hidden states from previous hidden state and input.",
+   "unsupported_part": null,
+   "chunk_ids": [
+    "1706.03762v7_p2_c0"
+   ]
+  },
+  {
+   "id": "s003",
+   "sentence": "This inherently sequential nature precludes parallelization within training examples, which becomes critical at longer sequence lengths  .",
+   "tags": [
+    3
+   ],
+   "cited": [
+    "P3 attention pp. 2-2"
+   ],
+   "occurrences": [
+    "q01/small_fast#3",
+    "q01/balanced_rerank#3"
+   ],
+   "label": "supported",
+   "reason": "Near-verbatim from passage.",
+   "unsupported_part": null,
+   "chunk_ids": [
+    "1706.03762v7_p2_c0"
+   ]
+  },
+  {
+   "id": "s004",
+   "sentence": "Memory constraints limit batching across examples due to this sequential computation  .",
+   "tags": [
+    3
+   ],
+   "cited": [
+    "P3 attention pp. 2-2"
+   ],
+   "occurrences": [
+    "q01/small_fast#4",
+    "q01/balanced_rerank#4"
+   ],
+   "label": "partially_supported",
+   "reason": "Memory constraints limiting batching is stated, but passage does not say this is caused by sequential computation; causality is inverted.",
+   "unsupported_part": "due to this sequential computation",
+   "chunk_ids": [
+    "1706.03762v7_p2_c0"
+   ]
+  },
+  {
+   "id": "s005",
+   "sentence": "The Transformer allows for significantly more parallelization compared to recurrent models  .",
+   "tags": [
+    1
+   ],
+   "cited": [
+    "P1 attention pp. 2-2"
+   ],
+   "occurrences": [
+    "q01/small_fast#5"
+   ],
+   "label": "supported",
+   "reason": "Passage says Transformer allows significantly more parallelization, in context of eschewing recurrence and its sequential constraint.",
+   "unsupported_part": null,
+   "chunk_ids": [
+    "1706.03762v7_p2_c1"
+   ]
+  },
+  {
+   "id": "s006",
+   "sentence": "It was designed to overcome the fundamental constraint of sequential computation that limits the efficiency of recurrent architectures   .",
+   "tags": [
+    1,
+    3
+   ],
+   "cited": [
+    "P1 attention pp. 2-2",
+    "P3 attention pp. 2-2"
+   ],
+   "occurrences": [
+    "q01/small_fast#6"
+   ],
+   "label": "supported",
+   "reason": "P1 names the fundamental constraint of sequential computation remaining in recurrent models; Transformer eschews recurrence; P3 explains the efficiency limitation.",
+   "unsupported_part": null,
+   "chunk_ids": [
+    "1706.03762v7_p2_c1",
+    "1706.03762v7_p2_c0"
+   ]
+  },
+  {
+   "id": "s007",
+   "sentence": "The Transformer allows for significantly more parallelization and can reach a new state of the art in translation quality  .",
+   "tags": [
+    1
+   ],
+   "cited": [
+    "P1 attention pp. 2-2"
+   ],
+   "occurrences": [
+    "q01/balanced_rerank#5",
+    "q01/large_wide#4"
+   ],
+   "label": "supported",
+   "reason": "Near-verbatim from passage.",
+   "unsupported_part": null,
+   "chunk_ids": [
+    "1706.03762v7_p2_c1"
+   ]
+  },
+  {
+   "id": "s008",
+   "sentence": "It is designed to be superior in quality while being more parallelizable and requiring significantly less time to train  .",
+   "tags": [
+    2
+   ],
+   "cited": [
+    "P2 attention pp. 1-1"
+   ],
+   "occurrences": [
+    "q01/balanced_rerank#6"
+   ],
+   "label": "partially_supported",
+   "reason": "Passage reports experimental results showing these properties; it does not say the model was designed to achieve them.",
+   "unsupported_part": "designed to be",
+   "chunk_ids": [
+    "1706.03762v7_p1_c1"
+   ]
+  },
+  {
+   "id": "s009",
+   "sentence": "Recurrent models factor computation along symbol positions, which inherently precludes parallelization within training examples  .",
+   "tags": [
+    1
+   ],
+   "cited": [
+    "P1 attention pp. 2-2"
+   ],
+   "occurrences": [
+    "q01/large_wide#2"
+   ],
+   "label": "supported",
+   "reason": "Passage states recurrent models factor computation along symbol positions and this sequential nature precludes parallelization within training examples.",
+   "unsupported_part": null,
+   "chunk_ids": [
+    "1706.03762v7_p2_c0"
+   ]
+  },
+  {
+   "id": "s010",
+   "sentence": "This sequential nature becomes critical at longer sequence lengths because memory constraints limit batching across examples  .",
+   "tags": [
+    1
+   ],
+   "cited": [
+    "P1 attention pp. 2-2"
+   ],
+   "occurrences": [
+    "q01/large_wide#3"
+   ],
+   "label": "supported",
+   "reason": "Close paraphrase: becomes critical at longer sequence lengths, as memory constraints limit batching across examples.",
+   "unsupported_part": null,
+   "chunk_ids": [
+    "1706.03762v7_p2_c0"
+   ]
+  },
+  {
+   "id": "s011",
+   "sentence": "It is the first transduction model relying entirely on self-attention to compute representations without using sequence-aligned RNNs or convolution  .",
+   "tags": [
+    2
+   ],
+   "cited": [
+    "P2 attention pp. 2-2"
+   ],
+   "occurrences": [
+    "q01/large_wide#5"
+   ],
+   "label": "supported",
+   "reason": "Near-verbatim from passage.",
+   "unsupported_part": null,
+   "chunk_ids": [
+    "1706.03762v7_p2_c1"
+   ]
+  },
+  {
+   "id": "s012",
+   "sentence": "The architecture was designed to reduce the number of operations required to relate signals from arbitrary positions to a constant number  .",
+   "tags": [
+    2
+   ],
+   "cited": [
+    "P2 attention pp. 2-2"
+   ],
+   "occurrences": [
+    "q01/large_wide#6"
+   ],
+   "label": "supported",
+   "reason": "Passage: in the Transformer this is reduced to a constant number of operations, framed under the goal of reducing sequential computation.",
+   "unsupported_part": null,
+   "chunk_ids": [
+    "1706.03762v7_p2_c1"
+   ]
+  },
+  {
+   "id": "s013",
+   "sentence": "Scaled Dot-Product Attention computes the dot products of the query with all keys, divides each by √d_k, and applies a softmax function to obtain weights on the values  .",
+   "tags": [
+    1
+   ],
+   "cited": [
+    "P1 attention pp. 4-4"
+   ],
+   "occurrences": [
+    "q02/small_fast#1",
+    "q02/balanced_rerank#1",
+    "q02/large_wide#1"
+   ],
+   "label": "supported",
+   "reason": "Near-verbatim description of Scaled Dot-Product Attention in passage.",
+   "unsupported_part": null,
+   "chunk_ids": [
+    "1706.03762v7_p4_c0"
+   ]
+  },
+  {
+   "id": "s014",
+   "sentence": "The input consists of queries and keys of dimension d_k, and values of dimension d_v  .",
+   "tags": [
+    1
+   ],
+   "cited": [
+    "P1 attention pp. 4-4"
+   ],
+   "occurrences": [
+    "q02/small_fast#2",
+    "q02/balanced_rerank#2",
+    "q02/large_wide#5"
+   ],
+   "label": "supported",
+   "reason": "Verbatim from passage.",
+   "unsupported_part": null,
+   "chunk_ids": [
+    "1706.03762v7_p4_c0"
+   ]
+  },
+  {
+   "id": "s015",
+   "sentence": "The authors divide by √d_k because for large values of d_k, dot products grow large in magnitude, pushing the softmax function into regions with extremely small gradients  .",
+   "tags": [
+    3
+   ],
+   "cited": [
+    "P3 attention pp. 4-4"
+   ],
+   "occurrences": [
+    "q02/small_fast#3"
+   ],
+   "label": "supported",
+   "reason": "Passage gives this as the authors' suspected reason and says they scale by sqrt(d_k) to counteract it.",
+   "unsupported_part": null,
+   "chunk_ids": [
+    "1706.03762v7_p4_c1"
+   ]
+  },
+  {
+   "id": "s016",
+   "sentence": "The authors divide by √d_k to counteract the effect of dot products growing large in magnitude for large values of d_k  .",
+   "tags": [
+    2
+   ],
+   "cited": [
+    "P2 attention pp. 4-4"
+   ],
+   "occurrences": [
+    "q02/balanced_rerank#3"
+   ],
+   "label": "supported",
+   "reason": "Passage: dot products grow large for large d_k; to counteract this effect, they scale by sqrt(d_k).",
+   "unsupported_part": null,
+   "chunk_ids": [
+    "1706.03762v7_p4_c1"
+   ]
+  },
+  {
+   "id": "s017",
+   "sentence": "This growth pushes the softmax function into regions where it has extremely small gradients  .",
+   "tags": [
+    2
+   ],
+   "cited": [
+    "P2 attention pp. 4-4"
+   ],
+   "occurrences": [
+    "q02/balanced_rerank#4"
+   ],
+   "label": "supported",
+   "reason": "Passage states growth pushes softmax into regions with extremely small gradients.",
+   "unsupported_part": null,
+   "chunk_ids": [
+    "1706.03762v7_p4_c1"
+   ]
+  },
+  {
+   "id": "s018",
+   "sentence": "The scaling factor distinguishes their algorithm from standard dot-product attention  .",
+   "tags": [
+    1
+   ],
+   "cited": [
+    "P1 attention pp. 4-4"
+   ],
+   "occurrences": [
+    "q02/balanced_rerank#5"
+   ],
+   "label": "supported",
+   "reason": "Passage: dot-product attention is identical to their algorithm except for the scaling factor.",
+   "unsupported_part": null,
+   "chunk_ids": [
+    "1706.03762v7_p4_c0"
+   ]
+  },
+  {
+   "id": "s019",
+   "sentence": "The final output is computed as the weighted sum of the values using these attention weights  .",
+   "tags": [
+    3
+   ],
+   "cited": [
+    "P3 attention pp. 3-4"
+   ],
+   "occurrences": [
+    "q02/balanced_rerank#6"
+   ],
+   "label": "supported",
+   "reason": "Passage: output computed as weighted sum of values, weights from query-key compatibility function.",
+   "unsupported_part": null,
+   "chunk_ids": [
+    "1706.03762v7_p3_c1"
+   ]
+  },
+  {
+   "id": "s020",
+   "sentence": "The authors divide by √d_k to counteract the effect of dot products growing large in magnitude for large values of d_k  .",
+   "tags": [
+    1
+   ],
+   "cited": [
+    "P1 attention pp. 4-4"
+   ],
+   "occurrences": [
+    "q02/large_wide#2"
+   ],
+   "label": "supported",
+   "reason": "Passage: dot products grow large for large d_k; scaling by sqrt(d_k) counteracts this effect.",
+   "unsupported_part": null,
+   "chunk_ids": [
+    "1706.03762v7_p4_c0"
+   ]
+  },
+  {
+   "id": "s021",
+   "sentence": "This growth pushes the softmax function into regions where it has extremely small gradients  .",
+   "tags": [
+    1
+   ],
+   "cited": [
+    "P1 attention pp. 4-4"
+   ],
+   "occurrences": [
+    "q02/large_wide#3"
+   ],
+   "label": "supported",
+   "reason": "Passage states this pushes softmax into regions with extremely small gradients.",
+   "unsupported_part": null,
+   "chunk_ids": [
+    "1706.03762v7_p4_c0"
+   ]
+  },
+  {
+   "id": "s022",
+   "sentence": "The scaling factor is necessary because, without it, additive attention outperforms dot-product attention for larger values of d_k  .",
+   "tags": [
+    1
+   ],
+   "cited": [
+    "P1 attention pp. 4-4"
+   ],
+   "occurrences": [
+    "q02/large_wide#4"
+   ],
+   "label": "partially_supported",
+   "reason": "Passage states additive outperforms unscaled dot-product for large d_k, but motivates scaling by gradient effect, not as the necessity reason.",
+   "unsupported_part": "The scaling factor is necessary because",
+   "chunk_ids": [
+    "1706.03762v7_p4_c0"
+   ]
+  },
+  {
+   "id": "s023",
+   "sentence": "The final output is computed as a weighted sum of the values  .",
+   "tags": [
+    2
+   ],
+   "cited": [
+    "P2 attention pp. 3-4"
+   ],
+   "occurrences": [
+    "q02/large_wide#6"
+   ],
+   "label": "supported",
+   "reason": "Passage: output is computed as a weighted sum of the values.",
+   "unsupported_part": null,
+   "chunk_ids": [
+    "1706.03762v7_p3_c1"
+   ]
+  },
+  {
+   "id": "s024",
+   "sentence": "The original Transformer model employs h = 8 parallel attention layers, or heads  .",
+   "tags": [
+    4
+   ],
+   "cited": [
+    "P4 attention pp. 5-5"
+   ],
+   "occurrences": [
+    "q03/small_fast#1"
+   ],
+   "label": "supported",
+   "reason": "Passage: in this work we employ h = 8 parallel attention layers, or heads.",
+   "unsupported_part": null,
+   "chunk_ids": [
+    "1706.03762v7_p5_c0"
+   ]
+  },
+  {
+   "id": "s025",
+   "sentence": "For each of these heads, the dimensions of the keys and values are d_k = d_v = d_model/h = 64  .",
+   "tags": [
+    4
+   ],
+   "cited": [
+    "P4 attention pp. 5-5"
+   ],
+   "occurrences": [
+    "q03/small_fast#2"
+   ],
+   "label": "supported",
+   "reason": "Passage: d_k = d_v = d_model/h = 64 for each head.",
+   "unsupported_part": null,
+   "chunk_ids": [
+    "1706.03762v7_p5_c0"
+   ]
+  },
+  {
+   "id": "s026",
+   "sentence": "The original Transformer base model employs h = 8 parallel attention layers, or heads  .",
+   "tags": [
+    2
+   ],
+   "cited": [
+    "P2 attention pp. 5-5"
+   ],
+   "occurrences": [
+    "q03/balanced_rerank#1"
+   ],
+   "label": "partially_supported",
+   "reason": "h = 8 heads stated, but cited text says 'in this work', not specifically the base model.",
+   "unsupported_part": "base",
+   "chunk_ids": [
+    "1706.03762v7_p5_c0"
+   ]
+  },
+  {
+   "id": "s027",
+   "sentence": "For each of these heads, the dimensions of the keys and values are d_k = d_v = d_model/h = 64  .",
+   "tags": [
+    2
+   ],
+   "cited": [
+    "P2 attention pp. 5-5"
+   ],
+   "occurrences": [
+    "q03/balanced_rerank#2"
+   ],
+   "label": "supported",
+   "reason": "Passage: d_k = d_v = d_model/h = 64 for each head.",
+   "unsupported_part": null,
+   "chunk_ids": [
+    "1706.03762v7_p5_c0"
+   ]
+  },
+  {
+   "id": "s028",
+   "sentence": "The original Transformer base model employs h = 8 parallel attention layers, or heads  .",
+   "tags": [
+    1
+   ],
+   "cited": [
+    "P1 attention pp. 4-5"
+   ],
+   "occurrences": [
+    "q03/large_wide#1"
+   ],
+   "label": "partially_supported",
+   "reason": "h = 8 heads stated, but cited text says 'in this work', not specifically the base model.",
+   "unsupported_part": "base",
+   "chunk_ids": [
+    "1706.03762v7_p4_c1"
+   ]
+  },
+  {
+   "id": "s029",
+   "sentence": "For each of these heads, the dimensions are set to d_k = d_v = d_model/h = 64  .",
+   "tags": [
+    1
+   ],
+   "cited": [
+    "P1 attention pp. 4-5"
+   ],
+   "occurrences": [
+    "q03/large_wide#2"
+   ],
+   "label": "supported",
+   "reason": "Passage: for each head d_k = d_v = d_model/h = 64.",
+   "unsupported_part": null,
+   "chunk_ids": [
+    "1706.03762v7_p4_c1"
+   ]
+  },
+  {
+   "id": "s030",
+   "sentence": "This configuration is confirmed in Table 3, where the base model row lists h = 8, d_k = 64, and d_v = 64  .",
+   "tags": [
+    3
+   ],
+   "cited": [
+    "P3 attention pp. 8-9"
+   ],
+   "occurrences": [
+    "q03/large_wide#3"
+   ],
+   "label": "supported",
+   "reason": "Table 3 base row lists h=8, d_k=64, d_v=64 under those column headers.",
+   "unsupported_part": null,
+   "chunk_ids": [
+    "1706.03762v7_p8_c1"
+   ]
+  },
+  {
+   "id": "s031",
+   "sentence": "The Transformer uses multi-head attention in three different ways: encoder-decoder attention, encoder self-attention, and decoder self-attention  .",
+   "tags": [
+    1
+   ],
+   "cited": [
+    "P1 attention pp. 5-5"
+   ],
+   "occurrences": [
+    "q04/small_fast#1",
+    "q04/balanced_rerank#1",
+    "q04/large_wide#1"
+   ],
+   "label": "supported",
+   "reason": "Passage lists encoder-decoder attention, encoder self-attention, and decoder self-attention as the three uses.",
+   "unsupported_part": null,
+   "chunk_ids": [
+    "1706.03762v7_p5_c1"
+   ]
+  },
+  {
+   "id": "s032",
+   "sentence": "In encoder-decoder attention layers, queries come from the previous decoder layer while memory keys and values come from the encoder output, allowing every decoder position to attend to all input positions  .",
+   "tags": [
+    1
+   ],
+   "cited": [
+    "P1 attention pp. 5-5"
+   ],
+   "occurrences": [
+    "q04/small_fast#2",
+    "q04/balanced_rerank#2",
+    "q04/large_wide#2"
+   ],
+   "label": "supported",
+   "reason": "Close paraphrase of the encoder-decoder attention bullet.",
+   "unsupported_part": null,
+   "chunk_ids": [
+    "1706.03762v7_p5_c1"
+   ]
+  },
+  {
+   "id": "s033",
+   "sentence": "The encoder contains self-attention layers where keys, values, and queries all originate from the output of the previous encoder layer, enabling each position to attend to all positions in that previous layer  .",
+   "tags": [
+    1
+   ],
+   "cited": [
+    "P1 attention pp. 5-5"
+   ],
+   "occurrences": [
+    "q04/small_fast#3",
+    "q04/balanced_rerank#3",
+    "q04/large_wide#3"
+   ],
+   "label": "supported",
+   "reason": "Close paraphrase of the encoder self-attention bullet.",
+   "unsupported_part": null,
+   "chunk_ids": [
+    "1706.03762v7_p5_c1"
+   ]
+  },
+  {
+   "id": "s034",
+   "sentence": "Similarly, decoder self-attention layers allow each position to attend to all positions in the decoder up to and including that position  .",
+   "tags": [
+    1
+   ],
+   "cited": [
+    "P1 attention pp. 5-5"
+   ],
+   "occurrences": [
+    "q04/small_fast#4",
+    "q04/balanced_rerank#4",
+    "q04/large_wide#4"
+   ],
+   "label": "supported",
+   "reason": "Close paraphrase of the decoder self-attention bullet.",
+   "unsupported_part": null,
+   "chunk_ids": [
+    "1706.03762v7_p5_c1"
+   ]
+  },
+  {
+   "id": "s035",
+   "sentence": "This specific arrangement in the decoder is necessary to prevent leftward information flow and preserve the auto-regressive property  .",
+   "tags": [
+    1
+   ],
+   "cited": [
+    "P1 attention pp. 5-5"
+   ],
+   "occurrences": [
+    "q04/small_fast#5"
+   ],
+   "label": "supported",
+   "reason": "Passage: need to prevent leftward information flow in decoder to preserve auto-regressive property, immediately after describing the restriction.",
+   "unsupported_part": null,
+   "chunk_ids": [
+    "1706.03762v7_p5_c1"
+   ]
+  },
+  {
+   "id": "s036",
+   "sentence": "Multi-head attention generally allows the model to jointly attend to information from different representation subspaces at different positions  .",
+   "tags": [
+    4
+   ],
+   "cited": [
+    "P4 attention pp. 4-5"
+   ],
+   "occurrences": [
+    "q04/small_fast#6",
+    "q04/large_wide#6"
+   ],
+   "label": "supported",
+   "reason": "Verbatim from passage.",
+   "unsupported_part": null,
+   "chunk_ids": [
+    "1706.03762v7_p4_c2"
+   ]
+  },
+  {
+   "id": "s037",
+   "sentence": "To preserve the auto-regressive property, the decoder implementation masks out illegal connections by setting their values to −∞ in the softmax input  .",
+   "tags": [
+    1
+   ],
+   "cited": [
+    "P1 attention pp. 5-5"
+   ],
+   "occurrences": [
+    "q04/balanced_rerank#5"
+   ],
+   "label": "supported",
+   "reason": "Passage: masking out (setting to -inf) softmax inputs for illegal connections to preserve auto-regressive property.",
+   "unsupported_part": null,
+   "chunk_ids": [
+    "1706.03762v7_p5_c1"
+   ]
+  },
+  {
+   "id": "s038",
+   "sentence": "This masking prevents leftward information flow within the decoder  .",
+   "tags": [
+    1
+   ],
+   "cited": [
+    "P1 attention pp. 5-5"
+   ],
+   "occurrences": [
+    "q04/balanced_rerank#6"
+   ],
+   "label": "supported",
+   "reason": "Passage: masking is how they implement preventing leftward information flow in the decoder.",
+   "unsupported_part": null,
+   "chunk_ids": [
+    "1706.03762v7_p5_c1"
+   ]
+  },
+  {
+   "id": "s039",
+   "sentence": "To preserve the auto-regressive property in the decoder, leftward information flow is prevented by masking out illegal connections in the softmax input  .",
+   "tags": [
+    1
+   ],
+   "cited": [
+    "P1 attention pp. 5-5"
+   ],
+   "occurrences": [
+    "q04/large_wide#5"
+   ],
+   "label": "supported",
+   "reason": "Passage states leftward flow prevented via masking illegal connections in softmax input to preserve auto-regressive property.",
+   "unsupported_part": null,
+   "chunk_ids": [
+    "1706.03762v7_p5_c0"
+   ]
+  },
+  {
+   "id": "s040",
+   "sentence": "The Transformer requires positional encoding because the model contains no recurrence and no convolution, necessitating the injection of information about the relative or absolute position of tokens  .",
+   "tags": [
+    1
+   ],
+   "cited": [
+    "P1 attention pp. 6-6"
+   ],
+   "occurrences": [
+    "q05/small_fast#1",
+    "q05/balanced_rerank#1"
+   ],
+   "label": "supported",
+   "reason": "Passage: no recurrence and no convolution, so must inject relative or absolute position information.",
+   "unsupported_part": null,
+   "chunk_ids": [
+    "1706.03762v7_p6_c0"
+   ]
+  },
+  {
+   "id": "s041",
+   "sentence": "The authors chose sinusoidal positional encodings because they hypothesized this function would allow the model to easily learn to attend by relative positions  .",
+   "tags": [
+    1
+   ],
+   "cited": [
+    "P1 attention pp. 6-6"
+   ],
+   "occurrences": [
+    "q05/small_fast#2",
+    "q05/balanced_rerank#2",
+    "q05/large_wide#2"
+   ],
+   "label": "supported",
+   "reason": "Passage: chose this function, hypothesizing it lets model easily learn to attend by relative (text truncated at 'relative').",
+   "unsupported_part": null,
+   "chunk_ids": [
+    "1706.03762v7_p6_c0"
+   ]
+  },
+  {
+   "id": "s042",
+   "sentence": "Additionally, the sinusoidal version was selected because it may allow the model to extrapolate to sequence lengths longer than those encountered during training  .",
+   "tags": [
+    2
+   ],
+   "cited": [
+    "P2 attention pp. 6-6"
+   ],
+   "occurrences": [
+    "q05/small_fast#3"
+   ],
+   "label": "supported",
+   "reason": "Near-verbatim from passage.",
+   "unsupported_part": null,
+   "chunk_ids": [
+    "1706.03762v7_p6_c1"
+   ]
+  },
+  {
+   "id": "s043",
+   "sentence": "The authors noted that learned positional embeddings produced nearly identical results to the sinusoidal version  .",
+   "tags": [
+    2
+   ],
+   "cited": [
+    "P2 attention pp. 6-6"
+   ],
+   "occurrences": [
+    "q05/small_fast#4"
+   ],
+   "label": "supported",
+   "reason": "Passage: learned embeddings and sinusoidal versions produced nearly identical results.",
+   "unsupported_part": null,
+   "chunk_ids": [
+    "1706.03762v7_p6_c1"
+   ]
+  },
+  {
+   "id": "s044",
+   "sentence": "This finding is supported by experiments where replacing sinusoidal positional encoding with learned positional embeddings yielded nearly identical results to the base model  .",
+   "tags": [
+    3
+   ],
+   "cited": [
+    "P3 attention pp. 9-9"
+   ],
+   "occurrences": [
+    "q05/small_fast#5"
+   ],
+   "label": "supported",
+   "reason": "Passage: row (E) replacing sinusoidal with learned embeddings gives nearly identical results to base model.",
+   "unsupported_part": null,
+   "chunk_ids": [
+    "1706.03762v7_p9_c1"
+   ]
+  },
+  {
+   "id": "s045",
+   "sentence": "Specifically, for any fixed offset k, PE_pos_+_k can be represented as a linear function of PEpos  .",
+   "tags": [
+    1
+   ],
+   "cited": [
+    "P1 attention pp. 6-6"
+   ],
+   "occurrences": [
+    "q05/balanced_rerank#3"
+   ],
+   "label": "supported",
+   "reason": "Verbatim from passage.",
+   "unsupported_part": null,
+   "chunk_ids": [
+    "1706.03762v7_p6_c0"
+   ]
+  },
+  {
+   "id": "s046",
+   "sentence": "The authors also noted that the sinusoidal version may allow the model to extrapolate to sequence lengths longer than those seen during training  .",
+   "tags": [
+    1
+   ],
+   "cited": [
+    "P1 attention pp. 6-6"
+   ],
+   "occurrences": [
+    "q05/balanced_rerank#4"
+   ],
+   "label": "partially_supported",
+   "reason": "Cited text is truncated at 'longer than'; the training-length comparison is not present.",
+   "unsupported_part": "those seen during training",
+   "chunk_ids": [
+    "1706.03762v7_p6_c0"
+   ]
+  },
+  {
+   "id": "s047",
+   "sentence": "Although they experimented with learned positional embeddings and found the two versions produced nearly identical results, they selected the sinusoidal version for its extrapolation potential  .",
+   "tags": [
+    1
+   ],
+   "cited": [
+    "P1 attention pp. 6-6"
+   ],
+   "occurrences": [
+    "q05/balanced_rerank#5"
+   ],
+   "label": "supported",
+   "reason": "Passage: experimented with learned embeddings, nearly identical results, chose sinusoidal as it may allow extrapolation to longer sequences.",
+   "unsupported_part": null,
+   "chunk_ids": [
+    "1706.03762v7_p6_c0"
+   ]
+  },
+  {
+   "id": "s048",
+   "sentence": "The Transformer requires positional encoding because the model contains no recurrence or convolution, necessitating the injection of information about the relative or absolute position of tokens  .",
+   "tags": [
+    1
+   ],
+   "cited": [
+    "P1 attention pp. 6-6"
+   ],
+   "occurrences": [
+    "q05/large_wide#1"
+   ],
+   "label": "supported",
+   "reason": "Passage: no recurrence and no convolution, so must inject relative or absolute position information.",
+   "unsupported_part": null,
+   "chunk_ids": [
+    "1706.03762v7_p6_c0"
+   ]
+  },
+  {
+   "id": "s049",
+   "sentence": "Additionally, the sinusoidal version was selected because it may allow the model to extrapolate to sequence lengths longer than those encountered during training  .",
+   "tags": [
+    1
+   ],
+   "cited": [
+    "P1 attention pp. 6-6"
+   ],
+   "occurrences": [
+    "q05/large_wide#3"
+   ],
+   "label": "supported",
+   "reason": "Near-verbatim from passage.",
+   "unsupported_part": null,
+   "chunk_ids": [
+    "1706.03762v7_p6_c0"
+   ]
+  },
+  {
+   "id": "s050",
+   "sentence": "The authors noted that learned positional embeddings produced nearly identical results to the sinusoidal version  .",
+   "tags": [
+    1
+   ],
+   "cited": [
+    "P1 attention pp. 6-6"
+   ],
+   "occurrences": [
+    "q05/large_wide#4"
+   ],
+   "label": "supported",
+   "reason": "Passage: learned embeddings and sinusoidal versions produced nearly identical results.",
+   "unsupported_part": null,
+   "chunk_ids": [
+    "1706.03762v7_p6_c0"
+   ]
+  },
+  {
+   "id": "s051",
+   "sentence": "confirms that replacing sinusoidal positional encoding with learned positional embeddings resulted in nearly identical performance to the base model.",
+   "tags": [
+    2
+   ],
+   "cited": [
+    "P2 attention pp. 8-9"
+   ],
+   "occurrences": [
+    "q05/large_wide#5"
+   ],
+   "label": "supported",
+   "reason": "Row (E) replacing sinusoids with learned positional embeddings gave nearly identical results to base model.",
+   "unsupported_part": null,
+   "chunk_ids": [
+    "1706.03762v7_p8_c1"
+   ]
+  },
+  {
+   "id": "s052",
+   "sentence": "Moshi aims to solve the limitations of latency, the textual information bottleneck, and turn-based modeling  .",
+   "tags": [
+    2
+   ],
+   "cited": [
+    "P2 moshi pp. 2-2"
+   ],
+   "occurrences": [
+    "q06/small_fast#1"
+   ],
+   "label": "supported",
+   "reason": "Passage lists latency, textual information bottleneck and turn-based modeling as limitations Moshi aims to solve.",
+   "unsupported_part": null,
+   "chunk_ids": [
+    "2410.00037v1_p2_c2"
+   ]
+  },
+  {
+   "id": "s053",
+   "sentence": "Conventional turn-based paradigms fall short in modeling interruptions, overlapping speech, and backchanneling  .",
+   "tags": [
+    2
+   ],
+   "cited": [
+    "P2 moshi pp. 2-2"
+   ],
+   "occurrences": [
+    "q06/small_fast#2"
+   ],
+   "label": "supported",
+   "reason": "Turn-based single-speaker paradigm falls short in modeling interruptions, overlapping speech and backchanneling.",
+   "unsupported_part": null,
+   "chunk_ids": [
+    "2410.00037v1_p2_c2"
+   ]
+  },
+  {
+   "id": "s054",
+   "sentence": "The model addresses the need to run in real time and allow for long conversations in full-duplex  .",
+   "tags": [
+    3
+   ],
+   "cited": [
+    "P3 moshi pp. 5-5"
+   ],
+   "occurrences": [
+    "q06/small_fast#3"
+   ],
+   "label": "partially_supported",
+   "reason": "Passage lists real-time full-duplex as a challenge for dialogue models; does not state Moshi addresses it (only real-time compatibility).",
+   "unsupported_part": "The model addresses ... long conversations in full-duplex",
+   "chunk_ids": [
+    "2410.00037v1_p5_c2"
+   ]
+  },
+  {
+   "id": "s055",
+   "sentence": "It is designed to be speech-to-speech to handle paralinguistic communication  .",
+   "tags": [
+    3
+   ],
+   "cited": [
+    "P3 moshi pp. 5-5"
+   ],
+   "occurrences": [
+    "q06/small_fast#4"
+   ],
+   "label": "partially_supported",
+   "reason": "Speech-to-speech for paralinguistics is stated as a requirement for dialogue models, not as Moshi's design in this passage.",
+   "unsupported_part": "It is designed to be",
+   "chunk_ids": [
+    "2410.00037v1_p5_c2"
+   ]
+  },
+  {
+   "id": "s056",
+   "sentence": "Moshi also aims to display knowledge and reasoning abilities for helpful and enjoyable conversations  .",
+   "tags": [
+    3
+   ],
+   "cited": [
+    "P3 moshi pp. 5-5"
+   ],
+   "occurrences": [
+    "q06/small_fast#5"
+   ],
+   "label": "partially_supported",
+   "reason": "Knowledge and reasoning is listed as a generic challenge; passage does not say Moshi aims to display it.",
+   "unsupported_part": "Moshi also aims to",
+   "chunk_ids": [
+    "2410.00037v1_p5_c2"
+   ]
+  },
+  {
+   "id": "s057",
+   "sentence": "Current systems for spoken dialogue rely on pipelines of independent components, which induces a latency of several seconds between interactions  .",
+   "tags": [
+    2
+   ],
+   "cited": [
+    "P2 moshi pp. 1-1"
+   ],
+   "occurrences": [
+    "q06/balanced_rerank#1"
+   ],
+   "label": "supported",
+   "reason": "Pipelines of independent components; their complexity induces latency of several seconds.",
+   "unsupported_part": null,
+   "chunk_ids": [
+    "2410.00037v1_p1_c1"
+   ]
+  },
+  {
+   "id": "s058",
+   "sentence": "Because text serves as the intermediate modality in these frameworks, non-linguistic information such as emotion or non-speech sounds is lost during the interaction  .",
+   "tags": [
+    2
+   ],
+   "cited": [
+    "P2 moshi pp. 1-1"
+   ],
+   "occurrences": [
+    "q06/balanced_rerank#2"
+   ],
+   "label": "supported",
+   "reason": "Text as intermediate modality loses non-linguistic information such as emotion or non-speech sounds.",
+   "unsupported_part": null,
+   "chunk_ids": [
+    "2410.00037v1_p1_c1"
+   ]
+  },
+  {
+   "id": "s059",
+   "sentence": "These systems also rely on a segmentation into speaker turns, which fails to account for overlapping speech, interruptions, and interjections  .",
+   "tags": [
+    2
+   ],
+   "cited": [
+    "P2 moshi pp. 1-1"
+   ],
+   "occurrences": [
+    "q06/balanced_rerank#3"
+   ],
+   "label": "supported",
+   "reason": "Segmentation into speaker turns does not account for overlapping speech, interruptions and interjections.",
+   "unsupported_part": null,
+   "chunk_ids": [
+    "2410.00037v1_p1_c1"
+   ]
+  },
+  {
+   "id": "s060",
+   "sentence": "Conventional spoken dialogue systems suffer from high latency, often reaching several seconds, which contrasts with the few hundred milliseconds typical of natural conversations  .",
+   "tags": [
+    2
+   ],
+   "cited": [
+    "P2 moshi pp. 2-2"
+   ],
+   "occurrences": [
+    "q06/large_wide#1"
+   ],
+   "label": "supported",
+   "reason": "Latency of several seconds versus natural response times of a few hundred milliseconds stated.",
+   "unsupported_part": null,
+   "chunk_ids": [
+    "2410.00037v1_p2_c0"
+   ]
+  },
+  {
+   "id": "s061",
+   "sentence": "These systems rely on text as an intermediate modality, causing them to ignore non-linguistic information such as emotion, accent, and non-speech audio  .",
+   "tags": [
+    2
+   ],
+   "cited": [
+    "P2 moshi pp. 2-2"
+   ],
+   "occurrences": [
+    "q06/large_wide#2"
+   ],
+   "label": "supported",
+   "reason": "Textual domain ignores non-written info: emotion, accent, non-speech audio.",
+   "unsupported_part": null,
+   "chunk_ids": [
+    "2410.00037v1_p2_c0"
+   ]
+  },
+  {
+   "id": "s062",
+   "sentence": "Finally, they are fundamentally turn-based, which prevents them from effectively modeling conversational dynamics like interruptions, overlapping speech, and backchanneling  .",
+   "tags": [
+    2
+   ],
+   "cited": [
+    "P2 moshi pp. 2-2"
+   ],
+   "occurrences": [
+    "q06/large_wide#3"
+   ],
+   "label": "supported",
+   "reason": "Models remain fundamentally turn-based and fall short on interruptions, overlap, backchanneling.",
+   "unsupported_part": null,
+   "chunk_ids": [
+    "2410.00037v1_p2_c0"
+   ]
+  },
+  {
+   "id": "s063",
+   "sentence": "Helium is a bespoke text language model backbone built from scratch to provide strong reasoning abilities to the system   .",
+   "tags": [
+    1,
+    4
+   ],
+   "cited": [
+    "P1 moshi pp. 5-6",
+    "P4 moshi pp. 6-7"
+   ],
+   "occurrences": [
+    "q07/small_fast#1"
+   ],
+   "label": "supported",
+   "reason": "P1: bespoke text LM backbone; P4: built from scratch with high-quality text data for strong reasoning.",
+   "unsupported_part": null,
+   "chunk_ids": [
+    "2410.00037v1_p5_c3",
+    "2410.00037v1_p6_c2"
+   ]
+  },
+  {
+   "id": "s064",
+   "sentence": "Mimi is a neural audio codec that uses residual vector quantization and distills semantic knowledge from a self-supervised speech model  .",
+   "tags": [
+    1
+   ],
+   "cited": [
+    "P1 moshi pp. 5-6"
+   ],
+   "occurrences": [
+    "q07/small_fast#2"
+   ],
+   "label": "supported",
+   "reason": "P1 describes Mimi as neural audio codec with RVQ and semantic knowledge distilled from self-supervised speech model.",
+   "unsupported_part": null,
+   "chunk_ids": [
+    "2410.00037v1_p5_c3"
+   ]
+  },
+  {
+   "id": "s065",
+   "sentence": "Mimi operates as a fully causal tokenizer at a low framerate and bitrate, which is crucial for achieving the low latency required for real-time dialogue  .",
+   "tags": [
+    2
+   ],
+   "cited": [
+    "P2 moshi pp. 24-24"
+   ],
+   "occurrences": [
+    "q07/small_fast#3"
+   ],
+   "label": "supported",
+   "reason": "Mimi fully causal, low framerate and bitrate; low framerate crucial for Moshi's low latency and real-time conversations.",
+   "unsupported_part": null,
+   "chunk_ids": [
+    "2410.00037v1_p24_c2"
+   ]
+  },
+  {
+   "id": "s066",
+   "sentence": "Moshi is the overarching multi-stream speech-to-speech Transformer model that enables full-duplex spoken dialogue  .",
+   "tags": [
+    4
+   ],
+   "cited": [
+    "P4 moshi pp. 6-7"
+   ],
+   "occurrences": [
+    "q07/small_fast#4"
+   ],
+   "label": "supported",
+   "reason": "Moshi is a multi-stream speech-to-speech Transformer allowing full-duplex spoken dialogue.",
+   "unsupported_part": null,
+   "chunk_ids": [
+    "2410.00037v1_p6_c2"
+   ]
+  },
+  {
+   "id": "s067",
+   "sentence": "The architecture allows Moshi to speak and listen to the user simultaneously without explicitly modeling speaker turns  .",
+   "tags": [
+    4
+   ],
+   "cited": [
+    "P4 moshi pp. 6-7"
+   ],
+   "occurrences": [
+    "q07/small_fast#5"
+   ],
+   "label": "supported",
+   "reason": "Model can speak and listen at the same time without explicitly modeling speaker turns.",
+   "unsupported_part": null,
+   "chunk_ids": [
+    "2410.00037v1_p6_c2"
+   ]
+  },
+  {
+   "id": "s068",
+   "sentence": "Moshi utilizes Inner Monologue to jointly model text and audio tokens, allowing it to exploit the knowledge imparted by the text modality while remaining a speech-to-speech system  .",
+   "tags": [
+    4
+   ],
+   "cited": [
+    "P4 moshi pp. 6-7"
+   ],
+   "occurrences": [
+    "q07/small_fast#6"
+   ],
+   "label": "supported",
+   "reason": "Inner Monologue jointly models text and audio tokens, exploiting text knowledge while remaining speech-to-speech.",
+   "unsupported_part": null,
+   "chunk_ids": [
+    "2410.00037v1_p6_c2"
+   ]
+  },
+  {
+   "id": "s069",
+   "sentence": "Helium is a text language model backbone built from scratch to provide strong reasoning abilities to the system   .",
+   "tags": [
+    1,
+    3
+   ],
+   "cited": [
+    "P1 moshi pp. 5-6",
+    "P3 moshi pp. 6-7"
+   ],
+   "occurrences": [
+    "q07/balanced_rerank#1"
+   ],
+   "label": "supported",
+   "reason": "P1 text LM backbone; P3 Helium built from scratch providing strong reasoning abilities.",
+   "unsupported_part": null,
+   "chunk_ids": [
+    "2410.00037v1_p5_c2",
+    "2410.00037v1_p6_c1"
+   ]
+  },
+  {
+   "id": "s070",
+   "sentence": "Mimi is a neural audio codec that uses residual vector quantization and distills semantic knowledge to convert audio into discrete tokens    .",
+   "tags": [
+    1,
+    3,
+    4
+   ],
+   "cited": [
+    "P1 moshi pp. 5-6",
+    "P3 moshi pp. 6-7",
+    "P4 moshi pp. 3-3"
+   ],
+   "occurrences": [
+    "q07/balanced_rerank#2"
+   ],
+   "label": "supported",
+   "reason": "P4: Mimi converts audio into discrete tokens using RVQ with semantic distillation; P1/P3 corroborate.",
+   "unsupported_part": null,
+   "chunk_ids": [
+    "2410.00037v1_p5_c2",
+    "2410.00037v1_p6_c1",
+    "2410.00037v1_p3_c0"
+   ]
+  },
+  {
+   "id": "s071",
+   "sentence": "Moshi is the overarching multi-stream speech-to-speech Transformer model that enables full-duplex spoken dialogue  .",
+   "tags": [
+    3
+   ],
+   "cited": [
+    "P3 moshi pp. 6-7"
+   ],
+   "occurrences": [
+    "q07/balanced_rerank#3"
+   ],
+   "label": "supported",
+   "reason": "Moshi is a multi-stream speech-to-speech Transformer allowing full-duplex spoken dialogue.",
+   "unsupported_part": null,
+   "chunk_ids": [
+    "2410.00037v1_p6_c1"
+   ]
+  },
+  {
+   "id": "s072",
+   "sentence": "The architecture combines Helium with a smaller Transformer to predict audio tokens in a hierarchical and streaming fashion  .",
+   "tags": [
+    4
+   ],
+   "cited": [
+    "P4 moshi pp. 3-3"
+   ],
+   "occurrences": [
+    "q07/balanced_rerank#4"
+   ],
+   "label": "supported",
+   "reason": "Moshi combines Helium with a smaller Transformer to predict audio tokens hierarchically and in streaming fashion.",
+   "unsupported_part": null,
+   "chunk_ids": [
+    "2410.00037v1_p3_c0"
+   ]
+  },
+  {
+   "id": "s073",
+   "sentence": "Moshi jointly models the audio streams from both the user and the system, along with Moshi’s text tokens, using a Depth Transformer  .",
+   "tags": [
+    3
+   ],
+   "cited": [
+    "P3 moshi pp. 6-7"
+   ],
+   "occurrences": [
+    "q07/balanced_rerank#5"
+   ],
+   "label": "supported",
+   "reason": "Depth Transformer jointly models Moshi and user audio streams plus Moshi's text tokens.",
+   "unsupported_part": null,
+   "chunk_ids": [
+    "2410.00037v1_p6_c1"
+   ]
+  },
+  {
+   "id": "s074",
+   "sentence": "This multi-stream design allows the model to speak and listen simultaneously without explicitly modeling speaker turns  .",
+   "tags": [
+    3
+   ],
+   "cited": [
+    "P3 moshi pp. 6-7"
+   ],
+   "occurrences": [
+    "q07/balanced_rerank#6"
+   ],
+   "label": "supported",
+   "reason": "Multi-stream architecture lets model speak and listen simultaneously without modeling speaker turns.",
+   "unsupported_part": null,
+   "chunk_ids": [
+    "2410.00037v1_p6_c1"
+   ]
+  },
+  {
+   "id": "s075",
+   "sentence": "Helium is a text language model built from scratch that serves as the backbone for Moshi, providing strong reasoning abilities through high-quality text data  .",
+   "tags": [
+    4
+   ],
+   "cited": [
+    "P4 moshi pp. 6-7"
+   ],
+   "occurrences": [
+    "q07/large_wide#1"
+   ],
+   "label": "supported",
+   "reason": "Moshi built on top of Helium, text LLM built from scratch with high-quality text data for reasoning.",
+   "unsupported_part": null,
+   "chunk_ids": [
+    "2410.00037v1_p6_c1"
+   ]
+  },
+  {
+   "id": "s076",
+   "sentence": "Mimi is a neural audio codec that combines semantic and acoustic information into a single tokenizer using residual vector quantization and knowledge distillation  .",
+   "tags": [
+    4
+   ],
+   "cited": [
+    "P4 moshi pp. 6-7"
+   ],
+   "occurrences": [
+    "q07/large_wide#2"
+   ],
+   "label": "supported",
+   "reason": "Mimi combines semantic and acoustic info into single tokenizer via RVQ and knowledge distillation.",
+   "unsupported_part": null,
+   "chunk_ids": [
+    "2410.00037v1_p6_c1"
+   ]
+  },
+  {
+   "id": "s077",
+   "sentence": "Moshi is the overall multi-stream speech-to-speech Transformer model that enables full-duplex spoken dialogue by leveraging these components  .",
+   "tags": [
+    4
+   ],
+   "cited": [
+    "P4 moshi pp. 6-7"
+   ],
+   "occurrences": [
+    "q07/large_wide#3"
+   ],
+   "label": "supported",
+   "reason": "Moshi multi-stream speech-to-speech Transformer for full-duplex, built on Helium and using Mimi.",
+   "unsupported_part": null,
+   "chunk_ids": [
+    "2410.00037v1_p6_c1"
+   ]
+  },
+  {
+   "id": "s078",
+   "sentence": "The architecture uses Mimi to capture user input audio and Moshi's output voice with high quality and efficiency  .",
+   "tags": [
+    4
+   ],
+   "cited": [
+    "P4 moshi pp. 6-7"
+   ],
+   "occurrences": [
+    "q07/large_wide#4"
+   ],
+   "label": "supported",
+   "reason": "Mimi proposed to capture input user audio and output Moshi's voice with high quality and efficiently.",
+   "unsupported_part": null,
+   "chunk_ids": [
+    "2410.00037v1_p6_c1"
+   ]
+  },
+  {
+   "id": "s079",
+   "sentence": "Moshi jointly models the audio streams from both the user and Moshi, along with Moshi's text tokens, using a Depth Transformer compatible with streaming inference  .",
+   "tags": [
+    4
+   ],
+   "cited": [
+    "P4 moshi pp. 6-7"
+   ],
+   "occurrences": [
+    "q07/large_wide#5"
+   ],
+   "label": "supported",
+   "reason": "Depth Transformer compatible with streaming inference models both audio streams and Moshi text tokens.",
+   "unsupported_part": null,
+   "chunk_ids": [
+    "2410.00037v1_p6_c1"
+   ]
+  },
+  {
+   "id": "s080",
+   "sentence": "This integration allows Moshi to exploit the knowledge imparted from the text modality via Inner Monologue while remaining a speech-to-speech system  .",
+   "tags": [
+    4
+   ],
+   "cited": [
+    "P4 moshi pp. 6-7"
+   ],
+   "occurrences": [
+    "q07/large_wide#6"
+   ],
+   "label": "supported",
+   "reason": "Inner Monologue lets model exploit text-modality knowledge while remaining speech-to-speech.",
+   "unsupported_part": null,
+   "chunk_ids": [
+    "2410.00037v1_p6_c1"
+   ]
+  },
+  {
+   "id": "s081",
+   "sentence": "Inner Monologue is a training and inference setup that predicts time-aligned text tokens before audio tokens to improve factuality and linguistic quality  .",
+   "tags": [
+    1
+   ],
+   "cited": [
+    "P1 moshi pp. 3-3"
+   ],
+   "occurrences": [
+    "q08/small_fast#1"
+   ],
+   "label": "supported",
+   "reason": "Inner Monologue training/inference setup improves factuality and linguistic quality by predicting time-aligned text first.",
+   "unsupported_part": null,
+   "chunk_ids": [
+    "2410.00037v1_p3_c1"
+   ]
+  },
+  {
+   "id": "s082",
+   "sentence": "It decomposes speech into a chain of text, semantic, and acoustic tokens, predicting this structured sequence in a hierarchical manner  .",
+   "tags": [
+    3
+   ],
+   "cited": [
+    "P3 moshi pp. 5-5"
+   ],
+   "occurrences": [
+    "q08/small_fast#2"
+   ],
+   "label": "supported",
+   "reason": "Inner Monologue decomposes speech into text, semantic, acoustic tokens predicted hierarchically.",
+   "unsupported_part": null,
+   "chunk_ids": [
+    "2410.00037v1_p5_c1"
+   ]
+  },
+  {
+   "id": "s083",
+   "sentence": "This approach uses text tokens as a per-timestep prefix to the semantic token, extending the coarse-to-fine generation hierarchy  .",
+   "tags": [
+    2
+   ],
+   "cited": [
+    "P2 moshi pp. 3-3"
+   ],
+   "occurrences": [
+    "q08/small_fast#3"
+   ],
+   "label": "supported",
+   "reason": "Text tokens used as per-timestep prefix to semantic token, extending coarse-to-fine hierarchy.",
+   "unsupported_part": null,
+   "chunk_ids": [
+    "2410.00037v1_p3_c2"
+   ]
+  },
+  {
+   "id": "s084",
+   "sentence": "The method significantly improves the length and quality of generated speech by leveraging this structured prediction  .",
+   "tags": [
+    2
+   ],
+   "cited": [
+    "P2 moshi pp. 3-3"
+   ],
+   "occurrences": [
+    "q08/small_fast#4"
+   ],
+   "label": "supported",
+   "reason": "Experiments show this drastically improves length and quality of generated speech.",
+   "unsupported_part": null,
+   "chunk_ids": [
+    "2410.00037v1_p3_c2"
+   ]
+  },
+  {
+   "id": "s085",
+   "sentence": "Additionally, Inner Monologue allows representing all utterances as both text and speech without switching modalities  .",
+   "tags": [
+    3
+   ],
+   "cited": [
+    "P3 moshi pp. 5-5"
+   ],
+   "occurrences": [
+    "q08/small_fast#5"
+   ],
+   "label": "supported",
+   "reason": "Allows representing all utterances both as text and speech rather than switching modalities.",
+   "unsupported_part": null,
+   "chunk_ids": [
+    "2410.00037v1_p5_c1"
+   ]
+  },
+  {
+   "id": "s086",
+   "sentence": "This hierarchical modeling decomposes the generation task without increasing the sequence length of the Transformer outputs  .",
+   "tags": [
+    3
+   ],
+   "cited": [
+    "P3 moshi pp. 5-5"
+   ],
+   "occurrences": [
+    "q08/small_fast#6"
+   ],
+   "label": "supported",
+   "reason": "Hierarchical modeling decomposes generation without increasing Transformer output sequence length.",
+   "unsupported_part": null,
+   "chunk_ids": [
+    "2410.00037v1_p5_c1"
+   ]
+  },
+  {
+   "id": "s087",
+   "sentence": "Inner Monologue is a training and inference setup for audio language models that predicts time-aligned text tokens before audio tokens  .",
+   "tags": [
+    1
+   ],
+   "cited": [
+    "P1 moshi pp. 3-3"
+   ],
+   "occurrences": [
+    "q08/balanced_rerank#1"
+   ],
+   "label": "supported",
+   "reason": "Inner Monologue: training and inference setup predicting time-aligned text tokens before audio tokens.",
+   "unsupported_part": null,
+   "chunk_ids": [
+    "2410.00037v1_p3_c1"
+   ]
+  },
+  {
+   "id": "s088",
+   "sentence": "This mechanism significantly improves the factuality and linguistic quality of the generated speech  .",
+   "tags": [
+    1
+   ],
+   "cited": [
+    "P1 moshi pp. 3-3"
+   ],
+   "occurrences": [
+    "q08/balanced_rerank#2"
+   ],
+   "label": "supported",
+   "reason": "Significantly improves factuality and linguistic quality of generated speech.",
+   "unsupported_part": null,
+   "chunk_ids": [
+    "2410.00037v1_p3_c1"
+   ]
+  },
+  {
+   "id": "s089",
+   "sentence": "The approach extends the coarse-to-fine generation hierarchy by using text tokens as a per-timestep prefix to the semantic token  .",
+   "tags": [
+    1
+   ],
+   "cited": [
+    "P1 moshi pp. 3-3"
+   ],
+   "occurrences": [
+    "q08/balanced_rerank#3"
+   ],
+   "label": "supported",
+   "reason": "Extends coarse-to-fine hierarchy using text tokens as per-timestep prefix to semantic token.",
+   "unsupported_part": null,
+   "chunk_ids": [
+    "2410.00037v1_p3_c1"
+   ]
+  },
+  {
+   "id": "s090",
+   "sentence": "Experiments demonstrate that this method drastically improves both the length and quality of the generated speech  .",
+   "tags": [
+    1
+   ],
+   "cited": [
+    "P1 moshi pp. 3-3"
+   ],
+   "occurrences": [
+    "q08/balanced_rerank#4"
+   ],
+   "label": "supported",
+   "reason": "Experiments show drastic improvement in length and quality of generated speech.",
+   "unsupported_part": null,
+   "chunk_ids": [
+    "2410.00037v1_p3_c1"
+   ]
+  },
+  {
+   "id": "s091",
+   "sentence": "Additionally, Inner Monologue decomposes speech on a per-frame basis, allowing each prediction step to output a speech frame  .",
+   "tags": [
+    2
+   ],
+   "cited": [
+    "P2 moshi pp. 5-5"
+   ],
+   "occurrences": [
+    "q08/balanced_rerank#5"
+   ],
+   "label": "supported",
+   "reason": "Per-frame decomposition; each prediction step outputs a speech frame.",
+   "unsupported_part": null,
+   "chunk_ids": [
+    "2410.00037v1_p5_c1"
+   ]
+  },
+  {
+   "id": "s092",
+   "sentence": "This per-frame decomposition makes the model compatible with real-time generation, unlike systems that require generating a complete text sequence first  .",
+   "tags": [
+    2
+   ],
+   "cited": [
+    "P2 moshi pp. 5-5"
+   ],
+   "occurrences": [
+    "q08/balanced_rerank#6"
+   ],
+   "label": "supported",
+   "reason": "Unlike Spectron requiring full text sequence first, this makes Moshi compatible with real-time generation.",
+   "unsupported_part": null,
+   "chunk_ids": [
+    "2410.00037v1_p5_c1"
+   ]
+  },
+  {
+   "id": "s093",
+   "sentence": "Inner Monologue is a training and inference setup that predicts time-aligned text tokens as a prefix to audio tokens to improve the factuality and linguistic quality of generated speech  .",
+   "tags": [
+    3
+   ],
+   "cited": [
+    "P3 moshi pp. 3-3"
+   ],
+   "occurrences": [
+    "q08/large_wide#1"
+   ],
+   "label": "supported",
+   "reason": "Predicts time-aligned text tokens before audio tokens (prefix) improving factuality and linguistic quality.",
+   "unsupported_part": null,
+   "chunk_ids": [
+    "2410.00037v1_p3_c0"
+   ]
+  },
+  {
+   "id": "s094",
+   "sentence": "It decomposes speech into a chain of text, semantic, and acoustic tokens, predicting this structured sequence in a hierarchical manner  .",
+   "tags": [
+    2
+   ],
+   "cited": [
+    "P2 moshi pp. 5-5"
+   ],
+   "occurrences": [
+    "q08/large_wide#2"
+   ],
+   "label": "supported",
+   "reason": "Inner Monologue decomposes speech into text, semantic, acoustic chain predicted hierarchically.",
+   "unsupported_part": null,
+   "chunk_ids": [
+    "2410.00037v1_p5_c0"
+   ]
+  },
+  {
+   "id": "s095",
+   "sentence": "The text stream is derived from the transcription of Moshi's own audio using the SentencePiece tokenizer and Whisper  .",
+   "tags": [
+    4
+   ],
+   "cited": [
+    "P4 moshi pp. 15-16"
+   ],
+   "occurrences": [
+    "q08/large_wide#3"
+   ],
+   "label": "supported",
+   "reason": "Text stream from SentencePiece tokenization of Whisper transcription of Moshi's audio.",
+   "unsupported_part": null,
+   "chunk_ids": [
+    "2410.00037v1_p15_c0"
+   ]
+  },
+  {
+   "id": "s096",
+   "sentence": "To align with the constant framerate of 12.5Hz, word-level timestamps from Whisper are used to map text tokens to specific time indices  .",
+   "tags": [
+    4
+   ],
+   "cited": [
+    "P4 moshi pp. 15-16"
+   ],
+   "occurrences": [
+    "q08/large_wide#4"
+   ],
+   "label": "supported",
+   "reason": "Whisper word-level timestamps align text tokens to 12.5Hz framerate via start indices.",
+   "unsupported_part": null,
+   "chunk_ids": [
+    "2410.00037v1_p15_c0"
+   ]
+  },
+  {
+   "id": "s097",
+   "sentence": "This mechanism provides a scaffolding that increases the linguistic quality of generation, with ablation studies showing it has one of the most critical impacts on speech quality  .",
+   "tags": [
+    4
+   ],
+   "cited": [
+    "P4 moshi pp. 15-16"
+   ],
+   "occurrences": [
+    "q08/large_wide#5"
+   ],
+   "label": "supported",
+   "reason": "Scaffolding increases linguistic quality; ablations show one of the most critical impacts on speech quality.",
+   "unsupported_part": null,
+   "chunk_ids": [
+    "2410.00037v1_p15_c0"
+   ]
+  },
+  {
+   "id": "s098",
+   "sentence": "The most drastic improvement to the quality and length of generated speech comes from enabling Inner Monologue  .",
+   "tags": [
+    5
+   ],
+   "cited": [
+    "P5 moshi pp. 26-26"
+   ],
+   "occurrences": [
+    "q08/large_wide#6"
+   ],
+   "label": "supported",
+   "reason": "Passage states most drastic improvement to quality and length comes from enabling Inner Monologue.",
+   "unsupported_part": null,
+   "chunk_ids": [
+    "2410.00037v1_p26_c0"
+   ]
+  },
+  {
+   "id": "s099",
+   "sentence": "Moshi achieves full-duplex communication by using a multi-stream architecture that allows the model to speak and listen to the user simultaneously without explicitly modeling speaker turns  .",
+   "tags": [
+    3
+   ],
+   "cited": [
+    "P3 moshi pp. 6-7"
+   ],
+   "occurrences": [
+    "q09/small_fast#1",
+    "q09/balanced_rerank#1"
+   ],
+   "label": "supported",
+   "reason": "Multi-stream architecture enables full-duplex; speaks and listens simultaneously without modeling speaker turns.",
+   "unsupported_part": null,
+   "chunk_ids": [
+    "2410.00037v1_p6_c2"
+   ]
+  },
+  {
+   "id": "s100",
+   "sentence": "This design enables the handling of full-duplex dialogues with arbitrary dynamics by modeling several audio streams in parallel  .",
+   "tags": [
+    4
+   ],
+   "cited": [
+    "P4 moshi pp. 3-3"
+   ],
+   "occurrences": [
+    "q09/small_fast#2",
+    "q09/balanced_rerank#2"
+   ],
+   "label": "supported",
+   "reason": "Modeling several audio streams in parallel allows simple handling of full-duplex dialogues with arbitrary dynamics.",
+   "unsupported_part": null,
+   "chunk_ids": [
+    "2410.00037v1_p3_c1"
+   ]
+  },
+  {
+   "id": "s101",
+   "sentence": "Modeling the user's and system's audio as separate parallel streams is important because previous approaches that model both into a single token stream are challenging in the presence of significant overlap  .",
+   "tags": [
+    1
+   ],
+   "cited": [
+    "P1 moshi pp. 6-6"
+   ],
+   "occurrences": [
+    "q09/small_fast#3"
+   ],
+   "label": "supported",
+   "reason": "Passage says modeling both speakers into a single token stream is challenging with significant overlap, contrasted with separate-stream modeling.",
+   "unsupported_part": null,
+   "chunk_ids": [
+    "2410.00037v1_p6_c0"
+   ]
+  },
+  {
+   "id": "s102",
+   "sentence": "The multi-stream approach allows for a conceptually and practically simple handling of these complex dialogue dynamics  .",
+   "tags": [
+    4
+   ],
+   "cited": [
+    "P4 moshi pp. 3-3"
+   ],
+   "occurrences": [
+    "q09/small_fast#4"
+   ],
+   "label": "supported",
+   "reason": "Passage: parallel audio streams allow conceptually and practically simple handling of full-duplex dialogues with arbitrary dynamics.",
+   "unsupported_part": null,
+   "chunk_ids": [
+    "2410.00037v1_p3_c1"
+   ]
+  },
+  {
+   "id": "s103",
+   "sentence": "Unlike previous full-duplex systems that may not run online or lack text knowledge, Moshi's architecture supports real-time generation with strong reasoning abilities   .",
+   "tags": [
+    1,
+    3
+   ],
+   "cited": [
+    "P1 moshi pp. 6-6",
+    "P3 moshi pp. 6-7"
+   ],
+   "occurrences": [
+    "q09/small_fast#5"
+   ],
+   "label": "supported",
+   "reason": "P1: dGSLM not online, lacks text LM knowledge; P3: Helium gives strong reasoning, multi-stream enables real-time dialogue.",
+   "unsupported_part": null,
+   "chunk_ids": [
+    "2410.00037v1_p6_c0",
+    "2410.00037v1_p6_c2"
+   ]
+  },
+  {
+   "id": "s104",
+   "sentence": "Modeling the user's and system's audio as separate parallel streams is important because combining them into a single token stream is challenging in the presence of significant overlap  .",
+   "tags": [
+    2
+   ],
+   "cited": [
+    "P2 moshi pp. 5-6"
+   ],
+   "occurrences": [
+    "q09/balanced_rerank#3"
+   ],
+   "label": "supported",
+   "reason": "Passage states single token stream modeling of both speakers is challenging in presence of significant overlap.",
+   "unsupported_part": null,
+   "chunk_ids": [
+    "2410.00037v1_p5_c2"
+   ]
+  },
+  {
+   "id": "s105",
+   "sentence": "The multi-stream approach allows Moshi to exploit all information from the user, including linguistic and non-linguistic aspects, while producing speech in real time  .",
+   "tags": [
+    1
+   ],
+   "cited": [
+    "P1 moshi pp. 6-6"
+   ],
+   "occurrences": [
+    "q09/balanced_rerank#4"
+   ],
+   "label": "supported",
+   "reason": "Passage: modeling two streams lets Moshi exploit all user information (linguistic and non-linguistic) while producing speech in real time.",
+   "unsupported_part": null,
+   "chunk_ids": [
+    "2410.00037v1_p6_c0"
+   ]
+  },
+  {
+   "id": "s106",
+   "sentence": "By modeling two streams of semantic and acoustic tokens hierarchically, Moshi can generate an arbitrary range of emotions, voices, and acoustic conditions  .",
+   "tags": [
+    1
+   ],
+   "cited": [
+    "P1 moshi pp. 6-6"
+   ],
+   "occurrences": [
+    "q09/balanced_rerank#5"
+   ],
+   "label": "partially_supported",
+   "reason": "Emotions/voices capability stated, but passage attributes it to producing acoustic tokens with text/semantic tokens, not two-stream modeling.",
+   "unsupported_part": "By modeling two streams of semantic and acoustic tokens hierarchically",
+   "chunk_ids": [
+    "2410.00037v1_p6_c0"
+   ]
+  },
+  {
+   "id": "s107",
+   "sentence": "This architecture relies on a Depth Transformer compatible with streaming inference to jointly model the audio streams from Moshi and the user  .",
+   "tags": [
+    3
+   ],
+   "cited": [
+    "P3 moshi pp. 6-7"
+   ],
+   "occurrences": [
+    "q09/balanced_rerank#6"
+   ],
+   "label": "supported",
+   "reason": "Passage: a Depth Transformer compatible with streaming inference jointly models Moshi's and user's audio streams.",
+   "unsupported_part": null,
+   "chunk_ids": [
+    "2410.00037v1_p6_c1"
+   ]
+  },
+  {
+   "id": "s108",
+   "sentence": "Moshi achieves full-duplex communication by modeling its own speech and the user's speech into parallel streams, which allows for the removal of explicit speaker turns  .",
+   "tags": [
+    4
+   ],
+   "cited": [
+    "P4 moshi pp. 1-1"
+   ],
+   "occurrences": [
+    "q09/large_wide#1"
+   ],
+   "label": "supported",
+   "reason": "Abstract: Moshi models its own and user's speech in parallel streams, allowing removal of explicit speaker turns.",
+   "unsupported_part": null,
+   "chunk_ids": [
+    "2410.00037v1_p1_c1"
+   ]
+  },
+  {
+   "id": "s109",
+   "sentence": "This multi-stream architecture enables the model to both speak and listen to the user at the same time without needing to explicitly model speaker turns  .",
+   "tags": [
+    1
+   ],
+   "cited": [
+    "P1 moshi pp. 6-7"
+   ],
+   "occurrences": [
+    "q09/large_wide#2"
+   ],
+   "label": "supported",
+   "reason": "Passage: multi-stream architecture lets the model speak and listen simultaneously without explicitly modeling speaker turns.",
+   "unsupported_part": null,
+   "chunk_ids": [
+    "2410.00037v1_p6_c1"
+   ]
+  },
+  {
+   "id": "s110",
+   "sentence": "Modeling the user's and system's audio as separate streams is important because it allows Moshi to handle full-duplex communication where there is no boundary between speaker turns  .",
+   "tags": [
+    2
+   ],
+   "cited": [
+    "P2 moshi pp. 5-6"
+   ],
+   "occurrences": [
+    "q09/large_wide#3"
+   ],
+   "label": "supported",
+   "reason": "Passage: prior models cannot handle full-duplex with no turn boundaries; modeling two streams makes Moshi full duplex.",
+   "unsupported_part": null,
+   "chunk_ids": [
+    "2410.00037v1_p5_c1"
+   ]
+  },
+  {
+   "id": "s111",
+   "sentence": "This approach addresses the limitations of previous systems that modeled both the user’s and the system’s speech into a single token stream, which is challenging in the presence of significant overlap  .",
+   "tags": [
+    2
+   ],
+   "cited": [
+    "P2 moshi pp. 5-6"
+   ],
+   "occurrences": [
+    "q09/large_wide#4"
+   ],
+   "label": "supported",
+   "reason": "Passage describes prior single-token-stream modeling as challenging with overlap and says Moshi addresses limitations with two streams.",
+   "unsupported_part": null,
+   "chunk_ids": [
+    "2410.00037v1_p5_c1"
+   ]
+  },
+  {
+   "id": "s112",
+   "sentence": "By using separate streams, Moshi can exploit all the information from the user, including linguistic and non-linguistic data, while producing speech in real time  .",
+   "tags": [
+    3
+   ],
+   "cited": [
+    "P3 moshi pp. 6-6"
+   ],
+   "occurrences": [
+    "q09/large_wide#5"
+   ],
+   "label": "supported",
+   "reason": "Passage: by modeling two streams Moshi exploits all user information (linguistic and non-linguistic) while producing speech in real time.",
+   "unsupported_part": null,
+   "chunk_ids": [
+    "2410.00037v1_p6_c0"
+   ]
+  },
+  {
+   "id": "s113",
+   "sentence": "The multi-stream design is essential for the model to gain the ability to both listen and speak simultaneously  .",
+   "tags": [
+    5
+   ],
+   "cited": [
+    "P5 moshi pp. 17-18"
+   ],
+   "occurrences": [
+    "q09/large_wide#6"
+   ],
+   "label": "not_supported",
+   "reason": "Passage inverts the relation: listen-and-speak ability is needed to achieve multi-stream, not multi-stream needed to gain that ability.",
+   "unsupported_part": "The multi-stream design is essential for the model to gain the ability",
+   "chunk_ids": [
+    "2410.00037v1_p17_c1"
+   ]
+  },
+  {
+   "id": "s114",
+   "sentence": "The paper states that Moshi has a theoretical latency of 160  .",
+   "tags": [
+    1
+   ],
+   "cited": [
+    "P1 moshi pp. 2-2"
+   ],
+   "occurrences": [
+    "q10/small_fast#1"
+   ],
+   "label": "supported",
+   "reason": "Passage text literally ends 'with a theoretical latency of 160'.",
+   "unsupported_part": null,
+   "chunk_ids": [
+    "2410.00037v1_p2_c2"
+   ]
+  },
+  {
+   "id": "s115",
+   "sentence": "The text notes that natural conversations demonstrate response times of a few hundred milliseconds  .",
+   "tags": [
+    2
+   ],
+   "cited": [
+    "P2 moshi pp. 2-2"
+   ],
+   "occurrences": [
+    "q10/small_fast#3"
+   ],
+   "label": "supported",
+   "reason": "Passage: natural conversations demonstrate response times of a few hundred milliseconds.",
+   "unsupported_part": null,
+   "chunk_ids": [
+    "2410.00037v1_p2_c1"
+   ]
+  },
+  {
+   "id": "s116",
+   "sentence": "Moshi has a theoretical latency of 160ms and a practical latency of 200ms  .",
+   "tags": [
+    3
+   ],
+   "cited": [
+    "P3 moshi pp. 1-1"
+   ],
+   "occurrences": [
+    "q10/balanced_rerank#1"
+   ],
+   "label": "supported",
+   "reason": "Passage: theoretical latency of 160ms, 200ms in practice.",
+   "unsupported_part": null,
+   "chunk_ids": [
+    "2410.00037v1_p1_c2"
+   ]
+  },
+  {
+   "id": "s117",
+   "sentence": "The paper states that natural conversations demonstrate response times of a few hundred milliseconds  .",
+   "tags": [
+    1
+   ],
+   "cited": [
+    "P1 moshi pp. 2-2"
+   ],
+   "occurrences": [
+    "q10/balanced_rerank#2"
+   ],
+   "label": "supported",
+   "reason": "Passage: natural conversations demonstrate response times of a few hundred milliseconds.",
+   "unsupported_part": null,
+   "chunk_ids": [
+    "2410.00037v1_p2_c1"
+   ]
+  },
+  {
+   "id": "s118",
+   "sentence": "Therefore, Moshi's reported latencies are comparable to the response times of natural human conversations   .",
+   "tags": [
+    1,
+    3
+   ],
+   "cited": [
+    "P1 moshi pp. 2-2",
+    "P3 moshi pp. 1-1"
+   ],
+   "occurrences": [
+    "q10/balanced_rerank#3"
+   ],
+   "label": "partially_supported",
+   "reason": "Latency figures and 'few hundred milliseconds' are stated, but no comparison is made; 'comparable' is the sentence's own judgment.",
+   "unsupported_part": "comparable to the response times of natural human conversations",
+   "chunk_ids": [
+    "2410.00037v1_p2_c1",
+    "2410.00037v1_p1_c2"
+   ]
+  },
+  {
+   "id": "s119",
+   "sentence": "Moshi has a theoretical latency of 160 ms   .",
+   "tags": [
+    3,
+    4
+   ],
+   "cited": [
+    "P3 moshi pp. 2-3",
+    "P4 moshi pp. 1-1"
+   ],
+   "occurrences": [
+    "q10/large_wide#1"
+   ],
+   "label": "supported",
+   "reason": "Both passages state a theoretical latency of 160 ms.",
+   "unsupported_part": null,
+   "chunk_ids": [
+    "2410.00037v1_p2_c1",
+    "2410.00037v1_p1_c1"
+   ]
+  },
+  {
+   "id": "s120",
+   "sentence": "In practice, the latency is 200 ms  .",
+   "tags": [
+    4
+   ],
+   "cited": [
+    "P4 moshi pp. 1-1"
+   ],
+   "occurrences": [
+    "q10/large_wide#2"
+   ],
+   "label": "supported",
+   "reason": "Abstract: 200ms in practice.",
+   "unsupported_part": null,
+   "chunk_ids": [
+    "2410.00037v1_p1_c1"
+   ]
+  },
+  {
+   "id": "s121",
+   "sentence": "The paper states that the average response time in natural conversations is 230 ms  .",
+   "tags": [
+    3
+   ],
+   "cited": [
+    "P3 moshi pp. 2-3"
+   ],
+   "occurrences": [
+    "q10/large_wide#3"
+   ],
+   "label": "supported",
+   "reason": "Passage: the 230 ms average in natural conversations measured over 10 languages.",
+   "unsupported_part": null,
+   "chunk_ids": [
+    "2410.00037v1_p2_c1"
+   ]
+  },
+  {
+   "id": "s122",
+   "sentence": "Therefore, Moshi's theoretical latency is lower than the average response time in natural conversations  .",
+   "tags": [
+    3
+   ],
+   "cited": [
+    "P3 moshi pp. 2-3"
+   ],
+   "occurrences": [
+    "q10/large_wide#4"
+   ],
+   "label": "supported",
+   "reason": "Passage: theoretical latency of 160 ms is lower than the 230 ms natural-conversation average.",
+   "unsupported_part": null,
+   "chunk_ids": [
+    "2410.00037v1_p2_c1"
+   ]
+  },
+  {
+   "id": "s123",
+   "sentence": "The practical latency of 200 ms is also lower than the 230 ms average for natural conversations   .",
+   "tags": [
+    3,
+    4
+   ],
+   "cited": [
+    "P3 moshi pp. 2-3",
+    "P4 moshi pp. 1-1"
+   ],
+   "occurrences": [
+    "q10/large_wide#5"
+   ],
+   "label": "supported",
+   "reason": "P4 gives 200ms in practice, P3 gives 230 ms average; 200 < 230 follows directly.",
+   "unsupported_part": null,
+   "chunk_ids": [
+    "2410.00037v1_p2_c1",
+    "2410.00037v1_p1_c1"
+   ]
+  },
+  {
+   "id": "s124",
+   "sentence": "Fixed-vocabulary tokenization is described as a pervasive handcrafted preprocessing step that comes with well-documented drawbacks, including poor character-level understanding and a lack of meaning and interpretability  .",
+   "tags": [
+    3
+   ],
+   "cited": [
+    "P3 hnet pp. 1-1"
+   ],
+   "occurrences": [
+    "q11/small_fast#1"
+   ],
+   "label": "supported",
+   "reason": "Passage: pervasive handcrafted preprocessing step with well-documented drawbacks including poor character-level understanding and lack of meaning/interpretability.",
+   "unsupported_part": null,
+   "chunk_ids": [
+    "2507.07955v2_p1_c3"
+   ]
+  },
+  {
+   "id": "s125",
+   "sentence": "The authors note that this process leads to degraded performance on complex languages and modalities  .",
+   "tags": [
+    3
+   ],
+   "cited": [
+    "P3 hnet pp. 1-1"
+   ],
+   "occurrences": [
+    "q11/small_fast#2"
+   ],
+   "label": "supported",
+   "reason": "Passage lists degraded performance on complex languages and modalities among tokenization drawbacks.",
+   "unsupported_part": null,
+   "chunk_ids": [
+    "2507.07955v2_p1_c3"
+   ]
+  },
+  {
+   "id": "s126",
+   "sentence": "Additionally, tokenization bias prevents the model from determining if a character is the start of a new word until subsequent characters are observed  .",
+   "tags": [
+    1
+   ],
+   "cited": [
+    "P1 hnet pp. 39-39"
+   ],
+   "occurrences": [
+    "q11/small_fast#3"
+   ],
+   "label": "supported",
+   "reason": "Passage: tokenization bias means one cannot tell whether a character starts a new word until seeing the next character.",
+   "unsupported_part": null,
+   "chunk_ids": [
+    "2507.07955v2_p39_c0"
+   ]
+  },
+  {
+   "id": "s127",
+   "sentence": "This issue can be exacerbated, as determining whether a specific character is the start of a token may require knowing the next two bytes  .",
+   "tags": [
+    1
+   ],
+   "cited": [
+    "P1 hnet pp. 39-39"
+   ],
+   "occurrences": [
+    "q11/small_fast#4"
+   ],
+   "label": "supported",
+   "reason": "Passage: the problem can be worse; determining whether l starts a token requires knowing the next two bytes.",
+   "unsupported_part": null,
+   "chunk_ids": [
+    "2507.07955v2_p39_c0"
+   ]
+  },
+  {
+   "id": "s128",
+   "sentence": "Replacing the tokenization–LM–detokenization pipeline with a single end-to-end model would better adhere to the spirit of deep learning and potentially scale more powerfully  .",
+   "tags": [
+    3
+   ],
+   "cited": [
+    "P3 hnet pp. 1-1"
+   ],
+   "occurrences": [
+    "q11/small_fast#5"
+   ],
+   "label": "supported",
+   "reason": "Passage: end-to-end model would adhere better to spirit of deep learning, ideally scaling more powerfully.",
+   "unsupported_part": null,
+   "chunk_ids": [
+    "2507.07955v2_p1_c3"
+   ]
+  },
+  {
+   "id": "s129",
+   "sentence": "The authors identify that fixed-vocabulary tokenization is a pervasive handcrafted preprocessing step that comes with well-documented drawbacks  .",
+   "tags": [
+    2
+   ],
+   "cited": [
+    "P2 hnet pp. 1-1"
+   ],
+   "occurrences": [
+    "q11/balanced_rerank#1"
+   ],
+   "label": "supported",
+   "reason": "Passage: fixed-vocabulary tokenization remains a pervasive handcrafted preprocessing step with well-documented drawbacks.",
+   "unsupported_part": null,
+   "chunk_ids": [
+    "2507.07955v2_p1_c3"
+   ]
+  },
+  {
+   "id": "s130",
+   "sentence": "These drawbacks include poor character-level understanding, a lack of meaning and interpretability, and degraded performance on complex languages and modalities  .",
+   "tags": [
+    2
+   ],
+   "cited": [
+    "P2 hnet pp. 1-1"
+   ],
+   "occurrences": [
+    "q11/balanced_rerank#2"
+   ],
+   "label": "supported",
+   "reason": "Passage lists exactly these three drawbacks.",
+   "unsupported_part": null,
+   "chunk_ids": [
+    "2507.07955v2_p1_c3"
+   ]
+  },
+  {
+   "id": "s131",
+   "sentence": "Replacing the tokenization–LM–detokenization pipeline with a single end-to-end model would better adhere to the spirit of deep learning  .",
+   "tags": [
+    2
+   ],
+   "cited": [
+    "P2 hnet pp. 1-1"
+   ],
+   "occurrences": [
+    "q11/balanced_rerank#3"
+   ],
+   "label": "supported",
+   "reason": "Passage: replacing the pipeline with a single end-to-end model would adhere better to the spirit of deep learning.",
+   "unsupported_part": null,
+   "chunk_ids": [
+    "2507.07955v2_p1_c3"
+   ]
+  },
+  {
+   "id": "s132",
+   "sentence": "Such an approach would ideally scale more powerfully with data and parameters, aligning with the concept of the bitter lesson  .",
+   "tags": [
+    2
+   ],
+   "cited": [
+    "P2 hnet pp. 1-1"
+   ],
+   "occurrences": [
+    "q11/balanced_rerank#4"
+   ],
+   "label": "supported",
+   "reason": "Passage: ideally scaling more powerfully with data and parameters (c.f. the bitter lesson).",
+   "unsupported_part": null,
+   "chunk_ids": [
+    "2507.07955v2_p1_c3"
+   ]
+  },
+  {
+   "id": "s133",
+   "sentence": "However, tokenization remains indispensable for its ability to compress and shorten sequences, as no end-to-end tokenizer-free model has yet matched the performance of tokenizer-based models when matched for computational budget  .",
+   "tags": [
+    2
+   ],
+   "cited": [
+    "P2 hnet pp. 1-1"
+   ],
+   "occurrences": [
+    "q11/balanced_rerank#5"
+   ],
+   "label": "supported",
+   "reason": "Passage states tokenization indispensable for compressing sequences; no tokenizer-free model has matched tokenizer-based performance at matched compute.",
+   "unsupported_part": null,
+   "chunk_ids": [
+    "2507.07955v2_p1_c3"
+   ]
+  },
+  {
+   "id": "s134",
+   "sentence": "Pre-processing steps such as tokenization remain a barrier to true end-to-end foundation models, which motivated the introduction of H-Net  .",
+   "tags": [
+    4
+   ],
+   "cited": [
+    "P4 hnet pp. 1-1"
+   ],
+   "occurrences": [
+    "q11/large_wide#1"
+   ],
+   "label": "supported",
+   "reason": "Abstract: tokenization remains a barrier to true end-to-end foundation models, followed by introducing H-Net.",
+   "unsupported_part": null,
+   "chunk_ids": [
+    "2507.07955v2_p1_c1"
+   ]
+  },
+  {
+   "id": "s135",
+   "sentence": "The authors argue that tokenization implicitly contains next-byte information, a phenomenon termed \"tokenization bias\" that prevents models from determining word boundaries without seeing subsequent characters  .",
+   "tags": [
+    3
+   ],
+   "cited": [
+    "P3 hnet pp. 39-39"
+   ],
+   "occurrences": [
+    "q11/large_wide#2"
+   ],
+   "label": "supported",
+   "reason": "Passage defines tokenization bias as implicit next-byte information and says word starts cannot be determined until seeing next character.",
+   "unsupported_part": null,
+   "chunk_ids": [
+    "2507.07955v2_p39_c0"
+   ]
+  },
+  {
+   "id": "s136",
+   "sentence": "Fixed-vocabulary tokenizers can leak information about the data mix they were trained on, as shown by examining the vocabulary of a BPE tokenizer  .",
+   "tags": [
+    1
+   ],
+   "cited": [
+    "P1 hnet pp. 34-35"
+   ],
+   "occurrences": [
+    "q11/large_wide#3"
+   ],
+   "label": "supported",
+   "reason": "Passage: Hayase et al. show examining a BPE tokenizer's vocabulary leaks information about its training data mix.",
+   "unsupported_part": null,
+   "chunk_ids": [
+    "2507.07955v2_p34_c1"
+   ]
+  },
+  {
+   "id": "s137",
+   "sentence": "Additionally, tokenization qualitatively changes what Transformers can learn for certain data distributions, and the primary role of shrinking input sequence length is not the sole factor in model performance  .",
+   "tags": [
+    1
+   ],
+   "cited": [
+    "P1 hnet pp. 34-35"
+   ],
+   "occurrences": [
+    "q11/large_wide#4"
+   ],
+   "label": "partially_supported",
+   "reason": "First clause supported (Rajaraman et al.); second clause garbles Schmidt et al.'s finding into an unstated 'sole factor' claim.",
+   "unsupported_part": "the primary role of shrinking input sequence length is not the sole factor in model performance",
+   "chunk_ids": [
+    "2507.07955v2_p34_c1"
+   ]
+  },
+  {
+   "id": "s138",
+   "sentence": "Schmidt et al. (2024) provided evidence against the hypothesis that tokenization's primary role is to shrink input sequence length by showing that higher compression rates can lead to worse language models  .",
+   "tags": [
+    1
+   ],
+   "cited": [
+    "P1 hnet pp. 34-35"
+   ],
+   "occurrences": [
+    "q11/large_wide#5"
+   ],
+   "label": "supported",
+   "reason": "Passage: Schmidt et al.'s higher-compression tokenizer led to worse LMs, providing evidence against the sequence-shrinking hypothesis.",
+   "unsupported_part": null,
+   "chunk_ids": [
+    "2507.07955v2_p34_c1"
+   ]
+  },
+  {
+   "id": "s139",
+   "sentence": "H-Net addresses these issues by replacing the tokenization–LM–detokenization pipeline with a single model learned fully end-to-end  .",
+   "tags": [
+    4
+   ],
+   "cited": [
+    "P4 hnet pp. 1-1"
+   ],
+   "occurrences": [
+    "q11/large_wide#6"
+   ],
+   "label": "supported",
+   "reason": "Abstract: H-Net allows replacing the tokenization-LM-detokenization pipeline with a single model learned fully end-to-end.",
+   "unsupported_part": null,
+   "chunk_ids": [
+    "2507.07955v2_p1_c1"
+   ]
+  },
+  {
+   "id": "s140",
+   "sentence": "H-Net employs a hierarchical architecture comprising three primary components: encoder networks (E), a main network (M), and decoder networks (D)  .",
+   "tags": [
+    1
+   ],
+   "cited": [
+    "P1 hnet pp. 4-4"
+   ],
+   "occurrences": [
+    "q12/small_fast#1",
+    "q12/balanced_rerank#1",
+    "q12/large_wide#1"
+   ],
+   "label": "supported",
+   "reason": "Passage: three primary components - encoder networks (E), main network (M), decoder networks (D).",
+   "unsupported_part": null,
+   "chunk_ids": [
+    "2507.07955v2_p4_c3"
+   ]
+  },
+  {
+   "id": "s141",
+   "sentence": "In the information flow, raw data is first processed by a small encoder network  .",
+   "tags": [
+    3
+   ],
+   "cited": [
+    "P3 hnet pp. 2-2"
+   ],
+   "occurrences": [
+    "q12/small_fast#2"
+   ],
+   "label": "supported",
+   "reason": "Passage: (i) raw data is processed by a small encoder network.",
+   "unsupported_part": null,
+   "chunk_ids": [
+    "2507.07955v2_p2_c2"
+   ]
+  },
+  {
+   "id": "s142",
+   "sentence": "The data is then downsampled and passed through the main network, which operates on compressed chunks  .",
+   "tags": [
+    3
+   ],
+   "cited": [
+    "P3 hnet pp. 2-2"
+   ],
+   "occurrences": [
+    "q12/small_fast#3"
+   ],
+   "label": "supported",
+   "reason": "Passage: (ii) then downsampled and passed through a main network operating on compressed chunks.",
+   "unsupported_part": null,
+   "chunk_ids": [
+    "2507.07955v2_p2_c2"
+   ]
+  },
+  {
+   "id": "s143",
+   "sentence": "Finally, the data is upsampled before being passed through a decoder network that operates on the original resolution  .",
+   "tags": [
+    3
+   ],
+   "cited": [
+    "P3 hnet pp. 2-2"
+   ],
+   "occurrences": [
+    "q12/small_fast#4"
+   ],
+   "label": "supported",
+   "reason": "Passage: (iii) finally upsampled before a decoder network operating on the original resolution.",
+   "unsupported_part": null,
+   "chunk_ids": [
+    "2507.07955v2_p2_c2"
+   ]
+  },
+  {
+   "id": "s144",
+   "sentence": "The encoder must simultaneously preserve fine-grained information for transmission to its corresponding decoder via residual connections and compress inputs into chunks for the main network  .",
+   "tags": [
+    2
+   ],
+   "cited": [
+    "P2 hnet pp. 5-5"
+   ],
+   "occurrences": [
+    "q12/small_fast#5"
+   ],
+   "label": "supported",
+   "reason": "Passage: each encoder must preserve fine-grained info via residual connections and compress inputs into chunks for the main network.",
+   "unsupported_part": null,
+   "chunk_ids": [
+    "2507.07955v2_p5_c1"
+   ]
+  },
+  {
+   "id": "s145",
+   "sentence": "The decoder effectively combines coarse-grained representations from the main network with fine-grained details from the encoder residuals  .",
+   "tags": [
+    2
+   ],
+   "cited": [
+    "P2 hnet pp. 5-5"
+   ],
+   "occurrences": [
+    "q12/small_fast#6"
+   ],
+   "label": "supported",
+   "reason": "Passage: decoder must effectively combine coarse-grained main-network representations with fine-grained encoder residual details.",
+   "unsupported_part": null,
+   "chunk_ids": [
+    "2507.07955v2_p5_c1"
+   ]
+  },
+  {
+   "id": "s146",
+   "sentence": "In a single-stage model, the architecture consists of one encoder network, one main network, and one decoder network  .",
+   "tags": [
+    1
+   ],
+   "cited": [
+    "P1 hnet pp. 4-5"
+   ],
+   "occurrences": [
+    "q12/balanced_rerank#2"
+   ],
+   "label": "supported",
+   "reason": "Passage: single-stage H-Net consists of one encoder, one main, and one decoder network.",
+   "unsupported_part": null,
+   "chunk_ids": [
+    "2507.07955v2_p4_c2"
+   ]
+  },
+  {
+   "id": "s147",
+   "sentence": "The encoder networks must simultaneously preserve fine-grained information for transmission to their corresponding decoders via residual connections and compress inputs into chunks of richer representations for the main network  .",
+   "tags": [
+    2
+   ],
+   "cited": [
+    "P2 hnet pp. 5-5"
+   ],
+   "occurrences": [
+    "q12/balanced_rerank#3"
+   ],
+   "label": "supported",
+   "reason": "Passage states both encoder objectives nearly verbatim.",
+   "unsupported_part": null,
+   "chunk_ids": [
+    "2507.07955v2_p5_c1"
+   ]
+  },
+  {
+   "id": "s148",
+   "sentence": "The main network operates on these progressively compressed sequences, allowing for larger networks within the same computational budget  .",
+   "tags": [
+    3
+   ],
+   "cited": [
+    "P3 hnet pp. 5-5"
+   ],
+   "occurrences": [
+    "q12/balanced_rerank#4"
+   ],
+   "label": "supported",
+   "reason": "Passage: main network operates on progressively compressed sequences, enabling much larger networks within the same computational budget.",
+   "unsupported_part": null,
+   "chunk_ids": [
+    "2507.07955v2_p5_c2"
+   ]
+  },
+  {
+   "id": "s149",
+   "sentence": "The decoder networks effectively combine the coarse-grained representations from the main network with the fine-grained details from the encoder residuals  .",
+   "tags": [
+    2
+   ],
+   "cited": [
+    "P2 hnet pp. 5-5"
+   ],
+   "occurrences": [
+    "q12/balanced_rerank#5"
+   ],
+   "label": "supported",
+   "reason": "Passage: decoder combines coarse-grained main-network representations with fine-grained encoder residual details.",
+   "unsupported_part": null,
+   "chunk_ids": [
+    "2507.07955v2_p5_c1"
+   ]
+  },
+  {
+   "id": "s150",
+   "sentence": "Both the encoder and decoder networks operate on uncompressed sequences, which makes computational efficiency a significant design constraint  .",
+   "tags": [
+    2
+   ],
+   "cited": [
+    "P2 hnet pp. 5-5"
+   ],
+   "occurrences": [
+    "q12/balanced_rerank#6"
+   ],
+   "label": "supported",
+   "reason": "Passage: both encoders and decoders operate on uncompressed sequences, making computational efficiency a significant design constraint.",
+   "unsupported_part": null,
+   "chunk_ids": [
+    "2507.07955v2_p5_c1"
+   ]
+  },
+  {
+   "id": "s151",
+   "sentence": "The overall pipeline begins with the encoder processing the input sequence, followed by the main network processing the compressed representations, and finally the decoder decompressing the sequence back to its original resolution  .",
+   "tags": [
+    1
+   ],
+   "cited": [
+    "P1 hnet pp. 4-5"
+   ],
+   "occurrences": [
+    "q12/large_wide#2"
+   ],
+   "label": "partially_supported",
+   "reason": "Pipeline order supported, but passage attributes decompression to the dechunking layer, not the decoder.",
+   "unsupported_part": "the decoder decompressing the sequence back to its original resolution",
+   "chunk_ids": [
+    "2507.07955v2_p4_c2"
+   ]
+  },
+  {
+   "id": "s152",
+   "sentence": "Information flows from the encoder to the main network via a chunking layer that compresses input sequences into fewer vectors with richer semantic embeddings  .",
+   "tags": [
+    1
+   ],
+   "cited": [
+    "P1 hnet pp. 4-5"
+   ],
+   "occurrences": [
+    "q12/large_wide#3"
+   ],
+   "label": "supported",
+   "reason": "Chunking layer compresses encoder output into fewer vectors with richer semantic embeddings for the main network (Eq. 1-2).",
+   "unsupported_part": null,
+   "chunk_ids": [
+    "2507.07955v2_p4_c2"
+   ]
+  },
+  {
+   "id": "s153",
+   "sentence": "The main network operates on these progressively compressed sequences, where the sequence length $L^S$ is much smaller than the initial input length $L^0$  .",
+   "tags": [
+    2
+   ],
+   "cited": [
+    "P2 hnet pp. 5-5"
+   ],
+   "occurrences": [
+    "q12/large_wide#4"
+   ],
+   "label": "supported",
+   "reason": "Passage: main network operates on progressively compressed sequences where L^S << L^0.",
+   "unsupported_part": null,
+   "chunk_ids": [
+    "2507.07955v2_p5_c0"
+   ]
+  },
+  {
+   "id": "s154",
+   "sentence": "The decoder combines coarse-grained representations from the main network with fine-grained details from the encoder residuals to reconstruct the output  .",
+   "tags": [
+    2
+   ],
+   "cited": [
+    "P2 hnet pp. 5-5"
+   ],
+   "occurrences": [
+    "q12/large_wide#5"
+   ],
+   "label": "supported",
+   "reason": "Passage states decoder combines coarse-grained main-network representations with fine-grained encoder residual details.",
+   "unsupported_part": null,
+   "chunk_ids": [
+    "2507.07955v2_p5_c0"
+   ]
+  },
+  {
+   "id": "s155",
+   "sentence": "This process is formalized by the equations where the encoder output is chunked, the main network processes the result, and the decoder applies a dechunking operation along with a linear projection of the encoder output  .",
+   "tags": [
+    1
+   ],
+   "cited": [
+    "P1 hnet pp. 4-5"
+   ],
+   "occurrences": [
+    "q12/large_wide#6"
+   ],
+   "label": "partially_supported",
+   "reason": "Eq. 3 applies Dechunk plus Linear before the decoder D^s; passage does not say the decoder applies dechunking.",
+   "unsupported_part": "the decoder applies a dechunking operation",
+   "chunk_ids": [
+    "2507.07955v2_p4_c2"
+   ]
+  },
+  {
+   "id": "s156",
+   "sentence": "The routing module predicts boundaries between adjacent data segments by calculating a similarity score  .",
+   "tags": [
+    2
+   ],
+   "cited": [
+    "P2 hnet pp. 2-2"
+   ],
+   "occurrences": [
+    "q13/small_fast#1"
+   ],
+   "label": "supported",
+   "reason": "Routing module predicts boundaries between adjacent elements through a similarity score.",
+   "unsupported_part": null,
+   "chunk_ids": [
+    "2507.07955v2_p2_c3"
+   ]
+  },
+  {
+   "id": "s157",
+   "sentence": "The smoothing module interpolates representations using the router's outputs to attenuate the effect of uncertain boundaries and enhance learnability  .",
+   "tags": [
+    2
+   ],
+   "cited": [
+    "P2 hnet pp. 2-2"
+   ],
+   "occurrences": [
+    "q13/small_fast#2"
+   ],
+   "label": "supported",
+   "reason": "Near-verbatim: smoothing interpolates using router outputs, attenuating uncertain boundaries, improving learnability.",
+   "unsupported_part": null,
+   "chunk_ids": [
+    "2507.07955v2_p2_c3"
+   ]
+  },
+  {
+   "id": "s158",
+   "sentence": "This smoothing process transforms discrete boundary indicators into interpolated representations to facilitate gradient propagation during backpropagation  .",
+   "tags": [
+    4
+   ],
+   "cited": [
+    "P4 hnet pp. 6-7"
+   ],
+   "occurrences": [
+    "q13/small_fast#3"
+   ],
+   "label": "partially_supported",
+   "reason": "Passage says smoothing addresses discrete boundaries impeding gradient flow; 'interpolated representations' not in truncated cited text.",
+   "unsupported_part": "into interpolated representations",
+   "chunk_ids": [
+    "2507.07955v2_p6_c4"
+   ]
+  },
+  {
+   "id": "s159",
+   "sentence": "The routing module in H-Net is responsible for dynamically drawing chunk boundaries  .",
+   "tags": [
+    1
+   ],
+   "cited": [
+    "P1 hnet pp. 3-4"
+   ],
+   "occurrences": [
+    "q13/balanced_rerank#1"
+   ],
+   "label": "supported",
+   "reason": "Figure 1 caption: routing module for dynamically drawing chunk boundaries.",
+   "unsupported_part": null,
+   "chunk_ids": [
+    "2507.07955v2_p3_c0"
+   ]
+  },
+  {
+   "id": "s160",
+   "sentence": "The smoothing module converts discrete chunks into interpolated representations to improve learnability  .",
+   "tags": [
+    1
+   ],
+   "cited": [
+    "P1 hnet pp. 3-4"
+   ],
+   "occurrences": [
+    "q13/balanced_rerank#2"
+   ],
+   "label": "partially_supported",
+   "reason": "Caption supports converting discrete chunks into interpolated representations; learnability purpose not stated in this passage.",
+   "unsupported_part": "to improve learnability",
+   "chunk_ids": [
+    "2507.07955v2_p3_c0"
+   ]
+  },
+  {
+   "id": "s161",
+   "sentence": "This smoothing process specifically attenuates the effect of uncertain boundaries  .",
+   "tags": [
+    3
+   ],
+   "cited": [
+    "P3 hnet pp. 2-3"
+   ],
+   "occurrences": [
+    "q13/balanced_rerank#3"
+   ],
+   "label": "supported",
+   "reason": "Passage: smoothing module attenuating the effect of uncertain boundaries.",
+   "unsupported_part": null,
+   "chunk_ids": [
+    "2507.07955v2_p2_c2"
+   ]
+  },
+  {
+   "id": "s162",
+   "sentence": "The routing module guides the model to retain vectors based on semantic importance rather than following predetermined patterns  .",
+   "tags": [
+    2
+   ],
+   "cited": [
+    "P2 hnet pp. 8-8"
+   ],
+   "occurrences": [
+    "q13/balanced_rerank#4"
+   ],
+   "label": "partially_supported",
+   "reason": "Passage attributes semantic-importance retention to the ratio loss mechanism/model learning, not the routing module guiding it.",
+   "unsupported_part": "The routing module guides the model",
+   "chunk_ids": [
+    "2507.07955v2_p8_c2"
+   ]
+  },
+  {
+   "id": "s163",
+   "sentence": "The routing module predicts boundaries between adjacent elements through a similarity score  .",
+   "tags": [
+    1
+   ],
+   "cited": [
+    "P1 hnet pp. 2-3"
+   ],
+   "occurrences": [
+    "q13/large_wide#1"
+   ],
+   "label": "supported",
+   "reason": "Verbatim in passage.",
+   "unsupported_part": null,
+   "chunk_ids": [
+    "2507.07955v2_p2_c1"
+   ]
+  },
+  {
+   "id": "s164",
+   "sentence": "The smoothing module interpolates representations using the router’s outputs to attenuate the effect of uncertain boundaries and improve learnability  .",
+   "tags": [
+    1
+   ],
+   "cited": [
+    "P1 hnet pp. 2-3"
+   ],
+   "occurrences": [
+    "q13/large_wide#2"
+   ],
+   "label": "supported",
+   "reason": "Verbatim in passage.",
+   "unsupported_part": null,
+   "chunk_ids": [
+    "2507.07955v2_p2_c1"
+   ]
+  },
+  {
+   "id": "s165",
+   "sentence": "The routing module’s boundary information is used to selectively retain vectors and reduce sequence length while preserving semantically significant positions  .",
+   "tags": [
+    1
+   ],
+   "cited": [
+    "P1 hnet pp. 2-3"
+   ],
+   "occurrences": [
+    "q13/large_wide#3"
+   ],
+   "label": "supported",
+   "reason": "Downsampler retains vectors based on routing boundary indicators, reducing length while preserving semantically significant positions.",
+   "unsupported_part": null,
+   "chunk_ids": [
+    "2507.07955v2_p2_c1"
+   ]
+  },
+  {
+   "id": "s166",
+   "sentence": "The Transformer architecture relies entirely on an attention mechanism to draw global dependencies between input and output, eschewing recurrence  .",
+   "tags": [
+    6
+   ],
+   "cited": [
+    "P6 attention pp. 2-2"
+   ],
+   "occurrences": [
+    "q13/large_wide#4"
+   ],
+   "label": "supported",
+   "reason": "Passage: Transformer eschews recurrence, relies entirely on attention to draw global dependencies between input and output.",
+   "unsupported_part": null,
+   "chunk_ids": [
+    "1706.03762v7_p2_c0"
+   ]
+  },
+  {
+   "id": "s167",
+   "sentence": "The smoothing module is essential for stable training dynamics because it transforms discrete upsampling operations into continuous ones, enabling effective backpropagation through chunk boundaries  .",
+   "tags": [
+    3
+   ],
+   "cited": [
+    "P3 hnet pp. 7-7"
+   ],
+   "occurrences": [
+    "q14/small_fast#1"
+   ],
+   "label": "partially_supported",
+   "reason": "Discrete-to-continuous upsampling enabling backprop supported; 'essential for stable training dynamics' causal claim not in this passage.",
+   "unsupported_part": "essential for stable training dynamics because",
+   "chunk_ids": [
+    "2507.07955v2_p7_c1"
+   ]
+  },
+  {
+   "id": "s168",
+   "sentence": "It prevents the model from overfitting to suboptimal chunking patterns early in training by smoothly interpolating between discrete choices based on confidence scores  .",
+   "tags": [
+    3
+   ],
+   "cited": [
+    "P3 hnet pp. 7-7"
+   ],
+   "occurrences": [
+    "q14/small_fast#2"
+   ],
+   "label": "supported",
+   "reason": "Passage's training-stability bullet states this nearly verbatim.",
+   "unsupported_part": null,
+   "chunk_ids": [
+    "2507.07955v2_p7_c1"
+   ]
+  },
+  {
+   "id": "s169",
+   "sentence": "When the smoothing module is removed, compression ratios fluctuate severely throughout training, which prevents the model from learning consistent chunking boundaries  .",
+   "tags": [
+    2
+   ],
+   "cited": [
+    "P2 hnet pp. 18-18"
+   ],
+   "occurrences": [
+    "q14/small_fast#3"
+   ],
+   "label": "partially_supported",
+   "reason": "Passage fragment starts at 'severely throughout training'; the subject (compression ratios fluctuate, smoothing removal) is cut off.",
+   "unsupported_part": "When the smoothing module is removed, compression ratios fluctuate",
+   "chunk_ids": [
+    "2507.07955v2_p18_c0"
+   ]
+  },
+  {
+   "id": "s170",
+   "sentence": "This instability directly manifests as substantial performance degradation, confirming that smooth gradient flow through the decompression process is crucial for effective end-to-end learning  .",
+   "tags": [
+    2
+   ],
+   "cited": [
+    "P2 hnet pp. 18-18"
+   ],
+   "occurrences": [
+    "q14/small_fast#4"
+   ],
+   "label": "supported",
+   "reason": "Verbatim in passage.",
+   "unsupported_part": null,
+   "chunk_ids": [
+    "2507.07955v2_p18_c0"
+   ]
+  },
+  {
+   "id": "s171",
+   "sentence": "The smoothing module is essential for stable training dynamics in H-Net  .",
+   "tags": [
+    1
+   ],
+   "cited": [
+    "P1 hnet pp. 17-18"
+   ],
+   "occurrences": [
+    "q14/balanced_rerank#1"
+   ],
+   "label": "supported",
+   "reason": "Passage: smoothing module proves essential for stable training dynamics.",
+   "unsupported_part": null,
+   "chunk_ids": [
+    "2507.07955v2_p17_c2"
+   ]
+  },
+  {
+   "id": "s172",
+   "sentence": "When this module is removed, the compression ratios fluctuate severely throughout training  .",
+   "tags": [
+    1
+   ],
+   "cited": [
+    "P1 hnet pp. 17-18"
+   ],
+   "occurrences": [
+    "q14/balanced_rerank#2"
+   ],
+   "label": "partially_supported",
+   "reason": "Passage says compression ratios fluctuate without the module; 'severely throughout training' is truncated from cited text.",
+   "unsupported_part": "severely throughout training",
+   "chunk_ids": [
+    "2507.07955v2_p17_c2"
+   ]
+  },
+  {
+   "id": "s173",
+   "sentence": "This instability prevents the model from learning consistent chunking boundaries  .",
+   "tags": [
+    1
+   ],
+   "cited": [
+    "P1 hnet pp. 17-18"
+   ],
+   "occurrences": [
+    "q14/balanced_rerank#3",
+    "q14/large_wide#5"
+   ],
+   "label": "not_supported",
+   "reason": "Cited passage is cut off before any mention of learning consistent chunking boundaries.",
+   "unsupported_part": "This instability prevents the model from learning consistent chunking boundaries",
+   "chunk_ids": [
+    "2507.07955v2_p17_c2"
+   ]
+  },
+  {
+   "id": "s174",
+   "sentence": "Consequently, the removal of the smoothing module leads to substantial performance degradation  .",
+   "tags": [
+    1
+   ],
+   "cited": [
+    "P1 hnet pp. 17-18"
+   ],
+   "occurrences": [
+    "q14/balanced_rerank#4"
+   ],
+   "label": "not_supported",
+   "reason": "Cited passage does not mention performance degradation from removing smoothing.",
+   "unsupported_part": "leads to substantial performance degradation",
+   "chunk_ids": [
+    "2507.07955v2_p17_c2"
+   ]
+  },
+  {
+   "id": "s175",
+   "sentence": "This outcome confirms that smooth gradient flow through the decompression process is crucial for effective end-to-end learning  .",
+   "tags": [
+    1
+   ],
+   "cited": [
+    "P1 hnet pp. 17-18"
+   ],
+   "occurrences": [
+    "q14/balanced_rerank#5"
+   ],
+   "label": "not_supported",
+   "reason": "Cited passage does not mention smooth gradient flow through decompression being crucial.",
+   "unsupported_part": "smooth gradient flow through the decompression process is crucial for effective end-to-end learning",
+   "chunk_ids": [
+    "2507.07955v2_p17_c2"
+   ]
+  },
+  {
+   "id": "s176",
+   "sentence": "The module works by interpolating representations to attenuate the effect of uncertain boundaries, which significantly improves learnability  .",
+   "tags": [
+    3
+   ],
+   "cited": [
+    "P3 hnet pp. 2-3"
+   ],
+   "occurrences": [
+    "q14/balanced_rerank#6"
+   ],
+   "label": "supported",
+   "reason": "Passage: interpolates representations, attenuating uncertain boundaries and significantly improving learnability.",
+   "unsupported_part": null,
+   "chunk_ids": [
+    "2507.07955v2_p2_c2"
+   ]
+  },
+  {
+   "id": "s177",
+   "sentence": "The smoothing module is essential for stable training dynamics because it transforms discrete chunking operations into differentiable computations, enabling effective backpropagation through chunk boundaries  .",
+   "tags": [
+    2
+   ],
+   "cited": [
+    "P2 hnet pp. 6-7"
+   ],
+   "occurrences": [
+    "q14/large_wide#1"
+   ],
+   "label": "partially_supported",
+   "reason": "Differentiable computations and backprop through boundaries supported; 'essential for stable training dynamics' not stated in this passage.",
+   "unsupported_part": "essential for stable training dynamics because",
+   "chunk_ids": [
+    "2507.07955v2_p6_c2"
+   ]
+  },
+  {
+   "id": "s178",
+   "sentence": "It achieves this by applying an exponential moving average to create smooth interpolations between chunks based on confidence scores  .",
+   "tags": [
+    2
+   ],
+   "cited": [
+    "P2 hnet pp. 6-7"
+   ],
+   "occurrences": [
+    "q14/large_wide#2"
+   ],
+   "label": "supported",
+   "reason": "Passage: EMA creating smooth interpolations between chunks, weighted by confidence P_t.",
+   "unsupported_part": null,
+   "chunk_ids": [
+    "2507.07955v2_p6_c2"
+   ]
+  },
+  {
+   "id": "s179",
+   "sentence": "This mechanism prevents the model from overfitting to suboptimal chunking patterns early in training  .",
+   "tags": [
+    2
+   ],
+   "cited": [
+    "P2 hnet pp. 6-7"
+   ],
+   "occurrences": [
+    "q14/large_wide#3"
+   ],
+   "label": "supported",
+   "reason": "Passage: prevents model from overfitting to suboptimal chunking patterns early in training.",
+   "unsupported_part": null,
+   "chunk_ids": [
+    "2507.07955v2_p6_c2"
+   ]
+  },
+  {
+   "id": "s180",
+   "sentence": "According to the ablation studies, removing the smoothing module causes compression ratios to fluctuate severely throughout training  .",
+   "tags": [
+    1
+   ],
+   "cited": [
+    "P1 hnet pp. 17-18"
+   ],
+   "occurrences": [
+    "q14/large_wide#4"
+   ],
+   "label": "supported",
+   "reason": "Passage: without smoothing module, compression ratios fluctuate severely throughout training.",
+   "unsupported_part": null,
+   "chunk_ids": [
+    "2507.07955v2_p17_c1"
+   ]
+  },
+  {
+   "id": "s181",
+   "sentence": "Consequently, the removal of the module results in substantial performance degradation  .",
+   "tags": [
+    1
+   ],
+   "cited": [
+    "P1 hnet pp. 17-18"
+   ],
+   "occurrences": [
+    "q14/large_wide#6"
+   ],
+   "label": "supported",
+   "reason": "Passage: this instability manifests as substantial performance degradation.",
+   "unsupported_part": null,
+   "chunk_ids": [
+    "2507.07955v2_p17_c1"
+   ]
+  },
+  {
+   "id": "s182",
+   "sentence": "Extending the hierarchy to multiple stages increases H-Net's performance by modeling multiple levels of abstraction  .",
+   "tags": [
+    1
+   ],
+   "cited": [
+    "P1 hnet pp. 1-1"
+   ],
+   "occurrences": [
+    "q15/small_fast#1"
+   ],
+   "label": "supported",
+   "reason": "Passage: multiple stages further increase performance by modeling multiple levels of abstraction.",
+   "unsupported_part": null,
+   "chunk_ids": [
+    "2507.07955v2_p1_c2"
+   ]
+  },
+  {
+   "id": "s183",
+   "sentence": "This multi-stage approach demonstrates significantly better scaling with data and matches the performance of a token-based Transformer that is twice its size  .",
+   "tags": [
+    1
+   ],
+   "cited": [
+    "P1 hnet pp. 1-1"
+   ],
+   "occurrences": [
+    "q15/small_fast#2"
+   ],
+   "label": "supported",
+   "reason": "Passage: significantly better scaling with data, matching token-based Transformer of twice its size.",
+   "unsupported_part": null,
+   "chunk_ids": [
+    "2507.07955v2_p1_c2"
+   ]
+  },
+  {
+   "id": "s184",
+   "sentence": "The authors provide experimental evidence showing that iterating H-Net from 0 to 1 stage and from 1 to 2 stages consistently improves performance  .",
+   "tags": [
+    4
+   ],
+   "cited": [
+    "P4 hnet pp. 22-22"
+   ],
+   "occurrences": [
+    "q15/small_fast#3"
+   ],
+   "label": "supported",
+   "reason": "Passage: iterating 0 to 1 stage and 1 to 2 stages consistently improves performance.",
+   "unsupported_part": null,
+   "chunk_ids": [
+    "2507.07955v2_p22_c2"
+   ]
+  },
+  {
+   "id": "s185",
+   "sentence": "In languages and modalities with weaker tokenization heuristics, such as Chinese, code, or DNA sequences, the improvement over tokenized pipelines is further increased  .",
+   "tags": [
+    1
+   ],
+   "cited": [
+    "P1 hnet pp. 1-1"
+   ],
+   "occurrences": [
+    "q15/small_fast#4"
+   ],
+   "label": "supported",
+   "reason": "Passage states improvement increased for weaker-tokenization languages/modalities like Chinese, code, DNA.",
+   "unsupported_part": null,
+   "chunk_ids": [
+    "2507.07955v2_p1_c2"
+   ]
+  },
+  {
+   "id": "s186",
+   "sentence": "Specifically, the model achieves nearly 4× improvement in data efficiency over baselines for DNA sequences  .",
+   "tags": [
+    1
+   ],
+   "cited": [
+    "P1 hnet pp. 1-1"
+   ],
+   "occurrences": [
+    "q15/small_fast#5"
+   ],
+   "label": "supported",
+   "reason": "Passage: DNA sequences (nearly 4x improvement in data efficiency over baselines).",
+   "unsupported_part": null,
+   "chunk_ids": [
+    "2507.07955v2_p1_c2"
+   ]
+  },
+  {
+   "id": "s187",
+   "sentence": "The authors note that they did not attempt a 3-stage H-Net in this paper, leaving deeper iteration as a future direction  .",
+   "tags": [
+    4
+   ],
+   "cited": [
+    "P4 hnet pp. 22-22"
+   ],
+   "occurrences": [
+    "q15/small_fast#6"
+   ],
+   "label": "supported",
+   "reason": "Passage: did not attempt 3-stage H-Net; deeper iteration remains a direction to explore.",
+   "unsupported_part": null,
+   "chunk_ids": [
+    "2507.07955v2_p22_c2"
+   ]
+  },
+  {
+   "id": "s188",
+   "sentence": "The authors provide experimental evidence that H-Net (2-stage) demonstrates superior scaling compared to Transformer and H-Net (space) on Chinese and code datasets  .",
+   "tags": [
+    3
+   ],
+   "cited": [
+    "P3 hnet pp. 37-37"
+   ],
+   "occurrences": [
+    "q15/balanced_rerank#2"
+   ],
+   "label": "supported",
+   "reason": "Passage: superior scaling for H-Net (2-stage) versus Transformer and H-Net (space) on Chinese and code.",
+   "unsupported_part": null,
+   "chunk_ids": [
+    "2507.07955v2_p37_c1"
+   ]
+  },
+  {
+   "id": "s189",
+   "sentence": "They note that H-Net achieves sparsity in a more semantically meaningful manner, which allows for better scaling than generic sparse methods  .",
+   "tags": [
+    1
+   ],
+   "cited": [
+    "P1 hnet pp. 20-21"
+   ],
+   "occurrences": [
+    "q15/balanced_rerank#3"
+   ],
+   "label": "supported",
+   "reason": "Passage: sparsity in a more semantically meaningful manner, allowing better scaling than generic sparse methods.",
+   "unsupported_part": null,
+   "chunk_ids": [
+    "2507.07955v2_p20_c1"
+   ]
+  },
+  {
+   "id": "s190",
+   "sentence": "Regarding data efficiency, the authors used the models' losses during the constant learning rate phase as a proxy for how quickly they improve with data  .",
+   "tags": [
+    4
+   ],
+   "cited": [
+    "P4 hnet pp. 23-23"
+   ],
+   "occurrences": [
+    "q15/balanced_rerank#4"
+   ],
+   "label": "supported",
+   "reason": "Passage: used losses during constant phase as proxy for how quickly models improve with data.",
+   "unsupported_part": null,
+   "chunk_ids": [
+    "2507.07955v2_p23_c0"
+   ]
+  },
+  {
+   "id": "s191",
+   "sentence": "They did not pursue formal scaling law coefficient calculations due to resource constraints  .",
+   "tags": [
+    4
+   ],
+   "cited": [
+    "P4 hnet pp. 23-23"
+   ],
+   "occurrences": [
+    "q15/balanced_rerank#5"
+   ],
+   "label": "supported",
+   "reason": "Passage: did not pursue formal scaling-law approach due to resource constraints.",
+   "unsupported_part": null,
+   "chunk_ids": [
+    "2507.07955v2_p23_c0"
+   ]
+  },
+  {
+   "id": "s192",
+   "sentence": "The paper acknowledges that validating H-Net at larger model sizes of 3B, 7B, and beyond remains to be done  .",
+   "tags": [
+    4
+   ],
+   "cited": [
+    "P4 hnet pp. 23-23"
+   ],
+   "occurrences": [
+    "q15/balanced_rerank#6"
+   ],
+   "label": "supported",
+   "reason": "Passage: it remains to validate H-Net at 3B, 7B, and beyond.",
+   "unsupported_part": null,
+   "chunk_ids": [
+    "2507.07955v2_p23_c0"
+   ]
+  },
+  {
+   "id": "s193",
+   "sentence": "The authors state that iterating H-Net from 0 stages to 1 stage and from 1 stage to 2 stages consistently improves performance   .",
+   "tags": [
+    2,
+    4
+   ],
+   "cited": [
+    "P2 hnet pp. 22-22",
+    "P4 hnet pp. 22-22"
+   ],
+   "occurrences": [
+    "q15/large_wide#1"
+   ],
+   "label": "supported",
+   "reason": "Stated verbatim in both cited passages.",
+   "unsupported_part": null,
+   "chunk_ids": [
+    "2507.07955v2_p22_c1",
+    "2507.07955v2_p22_c0"
+   ]
+  },
+  {
+   "id": "s194",
+   "sentence": "They did not attempt a 3-stage H-Net for simplicity, leaving deeper iteration as a future direction   .",
+   "tags": [
+    2,
+    4
+   ],
+   "cited": [
+    "P2 hnet pp. 22-22",
+    "P4 hnet pp. 22-22"
+   ],
+   "occurrences": [
+    "q15/large_wide#2"
+   ],
+   "label": "supported",
+   "reason": "Passage: did not attempt 3-stage for simplicity; deeper iteration remains a direction to explore.",
+   "unsupported_part": null,
+   "chunk_ids": [
+    "2507.07955v2_p22_c1",
+    "2507.07955v2_p22_c0"
+   ]
+  },
+  {
+   "id": "s195",
+   "sentence": "Regarding data efficiency, distilling H-Net from a pretrained Llama checkpoint with less than 200B bytes of training yields strong performance that is much better than training from scratch  .",
+   "tags": [
+    4
+   ],
+   "cited": [
+    "P4 hnet pp. 22-22"
+   ],
+   "occurrences": [
+    "q15/large_wide#3"
+   ],
+   "label": "supported",
+   "reason": "Passage: Llama-initialized distillation with <200B bytes yields strong performance much better than from scratch.",
+   "unsupported_part": null,
+   "chunk_ids": [
+    "2507.07955v2_p22_c0"
+   ]
+  },
+  {
+   "id": "s196",
+   "sentence": "This distilled model still performs worse than the teacher model but represents an efficient way to create an end-to-end byte-level model  .",
+   "tags": [
+    4
+   ],
+   "cited": [
+    "P4 hnet pp. 22-22"
+   ],
+   "occurrences": [
+    "q15/large_wide#4"
+   ],
+   "label": "supported",
+   "reason": "Passage: still worse than teacher; perhaps the most efficient way to create an end-to-end byte-level model.",
+   "unsupported_part": null,
+   "chunk_ids": [
+    "2507.07955v2_p22_c0"
+   ]
+  },
+  {
+   "id": "s197",
+   "sentence": "The paper notes that H-Net matches the efficiency of tokenized pipelines while substantially improving modeling ability  .",
+   "tags": [
+    5
+   ],
+   "cited": [
+    "P5 hnet pp. 2-2"
+   ],
+   "occurrences": [
+    "q15/large_wide#5"
+   ],
+   "label": "supported",
+   "reason": "Passage: H-Nets match efficiency of tokenized pipelines while substantially improving modeling ability.",
+   "unsupported_part": null,
+   "chunk_ids": [
+    "2507.07955v2_p2_c0"
+   ]
+  },
+  {
+   "id": "x001",
+   "sentence": "The authors introduced the Transformer to eschew recurrence and rely entirely on an attention mechanism to draw global dependencies between input and output  .",
+   "tags": [
+    1
+   ],
+   "chunk_ids": [
+    "1706.03762v7_p2_c0"
+   ],
+   "cited": [
+    "P1 attention pp. 2-2"
+   ],
+   "occurrences": [
+    "q01/large_wide#1"
+   ],
+   "label": "supported",
+   "reason": "Restates the passage's own sentence about proposing the Transformer.",
+   "unsupported_part": null
+  },
+  {
+   "id": "x002",
+   "sentence": "The Transformer allows for significantly more parallelization and can reach a new state of the art in translation quality  .",
+   "tags": [
+    1
+   ],
+   "chunk_ids": [
+    "1706.03762v7_p2_c0"
+   ],
+   "cited": [
+    "P1 attention pp. 2-2"
+   ],
+   "occurrences": [
+    "q01/large_wide#4"
+   ],
+   "label": "supported",
+   "reason": "Passage states it verbatim.",
+   "unsupported_part": null
+  },
+  {
+   "id": "x003",
+   "sentence": "The Transformer uses multi-head attention in three different ways: encoder-decoder attention, encoder self-attention, and decoder self-attention  .",
+   "tags": [
+    1
+   ],
+   "chunk_ids": [
+    "1706.03762v7_p5_c0"
+   ],
+   "cited": [
+    "P1 attention pp. 5-5"
+   ],
+   "occurrences": [
+    "q04/large_wide#1"
+   ],
+   "label": "supported",
+   "reason": "Passage lists the three uses: encoder-decoder, encoder self-attention, decoder self-attention.",
+   "unsupported_part": null
+  },
+  {
+   "id": "x004",
+   "sentence": "In encoder-decoder attention layers, queries come from the previous decoder layer while memory keys and values come from the encoder output, allowing every decoder position to attend to all input positions  .",
+   "tags": [
+    1
+   ],
+   "chunk_ids": [
+    "1706.03762v7_p5_c0"
+   ],
+   "cited": [
+    "P1 attention pp. 5-5"
+   ],
+   "occurrences": [
+    "q04/large_wide#2"
+   ],
+   "label": "supported",
+   "reason": "Passage states queries from decoder, keys/values from encoder output, attend over all input positions.",
+   "unsupported_part": null
+  },
+  {
+   "id": "x005",
+   "sentence": "The encoder contains self-attention layers where keys, values, and queries all originate from the output of the previous encoder layer, enabling each position to attend to all positions in that previous layer  .",
+   "tags": [
+    1
+   ],
+   "chunk_ids": [
+    "1706.03762v7_p5_c0"
+   ],
+   "cited": [
+    "P1 attention pp. 5-5"
+   ],
+   "occurrences": [
+    "q04/large_wide#3"
+   ],
+   "label": "supported",
+   "reason": "Passage states keys, values, queries come from the previous encoder layer's output.",
+   "unsupported_part": null
+  },
+  {
+   "id": "x006",
+   "sentence": "Similarly, decoder self-attention layers allow each position to attend to all positions in the decoder up to and including that position  .",
+   "tags": [
+    1
+   ],
+   "chunk_ids": [
+    "1706.03762v7_p5_c0"
+   ],
+   "cited": [
+    "P1 attention pp. 5-5"
+   ],
+   "occurrences": [
+    "q04/large_wide#4"
+   ],
+   "label": "supported",
+   "reason": "Passage states this for decoder self-attention.",
+   "unsupported_part": null
+  },
+  {
+   "id": "x007",
+   "sentence": "Multi-head attention generally allows the model to jointly attend to information from different representation subspaces at different positions  .",
+   "tags": [
+    4
+   ],
+   "chunk_ids": [
+    "1706.03762v7_p4_c1"
+   ],
+   "cited": [
+    "P4 attention pp. 4-5"
+   ],
+   "occurrences": [
+    "q04/large_wide#6"
+   ],
+   "label": "supported",
+   "reason": "Passage: 'Multi-head attention allows the model to jointly attend ...'.",
+   "unsupported_part": null
+  },
+  {
+   "id": "x008",
+   "sentence": "Moshi achieves full-duplex communication by using a multi-stream architecture that allows the model to speak and listen to the user simultaneously without explicitly modeling speaker turns  .",
+   "tags": [
+    3
+   ],
+   "chunk_ids": [
+    "2410.00037v1_p6_c1"
+   ],
+   "cited": [
+    "P3 moshi pp. 6-7"
+   ],
+   "occurrences": [
+    "q09/balanced_rerank#1"
+   ],
+   "label": "supported",
+   "reason": "Passage: multi-stream, speak and listen at the same time, no explicit speaker turns.",
+   "unsupported_part": null
+  },
+  {
+   "id": "x009",
+   "sentence": "H-Net employs a hierarchical architecture comprising three primary components: encoder networks (E), a main network (M), and decoder networks (D)  .",
+   "tags": [
+    1
+   ],
+   "chunk_ids": [
+    "2507.07955v2_p4_c2"
+   ],
+   "cited": [
+    "P1 hnet pp. 4-5"
+   ],
+   "occurrences": [
+    "q12/balanced_rerank#1",
+    "q12/large_wide#1"
+   ],
+   "label": "supported",
+   "reason": "Passage states the three components verbatim.",
+   "unsupported_part": null
+  },
+  {
+   "id": "x010",
+   "sentence": "This instability prevents the model from learning consistent chunking boundaries  .",
+   "tags": [
+    1
+   ],
+   "chunk_ids": [
+    "2507.07955v2_p17_c1"
+   ],
+   "cited": [
+    "P1 hnet pp. 17-18"
+   ],
+   "occurrences": [
+    "q14/large_wide#5"
+   ],
+   "label": "supported",
+   "reason": "This passage contains 'preventing the model from learning consistent chunking boundaries'.",
+   "unsupported_part": null
+  }
+ ],
+ "key": "sentence (citation tags removed) + the cited chunk ids: a label applies only to the passages it was judged against"
+}

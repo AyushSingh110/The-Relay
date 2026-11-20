@@ -70,5 +70,12 @@ poll_interval_s = 2.0            # how often the ingest worker looks for queued 
 max_attempts = 3                 # a failing document is tried at most this many times
 max_loaded_collections = 8       # collection indexes kept in memory (least recently used out)
 
+# L4: advisory entailment score on each verified sentence (V2-07). Download the model once
+# with `python scripts/download_l4_model.py`; without its files, L4 is simply off.
+[verifier]
+l4_model_dir = "data/models/nli/nli-MiniLM2-L6-H768"
+l4_model_file = "onnx/model_quint8_avx2.onnx"   # int8 for AVX2 CPUs; else "onnx/model.onnx"
+l4_threads = 8                                   # ONNX threads per scoring call
+
 [retrieval]
 settings = ["small_fast", "balanced_rerank", "large_wide"]

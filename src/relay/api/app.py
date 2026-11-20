@@ -42,7 +42,7 @@ from relay.orchestrator.pipeline import (
 )
 from relay.orchestrator.prompt import PROMPT_VERSION
 from relay.orchestrator.tools import DEFAULT_TOOL_TIMEOUT_S, PassageRetriever, ToolGateway
-from relay.orchestrator.verifier import CitedPassage
+from relay.orchestrator.verifier import CitedPassage, EntailmentScore
 from relay.providers.base import (
     ChatProvider,
     ChatRequest,
@@ -378,6 +378,9 @@ class RelayService:
         self.clock = clock
         self.flights: SingleFlight[_Led] = SingleFlight()
         self.trace_failures = 0
+        # V2-07 L4 (advisory): the entailment scorer, set at start-up when the model is
+        # installed (compose.py); None means no confidence is computed.
+        self.entailment: EntailmentScore | None = None
         self._run = run
         self._flight_ids = itertools.count(1)
 

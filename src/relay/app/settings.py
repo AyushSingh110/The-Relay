@@ -155,6 +155,19 @@ class RetrievalConfig(BaseModel):
         return self
 
 
+class VerifierSettings(BaseModel):
+    """L4, the advisory entailment score (V2-07). The model is downloaded with
+    ``scripts/download_l4_model.py``; when its files are absent, L4 is off."""
+
+    model_config = _MODEL
+
+    l4_model_dir: Path = Path("data/models/nli/nli-MiniLM2-L6-H768")
+    # V2-07 spike (14-core laptop, real Table 3 pairs): int8 for AVX2 CPUs at 8 threads per
+    # call is 142 ms per sentence at the median, 90 MB. Use "onnx/model.onnx" without AVX2.
+    l4_model_file: str = "onnx/model_quint8_avx2.onnx"
+    l4_threads: PositiveInt = 8  # ONNX threads per scoring call
+
+
 def _default_lanes() -> tuple[LaneSettings, ...]:
     return (LaneSettings(name="standin", kind="standin", model="qwen/qwen3.8-27b",
                          embedded=True, profile=CALIBRATED_PROFILE),)
@@ -172,6 +185,7 @@ class RelaySettings(BaseModel):
     cache: CacheSettings = CacheSettings()
     retrieval: RetrievalConfig = RetrievalConfig()
     ingestion: IngestionSettings = IngestionSettings()
+    verifier: VerifierSettings = VerifierSettings()
 
     @model_validator(mode="after")
     def _unique_lanes(self) -> RelaySettings:

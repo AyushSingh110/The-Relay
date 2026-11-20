@@ -23,18 +23,22 @@
 
 from __future__ import annotations
 
+import asyncio
+import logging
 import re
 from collections.abc import AsyncIterator, Sequence
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from typing import Final
 
-from relay.errors import ContractViolationError
+from relay.errors import ContractViolationError, sanitize_error
 from relay.ingestion.v1_corpus import V1_CUE_SET
 from relay.orchestrator.verifier import (
     LEADING_TAGS,
     REFUSAL_MARKER_PATTERN,
+    TAG_PATTERN,
     WORD_CHAR,
     CitedPassage,
+    EntailmentScore,
     SentenceChecker,
     Verifier,
     VerifierFailure,
@@ -42,6 +46,8 @@ from relay.orchestrator.verifier import (
     split_sentences,
 )
 from relay.retrieval.hybrid_index import RetrievedPassage
+
+logger = logging.getLogger(__name__)
 
 _LEADING_TAGS = LEADING_TAGS
 _WORD = WORD_CHAR
@@ -56,6 +62,7 @@ REASON_CLASSES: Final[dict[str, str]] = {
     "page_mismatch": "metadata_mismatch",
     "ungrounded_number": "ungrounded", "ungrounded_identifier": "ungrounded",
     "refusal_with_content": "refusal_with_content",
+    "refusal_as_claim": "refusal_as_claim",  # L3 (V2-07)
 }
 
 
@@ -155,6 +162,27 @@ class VerifiedSentence:
     index: int
     text: str
     citations: tuple[CitedPassage, ...]
+    confidence: float | None = None  # L4 (advisory): best entailment score of a cited passage
+
+
+async def score_sentence(scorer: EntailmentScore, text: str,
+                         passages: Sequence[RetrievedPassage]) -> float | None:
+    """L4 (V2-07, advisory): the best entailment score of ``text`` against the passages it
+    cites (it is supported if any cited passage supports it); None when it cites none.
+    The model runs in a worker thread, so the event loop is never blocked."""
+    tags = [int(n) for tag in TAG_PATTERN.finditer(text)
+            for n in re.findall(r"\d+", tag.group())]
+    cited = [passages[t - 1].text for t in dict.fromkeys(tags) if 1 <= t <= len(passages)]
+    if not cited:
+        return None
+    body = TAG_PATTERN.sub(" ", text).strip()
+    try:
+        scores = [await asyncio.to_thread(scorer.score, body, passage) for passage in cited]
+    except Exception as exc:  # advisory: a scorer failure never fails the answer
+        logger.warning("L4 entailment scoring failed (confidence left empty): %s",
+                       sanitize_error(exc))
+        return None
+    return round(max(scores), 4)
 
 
 @dataclass(frozen=True)
@@ -167,7 +195,7 @@ class StoppedEvent:
 
 @dataclass(frozen=True)
 class StreamRefusal:
-    """The model answered with the refusal marker alone."""
+    """The model refused: the marker alone, or only refusal-shaped sentences (L3)."""
 
 
 StreamEvent = VerifiedSentence | StoppedEvent | StreamRefusal
@@ -177,13 +205,16 @@ class SentenceStream:
     """Tokens in; verified sentences (or one stop) out. Iterate it once."""
 
     def __init__(self, tokens: AsyncIterator[str], passages: Sequence[RetrievedPassage],
-                 verifier: StreamingVerifier | None = None) -> None:
+                 verifier: StreamingVerifier | None = None, *,
+                 scorer: EntailmentScore | None = None) -> None:
         self._tokens = tokens
         self._passages = tuple(passages)
         self._verifier = verifier or StreamingVerifier()
+        self._scorer = scorer  # L4 (advisory); None: no confidence is computed
         self._splitter = IncrementalSentenceSplitter()
         self._released = 0
         self._marker_held = False
+        self._refusal_held = False  # L3: a refusal-shaped sentence came before any claim
         self._held: list[VerifiedSentence] = []  # lead-ins waiting for their item
         self.completed = False  # the token stream ended without a stop
         self.sentences: list[VerifiedSentence] = []  # released, in order
@@ -215,6 +246,16 @@ class SentenceStream:
             return []
         verdict = self._verifier.verify_sentence(unit, self._passages, index=index,
                                                  is_last=is_last)
+        if verdict.reason_class == "refusal_as_claim":
+            if self._released > 0:  # after verified sentences: stop, keep them (partial)
+                return [StoppedEvent("refusal_as_claim", True, index, verdict.failures)]
+            self._held.clear()
+            self._refusal_held = True  # a refusal, unless a claim comes with it
+            return []
+        if self._refusal_held:
+            if not verdict.claim:
+                return []  # a lead-in or an empty unit changes nothing
+            return [StoppedEvent("refusal_with_content", False, index)]  # refused, uncached
         if not verdict.passed:
             return [StoppedEvent(verdict.reason_class or "unverified", self._released > 0,
                                  index, verdict.failures)]
@@ -226,6 +267,15 @@ class SentenceStream:
         self._released += len(released)
         self.sentences += released
         return list(released)
+
+    async def _scored(self, event: StreamEvent) -> StreamEvent:
+        """A released sentence with its L4 confidence (when a scorer is set)."""
+        if self._scorer is None or not isinstance(event, VerifiedSentence):
+            return event
+        confidence = await score_sentence(self._scorer, event.text, self._passages)
+        scored = replace(event, confidence=confidence)
+        self.sentences[self.sentences.index(event)] = scored
+        return scored
 
     def _end_of_marker(self) -> StreamEvent:
         rest = REFUSAL_MARKER_PATTERN.sub("", self._splitter.text)
@@ -244,7 +294,7 @@ class SentenceStream:
                             await self._close_tokens()  # cancel generation first
                             yield event
                             return
-                        yield event
+                        yield await self._scored(event)
             if getattr(self._tokens, "failed", False):
                 # The provider failed: what is left is cut off and is never released (the
                 # caller reports the failure).
@@ -254,17 +304,19 @@ class SentenceStream:
             for n, unit in enumerate(tail, start=1):
                 index += 1
                 for event in self._judge(unit, index=index, is_last=n == len(tail)):
-                    yield event
+                    yield await self._scored(event)
                     if isinstance(event, StoppedEvent):
                         return
             self.completed = True
             if self._marker_held:
                 yield self._end_of_marker()
+            elif self._refusal_held:
+                yield StreamRefusal()  # only refusal-shaped sentences: a refusal in prose
         finally:
             if not self.completed:
                 await self._close_tokens()
 
 
-__all__ = ["REASON_CLASSES", "IncrementalSentenceSplitter", "SentenceStream",
+__all__ = ["REASON_CLASSES", "IncrementalSentenceSplitter", "SentenceStream", "score_sentence",
            "SentenceVerdict", "StoppedEvent", "StreamEvent", "StreamRefusal",
            "StreamingVerifier", "VerifiedSentence"]

@@ -171,6 +171,7 @@ const REASONS: Record<string, string> = {
   unknown_citation: "the next sentence cited a passage that was not retrieved",
   metadata_mismatch: "the next sentence named the wrong paper, section or page",
   refusal_with_content: "the model mixed a refusal with an answer",
+  refusal_as_claim: "the next sentence said the passages do not contain the answer",
   final_verification_failed: "the whole answer did not pass the final check",
   provider_error: "the model provider failed mid-answer",
   client_gave_up: "the request was abandoned",

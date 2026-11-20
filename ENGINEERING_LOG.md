@@ -1547,3 +1547,38 @@
   - the repository's real clone URL instead of the placeholder;
   - the v1 runbook is referenced through tag `v1-submission`.
 - **Owner approval status:** pending owner review.
+
+### Execution Entry
+
+- **Date and time:** 2026-11-20 IST
+- **Phase identifier:** `v2-07`: Verifier v2 (L3 refusal form, L4 entailment, advisory)
+- **Status:** completed, pending owner review. The L4 method and the proposed labels need an
+  owner decision before any threshold.
+- **Owner decisions** (`docs/DECISIONS.md`):
+  - L4 model: ONNX MiniLM2, with deberta-xsmall as the second candidate, on the existing
+    onnxruntime; no PyTorch.
+  - Calibration labels: proposed by Claude Code, unreviewed.
+  - L3 when streaming: hold, decide at the end.
+  - L3 when buffered: BLOCKED.
+- **Files:** listed in `reports/phase-v2-07-verifier-v2.md` §3–4. Migration 005 adds
+  `collection.l4_enabled`.
+- **Results:**
+  - **L3:** the plan's q21 case is classified as `refusal_as_claim`. The brief's q02 has no
+    refusal-shaped sentence.
+  - **84-replay:** 77 of 84 match. The 7 changed rows come from 5 answers, all VERIFIED →
+    BLOCKED, all refusal-shaped, all rubric-graded wrong in v1.
+  - **Streaming replay:** 58 of 63; partial rate 5 of 55.
+  - **L4 latency:** MiniLM2 int8 AVX2 at 8 threads, 142.3 ms p50 and 237.5 ms p95 per
+    (sentence, passage) pair, ~90 MB.
+  - **Calibration (whole passage):** not discriminative. FPR is 82.8 % at threshold 0.3; AUROC
+    is 0.530.
+  - **Exploratory 2-sentence windows:** AUROC 0.756; FPR 12.6 % and TPR 61.5 % at 0.3.
+- **Reviews:**
+  - L3 review: 2 Important findings, fixed.
+  - Full-phase review: 3 Important findings, fixed; minor ones deferred to the owner.
+  - A further advisory-failure fix of my own.
+  - Every fix has a test that failed first.
+- **Final commands:** `pytest -q` → **822 passed**; `ruff check .` clean; UI Jest 41 passed,
+  eslint and tsc clean; `results.csv` sha256 `8dfb10df…44efd`; `evidence/` unchanged.
+- **Real Groq calls:** 0. **Network:** Hugging Face metadata lookups and model downloads only.
+- **Owner approval status:** pending owner review (report §11).

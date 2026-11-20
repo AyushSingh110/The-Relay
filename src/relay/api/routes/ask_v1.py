@@ -6,7 +6,9 @@ Events, in order, on one SSE connection:
     status    stage: queued | retrieving | generating | verifying   (+ keepalives)
     sources   passages: [{id, chunk_id, paper_id, short_name, page_range, section,
                           text_excerpt, text}]   (text: the whole passage, V2-06)
-    sentence  text, citations: ["P1", ...]   (only sentences that passed the verifier)
+    sentence  text, citations: ["P1", ...], confidence   (only sentences that passed the
+              verifier; confidence: the advisory L4 entailment score, 0-1, or null when
+              the collection has L4 off or no model is installed; V2-07)
     stopped   reason_class, partial           (the answer stopped; no unverified text)
     final     status, verdict, tokens_in, tokens_out, ttft_ms, total_ms, cache_status,
               coalesced, partial, refused, message, ...   (always the last event)
@@ -68,8 +70,9 @@ from relay.orchestrator.streaming import (
     StoppedEvent,
     StreamRefusal,
     VerifiedSentence,
+    score_sentence,
 )
-from relay.orchestrator.verifier import TAG_PATTERN, split_sentences
+from relay.orchestrator.verifier import TAG_PATTERN, EntailmentScore, split_sentences
 from relay.providers.probing import CONSERVATIVE_CHARS_PER_TOKEN, status_for_error_code
 from relay.retrieval.hybrid_index import RetrievedPassage
 from relay.retrieval.registry import CollectionNotReadyError
@@ -244,18 +247,21 @@ def _stop_reason(outcome: PipelineOutcome, stop: StoppedEvent | None,
 
 async def _streamed(ctx: AskV1Context, channel: ReplayChannel, plan: StreamPlan,
                     spans: ServerSpanTracker, live: dict[str, Any],
-                    deadline_ns: int | None) -> tuple[PipelineOutcome, int]:
+                    deadline_ns: int | None,
+                    scorer: EntailmentScore | None) -> tuple[PipelineOutcome, int]:
     pipeline = ctx.service.pipeline
     channel.status("generating")
     tokens = pipeline.run_streaming(plan, spans, deadline_ns=deadline_ns)
     live["tokens"], live["chat"] = tokens, plan.chat  # for the cancel record's spend
-    stream = SentenceStream(tokens, plan.passages, plan.streaming_verifier)
+    stream = SentenceStream(tokens, plan.passages, plan.streaming_verifier, scorer=scorer)
     stop: StoppedEvent | None = None
     refused = False
     async for event in stream:
         if isinstance(event, VerifiedSentence):
+            live.setdefault("l4", []).append(event.confidence)
             channel.publish("sentence", {"text": event.text,
-                                         "citations": [f"P{c.tag}" for c in event.citations]})
+                                         "citations": [f"P{c.tag}" for c in event.citations],
+                                         "confidence": event.confidence})
         elif isinstance(event, StoppedEvent):
             stop = event
         elif isinstance(event, StreamRefusal):
@@ -271,16 +277,22 @@ async def _streamed(ctx: AskV1Context, channel: ReplayChannel, plan: StreamPlan,
 
 
 async def _buffered(ctx: AskV1Context, channel: ReplayChannel, plan: StreamPlan,
-                    spans: ServerSpanTracker,
-                    deadline_ns: int | None) -> tuple[PipelineOutcome, int]:
+                    spans: ServerSpanTracker, live: dict[str, Any],
+                    deadline_ns: int | None,
+                    scorer: EntailmentScore | None) -> tuple[PipelineOutcome, int]:
     channel.status("generating")
     outcome = await ctx.service.pipeline.complete_buffered(plan, spans,
                                                            deadline_ns=deadline_ns)
+    live["outcome"] = outcome  # its usage is known: a cancel during L4 scoring records it
     channel.status("verifying")
     released = 0
     if outcome.kind == "answer" and outcome.delivered_text is not None:
         for sentence in split_sentences(outcome.delivered_text):
-            channel.publish("sentence", {"text": sentence, "citations": tags_in(sentence)})
+            confidence = (None if scorer is None
+                          else await score_sentence(scorer, sentence, plan.passages))
+            live.setdefault("l4", []).append(confidence)
+            channel.publish("sentence", {"text": sentence, "citations": tags_in(sentence),
+                                         "confidence": confidence})
             released += 1
     return outcome, released
 
@@ -312,7 +324,8 @@ def _shed_summary(error_code: str, *, setting: str, buffered: bool,
 
 async def _lead(ctx: AskV1Context, flight: Flight, target: AskTarget, *, request_id: str,
                 collection_id: str, buffered: bool, go: asyncio.Event,
-                deadline_ns: int | None = None) -> None:
+                deadline_ns: int | None = None,
+                scorer: EntailmentScore | None = None) -> None:
     channel, service = flight.channel, ctx.service
     ask = target.ask
     setting = ask.retrieval_setting or ""
@@ -334,11 +347,11 @@ async def _lead(ctx: AskV1Context, flight: Flight, target: AskTarget, *, request
                 if plan.early is not None:
                     outcome, released = plan.early, 0
                 elif buffered:
-                    outcome, released = await _buffered(ctx, channel, plan, spans,
-                                                        deadline_ns)
+                    outcome, released = await _buffered(ctx, channel, plan, spans, live,
+                                                        deadline_ns, scorer)
                 else:
                     outcome, released = await _streamed(ctx, channel, plan, spans, live,
-                                                        deadline_ns)
+                                                        deadline_ns, scorer)
         except AdmissionRejectedError as shed:
             channel.publish(_SUMMARY, _shed_summary(shed.error_code, setting=setting,
                                                     buffered=buffered,
@@ -367,6 +380,7 @@ async def _lead(ctx: AskV1Context, flight: Flight, target: AskTarget, *, request
                               "provider_called": outcome.provider_called,
                               "tokens_in": outcome.tokens_in, "tokens_out": outcome.tokens_out,
                               "usage_source": outcome.usage_source,
+                              "l4_confidences": live.get("l4", []),  # V2-07, advisory
                               "pipeline": outcome.trace.model_dump(mode="json")})
         channel.publish(_SUMMARY, _summary(outcome, released=released, buffered=buffered,
                                            spans=spans, depth=depth))
@@ -401,7 +415,13 @@ def _forget(ctx: AskV1Context, flight: Flight) -> None:
 
 
 def _cancelled_spend(live: dict[str, Any]) -> dict[str, Any]:
-    """What a cancelled flight had spent, estimated (v1 does the same for /ask)."""
+    """What a cancelled flight had spent: the finished model call's own usage when it is
+    known (a buffered answer cancelled while L4 scores it), otherwise estimated (v1 does
+    the same for /ask)."""
+    outcome = live.get("outcome")
+    if isinstance(outcome, PipelineOutcome):
+        return {"provider_called": outcome.provider_called, "tokens_in": outcome.tokens_in,
+                "tokens_out": outcome.tokens_out, "usage_source": outcome.usage_source}
     tokens, chat = live.get("tokens"), live.get("chat")
     if tokens is None or chat is None:
         return {"provider_called": False, "tokens_in": 0, "tokens_out": 0,
@@ -441,7 +461,8 @@ async def _cached(ctx: AskV1Context, hit: CachedAnswer, *, request_id: str,
     if not hit.refused:  # a refusal's text is a message, never a sentence
         for sentence in split_sentences(hit.delivered_text):
             first = first if first is not None else (clock() - arrived_ns) / _NS_PER_MS
-            yield sse("sentence", {"text": sentence, "citations": tags_in(sentence)})
+            yield sse("sentence", {"text": sentence, "citations": tags_in(sentence),
+                                   "confidence": None})  # not re-scored on a cache hit
     total = (clock() - arrived_ns) / _NS_PER_MS
     final = {"request_id": request_id, "status": "ok", "verdict": hit.verification_verdict,
              "error_code": None, "partial": False, "refused": hit.refused,
@@ -472,7 +493,8 @@ def _request_record(request_id: str, *, hit_question: str | None, final: dict[st
 
 async def _respond(ctx: AskV1Context, target: AskTarget, *, request_id: str, arrived_ns: int,
                    collection_id: str, buffered: bool,
-                   deadline_ns: int | None = None) -> AsyncIterator[bytes]:
+                   deadline_ns: int | None = None,
+                   scorer: EntailmentScore | None = None) -> AsyncIterator[bytes]:
     service, ask = ctx.service, target.ask
     clock = service.clock
     setting = ask.retrieval_setting or ""
@@ -500,7 +522,8 @@ async def _respond(ctx: AskV1Context, target: AskTarget, *, request_id: str, arr
     if not follower:  # created now (so a disconnect can cancel it), started after accepted
         channel.task = asyncio.create_task(_lead(
             ctx, flight, target, request_id=request_id, collection_id=collection_id,
-            buffered=buffered, go=go, deadline_ns=deadline_ns), name=f"v1-ask-{request_id}")
+            buffered=buffered, go=go, deadline_ns=deadline_ns, scorer=scorer),
+            name=f"v1-ask-{request_id}")
         channel.task.add_done_callback(lambda _: _forget(ctx, flight))
     try:
         yield sse("accepted", _accepted(ctx, channel, request_id, follower=follower))
@@ -611,6 +634,7 @@ def ask_v1_router(ctx: AskV1Context) -> APIRouter:
         return StreamingResponse(
             _respond(ctx, target, request_id=request_id, arrived_ns=arrived_ns,
                      collection_id=collection_id, buffered=collection.buffered,
+                     scorer=service.entailment if collection.l4_enabled else None,
                      deadline_ns=None if body.deadline_ms is None
                      else arrived_ns + body.deadline_ms * _NS_PER_MS),
             media_type="text/event-stream",

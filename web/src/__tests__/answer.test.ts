@@ -1,5 +1,5 @@
 import type { AskEvent, Final, Passage } from "../api";
-import { chipLabel, highlight, initialAnswer, reduce, segments, type Answer } from "../answer";
+import { chipLabel, highlight, initialAnswer, reasonText, reduce, segments, type Answer } from "../answer";
 
 const passage = (over: Partial<Passage> = {}): Passage => ({
   id: "P1", chunk_id: "c1", paper_id: "1706.03762v7", short_name: "Attention",
@@ -86,4 +86,9 @@ test("a chip names the paper and section, or the pages", () => {
   expect(chipLabel(passage())).toBe("Attention §3.2");
   expect(chipLabel(passage({ section: "Abstract" }))).toBe("Attention p. 3-4");
   expect(chipLabel(passage({ short_name: null, section: null }))).toBe("1706.03762v7 p. 3-4");
+});
+
+test("an L3 stop reads as words, not a code (V2-07)", () => {
+  expect(reasonText("refusal_as_claim")).toBe(
+    "the next sentence said the passages do not contain the answer");
 });
