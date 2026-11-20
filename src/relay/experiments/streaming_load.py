@@ -75,12 +75,14 @@ class StreamResult:
 
 
 async def stream_one(client: httpx.AsyncClient, question_id: str, question: str, *,
-                     collection_id: str | None, auth: str, round_: int = 0) -> StreamResult:
+                     collection_id: str | None, auth: str, round_: int = 0,
+                     deadline_ms: int | None = None) -> StreamResult:
     """One request; a transport or protocol failure is recorded, not raised."""
     started = time.perf_counter()
     try:
         return await _stream_one(client, question_id, question, collection_id=collection_id,
-                                 auth=auth, round_=round_, started=started)
+                                 auth=auth, round_=round_, started=started,
+                                 deadline_ms=deadline_ms)
     except httpx.HTTPError as exc:  # transport: the request did not complete
         return StreamResult(question_id=question_id, round=round_, http_status=0,
                             error_code=type(exc).__name__,
@@ -93,10 +95,12 @@ async def stream_one(client: httpx.AsyncClient, question_id: str, question: str,
 
 async def _stream_one(client: httpx.AsyncClient, question_id: str, question: str, *,
                       collection_id: str | None, auth: str, round_: int,
-                      started: float) -> StreamResult:
+                      started: float, deadline_ms: int | None = None) -> StreamResult:
     body: dict[str, Any] = {"question": question}
     if collection_id is not None:
         body["collection_id"] = collection_id
+    if deadline_ms is not None:
+        body["deadline_ms"] = deadline_ms
 
     def now_ms() -> float:
         return round((time.perf_counter() - started) * 1000, 3)

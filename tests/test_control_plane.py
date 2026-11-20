@@ -171,18 +171,19 @@ async def test_settlement_replaces_the_estimate_with_provider_usage() -> None:
         100, 100, 900)
 
 
-async def test_missing_usage_keeps_the_reservation_and_is_marked_estimated() -> None:
+async def test_missing_usage_charges_prompt_and_received_text_and_is_marked_estimated() -> None:
     ft = FakeTime()
     guard = make_guard(ft, tpm_limit=1000)
     permit = await guard.acquire(chat(300, 100))
     settled = guard.settle(permit, usage=None, stream_opened=True, received_chars=30)
-    assert (settled.usage_source, settled.charged) == ("estimated", 200)
+    # V2-14: prompt estimate 100 + 30 received chars (10 tokens), not the 200 reservation
+    assert (settled.usage_source, settled.charged) == ("estimated", 110)
     assert (settled.tokens_in, settled.tokens_out) == (100, 10)
-    assert guard.snapshot().tokens_last_minute == 200  # stays charged
+    assert guard.snapshot().tokens_last_minute == 110  # stays charged
     rejected = await guard.acquire(chat(300, 100))
     released = guard.settle(rejected, usage=None, stream_opened=False)
     assert (released.usage_source, released.charged) == ("none", 0)
-    assert guard.snapshot().tokens_last_minute == 200  # the rejected call cost nothing
+    assert guard.snapshot().tokens_last_minute == 110  # the rejected call cost nothing
 
 
 async def test_chars_per_token_adapts_conservatively_and_stays_bounded() -> None:
@@ -384,7 +385,9 @@ async def test_retry_then_success_is_counted_timed_and_summed() -> None:
     assert summary.retrying_ms == pytest.approx(ft.sleeps[0] * 1000, abs=0.01)
     total = summary.waiting_ms + summary.working_ms + summary.retrying_ms
     assert abs(total - summary.server_total_ms) <= 1.0
-    assert guard.snapshot().tokens_last_minute == 200 + 100  # reservation kept + usage
+    # V2-14: the failed attempt is charged its prompt estimate + the 6 chars it streamed
+    # (100 + 2), not its whole 200 reservation; attempt 2 is charged its usage (100).
+    assert guard.snapshot().tokens_last_minute == 102 + 100
 
 
 async def test_non_retryable_and_exhausted_retries_stop_with_the_last_error() -> None:

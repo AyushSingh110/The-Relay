@@ -2,6 +2,8 @@
 
   python scripts/run_v2_load.py                       # all five, each run twice
   python scripts/run_v2_load.py --scenario burst_cache_on --repeat 1
+  python scripts/run_v2_load.py --prefix v2-load-rerun --scenario overload
+         --scenario tpm_halved --repeat 1   (one command: writes runs/v2-load-rerun-<UTC>/)
 
 Writes runs/v2-load-<UTC>/ (never evidence/):
   manifest.json                     git state, v1 reference runs, what was run
@@ -41,6 +43,8 @@ def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--repeat", type=int, default=2, choices=range(1, 6),
                         help="runs per scenario (default 2; the last is compared)")
     parser.add_argument("--runs-dir", type=Path, default=Path("runs"))
+    parser.add_argument("--prefix", choices=("v2-load", "v2-load-rerun"), default="v2-load",
+                        help="run directory name prefix (default v2-load)")
     parser.add_argument("--evidence-dir", type=Path, default=Path("evidence"))
     parser.add_argument("--questions-file", type=Path, default=Path("eval/questions.json"))
     parser.add_argument("--papers-dir", type=Path, default=Path("data/papers"))
@@ -62,7 +66,7 @@ async def main_async(args: argparse.Namespace) -> int:
         print(f"refused: {exc}")
         return 2
     keys = args.scenario or list(v2_load.V1_RUNS)
-    root = runs_dir / f"v2-load-{datetime.now(UTC).strftime('%Y%m%dT%H%M%SZ')}"
+    root = runs_dir / f"{args.prefix}-{datetime.now(UTC).strftime('%Y%m%dT%H%M%SZ')}"
     root.mkdir(parents=True, exist_ok=False)
     corpus = load_corpus_and_questions(args.papers_dir, args.questions_file)
     questions = {qid: q.question for qid, q in corpus.questions.by_id().items()}
@@ -97,7 +101,7 @@ async def main_async(args: argparse.Namespace) -> int:
                                           encoding="utf-8")
     md = [f"# v2 load re-validation: {root.name}\n"]
     for key, c in comparison.items():
-        md += [f"## {key} (v1 {c['v1_run']}, v2 {key}/{c['v2_run']})\n",
+        md += [f"## {key} (v1 {c['v1_run']}, v2 {c['v2_run']})\n",
                v2_load.comparison_table(c["v1"], c["v2"]), ""]
     (root / "comparison.md").write_text("\n".join(md) + "\n", encoding="utf-8")
     manifest["ended_at"] = datetime.now(UTC).isoformat()

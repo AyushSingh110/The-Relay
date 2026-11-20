@@ -1,0 +1,124 @@
+{
+  "overload": {
+    "v1_run": "exp-20261113T074816Z-c26f18c",
+    "v2_run": "v2-load-rerun-20261120T084043Z/overload/run-1",
+    "v1": {
+      "requests": 86,
+      "delivered": 58,
+      "refused": 19,
+      "dropped": 9,
+      "delivered_pct": 67.4,
+      "refused_pct": 22.1,
+      "dropped_pct": 10.5,
+      "total_ms_p50": 811.4,
+      "total_ms_p95": 24080.5,
+      "provider_calls": 56,
+      "cache_hits": 0,
+      "coalesced": 0,
+      "first_sentence_ms_p50": null,
+      "first_sentence_ms_p95": null,
+      "partial_answers": 0,
+      "status": {
+        "ok": 58,
+        "rate_limited": 19,
+        "timeout": 9
+      },
+      "error_codes": {
+        "citation_verification_failed": 8,
+        "client_gave_up": 9,
+        "predicted_wait_exceeds_deadline": 8,
+        "queue_full": 11
+      }
+    },
+    "v2": {
+      "requests": 86,
+      "delivered": 54,
+      "refused": 24,
+      "dropped": 8,
+      "delivered_pct": 62.8,
+      "refused_pct": 27.9,
+      "dropped_pct": 9.3,
+      "total_ms_p50": 826.4,
+      "total_ms_p95": 24008.5,
+      "provider_calls": 53,
+      "cache_hits": 0,
+      "coalesced": 0,
+      "first_sentence_ms_p50": 2620.0,
+      "first_sentence_ms_p95": 23745.9,
+      "partial_answers": 3,
+      "status": {
+        "ok": 54,
+        "rate_limited": 24,
+        "timeout": 8
+      },
+      "error_codes": {
+        "citation_verification_failed": 7,
+        "client_gave_up": 8,
+        "predicted_wait_exceeds_deadline": 13,
+        "queue_full": 11
+      }
+    },
+    "v2_first_status_ms_p50": 6.9,
+    "v2_first_status_ms_p95": 14.9
+  },
+  "tpm_halved": {
+    "v1_run": "exp-20261113T080532Z-c26f18c",
+    "v2_run": "v2-load-rerun-20261120T084043Z/tpm_halved/run-1",
+    "v1": {
+      "requests": 40,
+      "delivered": 31,
+      "refused": 4,
+      "dropped": 5,
+      "delivered_pct": 77.5,
+      "refused_pct": 10.0,
+      "dropped_pct": 12.5,
+      "total_ms_p50": 715.4,
+      "total_ms_p95": 19099.5,
+      "provider_calls": 30,
+      "cache_hits": 0,
+      "coalesced": 0,
+      "first_sentence_ms_p50": null,
+      "first_sentence_ms_p95": null,
+      "partial_answers": 0,
+      "status": {
+        "ok": 31,
+        "rate_limited": 4,
+        "timeout": 5
+      },
+      "error_codes": {
+        "citation_verification_failed": 7,
+        "client_gave_up": 5,
+        "predicted_wait_exceeds_deadline": 4
+      }
+    },
+    "v2": {
+      "requests": 40,
+      "delivered": 29,
+      "refused": 5,
+      "dropped": 6,
+      "delivered_pct": 72.5,
+      "refused_pct": 12.5,
+      "dropped_pct": 15.0,
+      "total_ms_p50": 688.8,
+      "total_ms_p95": 22912.0,
+      "provider_calls": 28,
+      "cache_hits": 0,
+      "coalesced": 0,
+      "first_sentence_ms_p50": 529.7,
+      "first_sentence_ms_p95": 22683.6,
+      "partial_answers": 2,
+      "status": {
+        "ok": 29,
+        "rate_limited": 5,
+        "timeout": 6
+      },
+      "error_codes": {
+        "citation_verification_failed": 5,
+        "client_gave_up": 6,
+        "predicted_wait_exceeds_deadline": 5
+      }
+    },
+    "v2_first_status_ms_p50": 14.1,
+    "v2_first_status_ms_p95": 18.1
+  }
+}

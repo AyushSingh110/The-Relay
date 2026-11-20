@@ -13,13 +13,17 @@ calibrated stand-in on 127.0.0.1. Each run starts a fresh stand-in, store and ca
 
 Differences that cannot be removed, reported with the results:
 
-- ``/v1/ask`` has no ``deadline_ms``: v2 cannot shed on predicted wait or expire a deadline
-  (v1 sent 30 s). The client still gives up at each arrival's patience, exactly as in v1.
+- Each request carries the scenario's ``deadline_ms`` (30 s), as v1's requests did
+  (``/v1/ask`` accepts it from V2-14). The client gives up at each arrival's patience.
 - v2 has no "store without answer cache" setting; for the cache-off scenarios the harness
   detaches the answer cache from the composed service (``service.cache = None``), which is
   what ``cache.mode = off`` does in v1 (no cache, no coalescing).
 - The ``v1-papers`` retriever is loaded before the clock starts (v1 loaded its retrievers
   before its runs too); this makes no provider call.
+- The comparison is v1 against v2 *as built*, which includes the V2-14 ProviderGuard change:
+  a call cut off before its usage report is charged locally for the text received, not the
+  whole completion allowance (v1 kept the whole reservation). Header headroom still keeps
+  the whole reservation until the provider's next headers.
 
 Outcomes are classified identically for v1 rows and v2 rows: **delivered** = status ``ok``
 (an answer, a partial answer or a refusal reached the user); **refused** = ``rate_limited``
@@ -251,7 +255,8 @@ class V2Row(BaseModel):
 
 
 async def send_with_patience(client: httpx.AsyncClient, arrival: Arrival, question: str, *,
-                             run_id: str, scenario: str, collection_id: str) -> V2Row:
+                             run_id: str, scenario: str, collection_id: str,
+                             deadline_ms: int | None = None) -> V2Row:
     """One request as a user sees it, abandoned at ``arrival.patience_s`` (as in v1)."""
     start_time = datetime.now(UTC).isoformat(timespec="milliseconds")
     started = time.perf_counter()
@@ -262,7 +267,7 @@ async def send_with_patience(client: httpx.AsyncClient, arrival: Arrival, questi
     try:
         result = await asyncio.wait_for(
             stream_one(client, arrival.question_id, question, collection_id=collection_id,
-                       auth=AUTH), timeout=arrival.patience_s)
+                       auth=AUTH, deadline_ms=deadline_ms), timeout=arrival.patience_s)
     except TimeoutError:
         return V2Row(**common, request_id=None, http_status=None, status="timeout",
                      error_code="client_gave_up", cache_status="unknown",
@@ -381,7 +386,8 @@ async def _replay(runtime: compose.Runtime, ref: V1Reference, *, run_id: str,
                     await asyncio.sleep(delay)
                 coro = send_with_patience(client, arrival, questions[arrival.question_id],
                                           run_id=run_id, scenario=ref.key,
-                                          collection_id=V1_COLLECTION_ID)
+                                          collection_id=V1_COLLECTION_ID,
+                                          deadline_ms=ref.spec.deadline_ms)
                 if arrival.phase in sequential:
                     rows.append(await coro)
                 else:

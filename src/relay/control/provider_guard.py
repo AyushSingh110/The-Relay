@@ -328,8 +328,14 @@ class ProviderGuard:
             spans.switch(previous)
 
     def settle(self, permit: Permit, *, usage: TokenUsage | None, stream_opened: bool,
-               received_chars: int = 0) -> Settlement:
-        """Replace the reservation with what the provider reported, and free the slot."""
+               received_chars: int | None = 0) -> Settlement:
+        """Replace the reservation with what the provider reported, and free the slot.
+
+        Without a usage report (the stream broke, or the caller cancelled it), the charge is
+        the prompt estimate plus the tokens of the text actually received, counted with the
+        same chars-per-token rule as the prompt (V2-14: a verification stop used to keep the
+        whole completion allowance, starving the TPM budget). ``received_chars=None`` means
+        the amount received is unknown, and the whole reservation stays charged."""
         self._semaphore.release()
         self._trial_in_flight = False  # a half-open trial ends when its call is settled
         if usage is not None:
@@ -337,9 +343,14 @@ class ProviderGuard:
             result = (usage.prompt_tokens, usage.completion_tokens, "provider")
             self._adapt(permit.prompt_chars, usage.prompt_tokens)
         elif stream_opened:
-            charged = permit.estimate
             prompt = math.ceil(permit.prompt_chars / self._chars_per_token)
-            result = (prompt, math.ceil(received_chars / self._chars_per_token), "estimated")
+            if received_chars is None:
+                charged = permit.estimate
+                result = (prompt, permit.estimate - prompt, "estimated")
+            else:
+                received = math.ceil(received_chars / self._chars_per_token)
+                charged = prompt + received
+                result = (prompt, received, "estimated")
         else:
             charged = 0
             result = (0, 0, "none")
@@ -347,7 +358,12 @@ class ProviderGuard:
         permit.entry.tokens = charged
         if permit.day == self._day:
             self._day_tokens += delta
-        if self._tpm_header is not None:
+        # The provider's own headroom is given back only when it settled the call (it
+        # reported usage) or never opened it. A stream cut off mid-way may keep its whole
+        # reservation at the provider (the stand-in does), so header headroom stays reduced
+        # until the provider's next headers say otherwise.
+        provider_settled = usage is not None or not stream_opened
+        if self._tpm_header is not None and (provider_settled or delta > 0):
             self._reserved_since_header += delta
         return Settlement(tokens_in=result[0], tokens_out=result[1], usage_source=result[2],
                           reserved=permit.estimate, charged=charged)
@@ -433,6 +449,11 @@ class GuardedGenerator:
         and a retry would produce a different answer."""
         self._retry.budget.record_first_attempt()
         forwarded = False
+        attempt_chars = 0  # content and reasoning characters received by the current attempt
+
+        def count(chars: int) -> None:
+            nonlocal attempt_chars
+            attempt_chars += chars
 
         def forward(text: str) -> None:
             nonlocal forwarded
@@ -461,12 +482,17 @@ class GuardedGenerator:
             except GuardError as refusal:
                 return finish(GenerationResult(None, refusal, False, 0, attempts=0))
             attempts += 1
+            attempt_chars = 0
             try:
                 result = await self._call.generate(
-                    request, spans, on_content=None if on_content is None else forward)
+                    request, spans, on_content=None if on_content is None else forward,
+                    on_received=count)
             except BaseException:
-                # Cancelled mid-call: tokens may have been spent, so the reservation stays charged.
-                self._guard.settle(permit, usage=None, stream_opened=True)
+                # Cancelled mid-call. Streaming: charge the text received so far. Buffered:
+                # what the provider produced is unknown, so the reservation stays charged.
+                self._guard.settle(permit, usage=None, stream_opened=True,
+                                   received_chars=attempt_chars if on_content is not None
+                                   else None)
                 raise
             usage = None if result.completion is None else result.completion.usage
             settled = self._guard.settle(permit, usage=usage, stream_opened=result.stream_opened,

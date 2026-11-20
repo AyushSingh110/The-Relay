@@ -218,7 +218,10 @@ class SingleCallGenerator:
 
     async def generate(self, request: ChatRequest, spans: ServerSpanTracker, *,
                        deadline_ns: int | None = None,
-                       on_content: ContentSink | None = None) -> GenerationResult:
+                       on_content: ContentSink | None = None,
+                       on_received: Callable[[int], None] | None = None) -> GenerationResult:
+        """``on_received`` (V2-14) is told the size of every content and reasoning piece as
+        it arrives, so a caller cancelled mid-stream still knows what was generated."""
         opened = False
         received = 0
 
@@ -228,13 +231,17 @@ class SingleCallGenerator:
                 if isinstance(event, ResponseOpened):
                     opened = True
                 elif isinstance(event, ContentDelta):
+                    received += len(event.text)
+                    if on_received is not None and event.text:
+                        on_received(len(event.text))
                     if event.text:
                         spans.mark_provider_first_token()
                         if on_content is not None:
                             on_content(event.text)
-                    received += len(event.text)
                 elif isinstance(event, ReasoningDelta):
                     received += len(event.text)
+                    if on_received is not None and event.text:
+                        on_received(len(event.text))
                 yield event
 
         try:

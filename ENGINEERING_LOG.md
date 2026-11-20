@@ -1453,3 +1453,64 @@
 - **Commands (final):** `python -m pytest -q` → **744 passed**; `ruff check .` → clean; `git status --short evidence results.csv` → empty; `results.csv` sha256 `8dfb10df…44efd`.
 - **Real Groq calls:** 0.
 - **Owner approval status:** pending owner decision on the ProviderGuard settlement rule for cancelled streams (and on `deadline_ms` for `/v1/ask`).
+
+### Execution Entry
+
+- **Date and time:** 2026-11-20 IST
+- **Phase identifier:** `v2-14`, part 1 fixes and part 2 re-run
+- **Status:** **stopped for an owner decision.** The fixes are in and tested, but both re-run
+  delivery rates are still below v1. As the prompt instructs, Parts 3–5 (report, README, demo
+  scripts) were not continued. The README draft and a copy of the v1 README were moved out of
+  the repository to the session scratchpad; `README.md` is the committed version.
+- **Fix A (ProviderGuard):**
+  - Without a usage report, a call is charged the prompt estimate plus the tokens of the text
+    received, using the guard's own chars-per-token rule. Before, it kept the full reservation
+    (prompt + 512).
+  - `received_chars=None` (unknown, for example a cancelled buffered call) keeps the full
+    reservation.
+  - Review fixes:
+    - Header-based headroom is given back only when the provider settled (it reported usage)
+      or the stream never opened. A disconnected stand-in stream keeps its reservation.
+    - Reasoning text received is counted too (`SingleCallGenerator(on_received=...)`).
+  - Two v1 expectations in `tests/test_control_plane.py` were updated deliberately, to
+    110 = 100 + 10 and 202 = 102 + 100.
+- **Fix B (`/v1/ask deadline_ms`):**
+  - `deadline_ms` is passed to the admission queue, `run_streaming` and `complete_buffered`,
+    as v1's `/ask` does.
+  - Review fix: a coalesced follower's own deadline bounds its wait (`deadline_expired`), as v1
+    does.
+  - As in v1, the deadline does not cut off a running generation. A test that assumed it did
+    was corrected.
+  - The harness now sends each scenario's `deadline_ms` (30 s), as v1 did.
+- **Tests:**
+  - `test_v2_14_guard_charge.py` (6), `test_v2_14_deadline.py` (5), and harness tests (+2).
+  - All were written first and seen failing. One validation test already passed before the
+    fix, because the field was unknown.
+  - Final run: **757 passed**; ruff clean.
+- **Re-runs:**
+  - `runs/v2-load-rerun-20261120T083240Z`: **superseded**. It ran the pre-review Fix A, which
+    over-refunded provider headroom. It was stopped after overload: 53/86.
+  - `runs/v2-load-rerun-20261120T084027Z`: **aborted**. The process was killed at start, so
+    there are no results.
+  - `runs/v2-load-rerun-20261120T084043Z`: **canonical**.
+    - overload 54/86 = **62.8 %** (v1 67.4 %, first V2 run 55.8 %).
+    - tpm_halved 29/40 = **72.5 %** (v1 77.5 %, first V2 run 72.5 %).
+  - **Neither criterion is met.**
+- **What the fixes changed:**
+  - Client give-ups fell to v1's level: overload 18 → 8 (v1 9), tpm_halved 11 → 6 (v1 5).
+  - Predicted-wait shedding is back: overload 13 (v1 8), tpm_halved 5 (v1 4).
+  - queue_full matches v1 exactly (11).
+  - Provider calls: overload 47 → 53 (v1 56). No stand-in 429s in any run.
+- **What remains:**
+  - v1's stand-in recorded **0 disconnected streams**; V2's recorded **7 (overload) and 5
+    (tpm_halved)**. These equal the verifier stops, and every v1 stream completed.
+  - A disconnected stand-in stream keeps its prompt + 512 reservation for the minute and never
+    settles to usage. The guard (correctly) sees that through the rate-limit headers, so fewer
+    calls fit.
+  - This is a provider-side cost of cancelling a stream early, under the stand-in's settlement
+    model. Groq's behaviour is unobserved. A guard-side change cannot remove it.
+  - Run-to-run noise is about ±1–2 requests (V2 repeats: 49/48, 28/29, 8/9). The tpm_halved
+    gap (2) is within it; the overload gap (4) is not.
+- **Real Groq calls:** 0. `results.csv` sha256 is unchanged (`8dfb10df…44efd`); `evidence/` is
+  unchanged.
+- **Owner approval status:** pending owner decision (options in the final report to the owner).

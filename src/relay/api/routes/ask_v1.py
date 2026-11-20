@@ -81,6 +81,7 @@ logger = logging.getLogger(__name__)
 DEFAULT_KEEPALIVE_S: Final = 4.0  # under the 5 s silence limit, with margin
 EXCERPT_CHARS: Final = 240
 _NS_PER_MS: Final = 1_000_000
+_NS_PER_S: Final = 1_000_000_000
 _NUMBER = re.compile(r"\d+")
 _SUMMARY: Final = "_summary"  # internal: the flight's result, turned into each final
 Event = tuple[str, dict[str, Any]]
@@ -92,6 +93,10 @@ class AskV1Body(BaseModel):
     question: Annotated[str, Field(min_length=1, max_length=MAX_QUESTION_CHARS)]
     collection_id: Annotated[str, Field(min_length=1, max_length=64)] | None = None
     conversation_id: Annotated[str, Field(min_length=1, max_length=64)] | None = None
+    # V2-14: as in v1's POST /ask. The queue sheds a request predicted to wait past it;
+    # it bounds the provider guard's quota waits and retries, and a coalesced follower's
+    # wait. It does not cut off an answer already being generated. None: no deadline.
+    deadline_ms: Annotated[int, Field(gt=0)] | None = None
 
 
 # --- Replay channel ----------------------------------------------------------------------
@@ -238,11 +243,11 @@ def _stop_reason(outcome: PipelineOutcome, stop: StoppedEvent | None,
 
 
 async def _streamed(ctx: AskV1Context, channel: ReplayChannel, plan: StreamPlan,
-                    spans: ServerSpanTracker,
-                    live: dict[str, Any]) -> tuple[PipelineOutcome, int]:
+                    spans: ServerSpanTracker, live: dict[str, Any],
+                    deadline_ns: int | None) -> tuple[PipelineOutcome, int]:
     pipeline = ctx.service.pipeline
     channel.status("generating")
-    tokens = pipeline.run_streaming(plan, spans)
+    tokens = pipeline.run_streaming(plan, spans, deadline_ns=deadline_ns)
     live["tokens"], live["chat"] = tokens, plan.chat  # for the cancel record's spend
     stream = SentenceStream(tokens, plan.passages, plan.streaming_verifier)
     stop: StoppedEvent | None = None
@@ -266,9 +271,11 @@ async def _streamed(ctx: AskV1Context, channel: ReplayChannel, plan: StreamPlan,
 
 
 async def _buffered(ctx: AskV1Context, channel: ReplayChannel, plan: StreamPlan,
-                    spans: ServerSpanTracker) -> tuple[PipelineOutcome, int]:
+                    spans: ServerSpanTracker,
+                    deadline_ns: int | None) -> tuple[PipelineOutcome, int]:
     channel.status("generating")
-    outcome = await ctx.service.pipeline.complete_buffered(plan, spans)
+    outcome = await ctx.service.pipeline.complete_buffered(plan, spans,
+                                                           deadline_ns=deadline_ns)
     channel.status("verifying")
     released = 0
     if outcome.kind == "answer" and outcome.delivered_text is not None:
@@ -304,7 +311,8 @@ def _shed_summary(error_code: str, *, setting: str, buffered: bool,
 
 
 async def _lead(ctx: AskV1Context, flight: Flight, target: AskTarget, *, request_id: str,
-                collection_id: str, buffered: bool, go: asyncio.Event) -> None:
+                collection_id: str, buffered: bool, go: asyncio.Event,
+                deadline_ns: int | None = None) -> None:
     channel, service = flight.channel, ctx.service
     ask = target.ask
     setting = ask.retrieval_setting or ""
@@ -314,7 +322,8 @@ async def _lead(ctx: AskV1Context, flight: Flight, target: AskTarget, *, request
     try:
         await go.wait()  # no work before "accepted" has been sent
         try:
-            async with service.queue.admit(is_connected=lambda: channel.subscribers > 0,
+            async with service.queue.admit(deadline_ns=deadline_ns,
+                                           is_connected=lambda: channel.subscribers > 0,
                                            on_queued=channel.queued) as ticket:
                 depth = ticket.queue_depth_at_entry
                 channel.status("retrieving")
@@ -325,9 +334,11 @@ async def _lead(ctx: AskV1Context, flight: Flight, target: AskTarget, *, request
                 if plan.early is not None:
                     outcome, released = plan.early, 0
                 elif buffered:
-                    outcome, released = await _buffered(ctx, channel, plan, spans)
+                    outcome, released = await _buffered(ctx, channel, plan, spans,
+                                                        deadline_ns)
                 else:
-                    outcome, released = await _streamed(ctx, channel, plan, spans, live)
+                    outcome, released = await _streamed(ctx, channel, plan, spans, live,
+                                                        deadline_ns)
         except AdmissionRejectedError as shed:
             channel.publish(_SUMMARY, _shed_summary(shed.error_code, setting=setting,
                                                     buffered=buffered,
@@ -460,7 +471,8 @@ def _request_record(request_id: str, *, hit_question: str | None, final: dict[st
 
 
 async def _respond(ctx: AskV1Context, target: AskTarget, *, request_id: str, arrived_ns: int,
-                   collection_id: str, buffered: bool) -> AsyncIterator[bytes]:
+                   collection_id: str, buffered: bool,
+                   deadline_ns: int | None = None) -> AsyncIterator[bytes]:
     service, ask = ctx.service, target.ask
     clock = service.clock
     setting = ask.retrieval_setting or ""
@@ -488,15 +500,29 @@ async def _respond(ctx: AskV1Context, target: AskTarget, *, request_id: str, arr
     if not follower:  # created now (so a disconnect can cancel it), started after accepted
         channel.task = asyncio.create_task(_lead(
             ctx, flight, target, request_id=request_id, collection_id=collection_id,
-            buffered=buffered, go=go), name=f"v1-ask-{request_id}")
+            buffered=buffered, go=go, deadline_ns=deadline_ns), name=f"v1-ask-{request_id}")
         channel.task.add_done_callback(lambda _: _forget(ctx, flight))
     try:
         yield sse("accepted", _accepted(ctx, channel, request_id, follower=follower))
         go.set()
         index = 0
         first: float | None = None
+        # A follower's own deadline bounds its wait (v1: follower_timeout); the leader's
+        # deadline, if any, already bounds the flight itself.
+        own_deadline = deadline_ns if follower else None
         while True:
-            event = await channel.next(index, ctx.keepalive_s)
+            wait_s = ctx.keepalive_s
+            if own_deadline is not None:
+                wait_s = max(0.0, min(wait_s, (own_deadline - clock()) / _NS_PER_S))
+            event = await channel.next(index, wait_s)
+            if event is None and own_deadline is not None and clock() >= own_deadline:
+                event = (_SUMMARY, _shed_summary("deadline_expired", setting=setting,
+                                                 buffered=buffered, depth=None))
+                if first is not None:  # sentences went out: the answer is partial
+                    yield sse("stopped", {"reason_class": "deadline_expired",
+                                          "partial": True})
+                    event[1]["partial"] = True
+                index -= 1  # not an event of the flight
             if event is None:  # silence: repeat the current stage
                 yield sse("status", {"stage": channel.stage,
                                      "queue_position": channel.position(), "keepalive": True})
@@ -584,7 +610,9 @@ def ask_v1_router(ctx: AskV1Context) -> APIRouter:
                           "the collection has no indexed documents yet")
         return StreamingResponse(
             _respond(ctx, target, request_id=request_id, arrived_ns=arrived_ns,
-                     collection_id=collection_id, buffered=collection.buffered),
+                     collection_id=collection_id, buffered=collection.buffered,
+                     deadline_ns=None if body.deadline_ms is None
+                     else arrived_ns + body.deadline_ms * _NS_PER_MS),
             media_type="text/event-stream",
             headers={"cache-control": "no-store", "x-accel-buffering": "no"})
 

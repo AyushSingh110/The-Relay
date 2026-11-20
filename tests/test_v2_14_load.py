@@ -143,3 +143,35 @@ def test_results_never_go_to_evidence(tmp_path: Path) -> None:
     with pytest.raises(ValueError, match="evidence"):
         v2_load.check_output_dir(Path("evidence") / "x")
     assert v2_load.check_output_dir(tmp_path / "runs") == tmp_path / "runs"
+
+
+async def test_each_request_carries_the_v1_scenario_deadline() -> None:
+    seen: list[dict[str, object]] = []
+    app = FastAPI()
+
+    @app.post("/v1/ask")
+    async def ask(body: dict[str, object]) -> StreamingResponse:
+        seen.append(body)
+        return StreamingResponse(iter([b'event: final\ndata: {"status": "ok"}\n\n']),
+                                 media_type="text/event-stream")
+
+    arrival = v2_load.Arrival(index=0, at_s=0.0, question_id="q01", patience_s=5.0)
+    async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app),
+                                 base_url="http://test") as client:
+        await v2_load.send_with_patience(client, arrival, "What?", run_id="r", scenario="s",
+                                         collection_id="v1-papers", deadline_ms=30_000)
+    assert seen == [{"question": "What?", "collection_id": "v1-papers", "deadline_ms": 30_000}]
+
+
+def test_the_runner_names_rerun_directories_apart() -> None:
+    import importlib.util
+
+    spec = importlib.util.spec_from_file_location("run_v2_load", "scripts/run_v2_load.py")
+    assert spec is not None and spec.loader is not None
+    runner = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(runner)
+    assert runner.parse_args([]).prefix == "v2-load"
+    args = runner.parse_args(["--prefix", "v2-load-rerun", "--scenario", "overload",
+                              "--scenario", "tpm_halved", "--repeat", "1"])
+    assert (args.prefix, args.scenario, args.repeat) == ("v2-load-rerun",
+                                                         ["overload", "tpm_halved"], 1)
