@@ -71,6 +71,7 @@ class StreamResult:
     keepalives: int = 0
     max_gap_ms: float | None = None  # the longest silence between two events
     provider_first_token_ms: float | None = None  # server side, from the final event
+    final: dict[str, Any] | None = None  # the whole final event (V2-14: spend, refusal)
 
 
 async def stream_one(client: httpx.AsyncClient, question_id: str, question: str, *,
@@ -136,6 +137,7 @@ async def _stream_one(client: httpx.AsyncClient, question_id: str, question: str
                 result.status, result.verdict = data["status"], data["verdict"]
                 result.error_code, result.cache_status = data["error_code"], data["cache_status"]
                 result.provider_first_token_ms = data.get("provider_first_token_ms")
+                result.final = data
         result.max_gap_ms = round(max(gaps), 3) if gaps else None
         return result
 

@@ -55,8 +55,25 @@ class CacheScope(BaseModel):
     model_id: Annotated[str, Field(min_length=1)]
 
 
+class CachedSource(BaseModel):
+    """One passage of a cached answer's ``sources`` event, kept so that a hit on
+    POST /v1/ask sends exactly what the live answer sent (V2-14)."""
+
+    model_config = _STRICT
+
+    id: str  # "P1"
+    chunk_id: str
+    paper_id: str
+    short_name: str | None
+    page_range: str
+    section: str | None
+    text_excerpt: str | None
+    text: str | None
+
+
 class CachedAnswer(BaseModel):
-    """What is replayed on a hit: the delivered text and its verified citations."""
+    """What is replayed on a hit: the delivered text, its verified citations and (for
+    answers cached by POST /v1/ask) the retrieved passages it was answered from."""
 
     model_config = _STRICT
 
@@ -66,6 +83,7 @@ class CachedAnswer(BaseModel):
     verification_verdict: VerificationVerdict
     model_id: str | None
     source_request_id: str
+    sources: tuple[CachedSource, ...] = ()  # empty for entries written by v1's POST /ask
 
 
 CacheKey = tuple[str, str, str, str, str]
@@ -195,6 +213,7 @@ __all__ = [
     "CACHEABLE_VERDICTS",
     "CacheScope",
     "CachedAnswer",
+    "CachedSource",
     "ExactCache",
     "Flight",
     "FlightResult",

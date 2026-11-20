@@ -1,0 +1,149 @@
+{
+  "drained": true,
+  "first_status_ms_p50": 11.3,
+  "first_status_ms_p95": 27.8,
+  "metrics": {
+    "cache_hits": 0,
+    "coalesced": 0,
+    "delivered": 9,
+    "delivered_pct": 30.0,
+    "dropped": 0,
+    "dropped_pct": 0.0,
+    "error_codes": {
+      "queue_full": 21
+    },
+    "first_sentence_ms_p50": 1156.3,
+    "first_sentence_ms_p95": 1556.2,
+    "partial_answers": 0,
+    "provider_calls": 9,
+    "refused": 21,
+    "refused_pct": 70.0,
+    "requests": 30,
+    "status": {
+      "ok": 9,
+      "rate_limited": 21
+    },
+    "total_ms_p50": 1386.4,
+    "total_ms_p95": 1749.7
+  },
+  "requests_sent": 30,
+  "run_id": "v2-load-20261119T171412Z/burst_cache_off/run-2",
+  "scenario": "burst_cache_off",
+  "settings": {
+    "cache": {
+      "mode": "sqlite"
+    },
+    "guard": {
+      "daily_safety_fraction": 0.75,
+      "max_concurrency": 2,
+      "rpd": 1000,
+      "rpm": null,
+      "tpd": null,
+      "tpm": 8000
+    },
+    "ingestion": {
+      "max_attempts": 3,
+      "max_loaded_collections": 8,
+      "max_pages": 500,
+      "max_upload_mb": 50.0,
+      "poll_interval_s": 2.0
+    },
+    "lanes": [
+      {
+        "base_url": "http://127.0.0.1:59694/openai/v1",
+        "embedded": false,
+        "kind": "standin",
+        "max_completion_tokens": 512,
+        "model": "qwen/qwen3.8-27b",
+        "name": "standin",
+        "profile": null,
+        "reasoning_effort": null
+      }
+    ],
+    "paths": {
+      "collections_dir": "runs\\v2-load-20261119T171412Z\\burst_cache_off\\run-2\\collections",
+      "index_dir": "data\\indexes",
+      "models_dir": "data\\models",
+      "papers_dir": "data\\papers",
+      "store_path": "runs\\v2-load-20261119T171412Z\\burst_cache_off\\run-2\\store.sqlite3",
+      "uploads_dir": "runs\\v2-load-20261119T171412Z\\burst_cache_off\\run-2\\uploads"
+    },
+    "queue": {
+      "capacity": 3,
+      "max_active": null,
+      "patience_median_s": 20.0,
+      "tokens_per_answer": 809.1
+    },
+    "retrieval": {
+      "settings": [
+        "small_fast",
+        "balanced_rerank",
+        "large_wide"
+      ]
+    },
+    "server": {
+      "host": "127.0.0.1",
+      "port": 8000
+    }
+  },
+  "spec": {
+    "cache_mode": "off",
+    "deadline_ms": 30000,
+    "description": "30 requests within 2 s over 6 hot questions (duplicates); run with cache on and with cache off.",
+    "guard_overrides": {},
+    "name": "burst",
+    "patience": {
+      "kind": "lognormal",
+      "max_s": null,
+      "median_s": 20.0,
+      "min_s": 1.0,
+      "sigma": 0.6
+    },
+    "phases": [
+      {
+        "count": 30,
+        "draw": "random",
+        "duration_s": null,
+        "name": "main",
+        "pool": "burst_hot",
+        "rate_per_min": null,
+        "sequential": false,
+        "shape": "burst",
+        "start_s": 0.0,
+        "window_s": 2.0
+      }
+    ],
+    "retrieval_setting": "small_fast",
+    "retry_budget_enabled": true,
+    "seed": 0,
+    "standin_overrides": {}
+  },
+  "standin_stats": {
+    "active": 0,
+    "by_status": {
+      "200": 9
+    },
+    "completed_streams": 9,
+    "completion_tokens": 1124,
+    "disconnects": 0,
+    "errors_injected": 0,
+    "label": "calibrated",
+    "limits": {
+      "RPD": {
+        "capacity": 1000,
+        "level": 991.037
+      },
+      "TPM": {
+        "capacity": 8000,
+        "level": 1509.067
+      }
+    },
+    "peak_active": 2,
+    "prompt_tokens": 5792,
+    "rate_limited": {},
+    "requests": 9,
+    "stalls": 0,
+    "stragglers": 0
+  },
+  "v1_reference_run": "exp-20261113T074807Z-c26f18c"
+}

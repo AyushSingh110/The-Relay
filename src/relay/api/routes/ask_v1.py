@@ -54,7 +54,7 @@ from relay.api.app import UNAVAILABLE_MESSAGES, AskRequest, AskTarget, RelayServ
 from relay.app.bootstrap import V1_COLLECTION_ID
 from relay.app.routes.ingestion import Rejected, caller_tenant
 from relay.control.admission import AdmissionRejectedError
-from relay.control.cache import CachedAnswer, normalise_question, question_hash
+from relay.control.cache import CachedAnswer, CachedSource, normalise_question, question_hash
 from relay.errors import sanitize_error
 from relay.ingestion.registry import CollectionNotFoundError
 from relay.orchestrator.pipeline import (
@@ -342,7 +342,9 @@ async def _lead(ctx: AskV1Context, flight: Flight, target: AskTarget, *, request
                     delivered_text=outcome.delivered_text, refused=outcome.refused,
                     citations=outcome.citations,
                     verification_verdict=outcome.verification_verdict,
-                    model_id=outcome.model_id, source_request_id=request_id),
+                    model_id=outcome.model_id, source_request_id=request_id,
+                    sources=tuple(CachedSource(**p) for p in
+                                  sources_payload(plan.passages)["passages"])),
                     degraded=outcome.degraded)
             except Exception as exc:  # a lost cache entry must not change the answer
                 logger.warning("/v1/ask request %s: answer not cached: %s", request_id,
@@ -417,10 +419,13 @@ async def _cached(ctx: AskV1Context, hit: CachedAnswer, *, request_id: str,
     clock = ctx.service.clock
     yield sse("accepted", {"request_id": request_id, "queue_position": 0,
                            "expected_wait_ms": 0.0})
-    yield sse("sources", {"passages": [{
-        "id": f"P{c.tag}", "chunk_id": c.chunk_id, "paper_id": c.paper_id,
-        "short_name": None, "page_range": _page_range(c.page_start, c.page_end),
-        "section": None, "text_excerpt": None, "text": None} for c in hit.citations]})
+    if hit.sources:  # cached by /v1/ask: the same passages the live answer sent
+        yield sse("sources", {"passages": [s.model_dump() for s in hit.sources]})
+    else:  # cached by v1's POST /ask, which keeps only the cited pages
+        yield sse("sources", {"passages": [{
+            "id": f"P{c.tag}", "chunk_id": c.chunk_id, "paper_id": c.paper_id,
+            "short_name": None, "page_range": _page_range(c.page_start, c.page_end),
+            "section": None, "text_excerpt": None, "text": None} for c in hit.citations]})
     first: float | None = None
     if not hit.refused:  # a refusal's text is a message, never a sentence
         for sentence in split_sentences(hit.delivered_text):

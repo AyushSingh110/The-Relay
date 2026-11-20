@@ -1,0 +1,154 @@
+{
+  "drained": true,
+  "first_status_ms_p50": 12.7,
+  "first_status_ms_p95": 16.1,
+  "metrics": {
+    "cache_hits": 0,
+    "coalesced": 0,
+    "delivered": 28,
+    "delivered_pct": 70.0,
+    "dropped": 12,
+    "dropped_pct": 30.0,
+    "error_codes": {
+      "citation_verification_failed": 5,
+      "client_gave_up": 12
+    },
+    "first_sentence_ms_p50": 532.9,
+    "first_sentence_ms_p95": 21976.2,
+    "partial_answers": 1,
+    "provider_calls": 27,
+    "refused": 0,
+    "refused_pct": 0.0,
+    "requests": 40,
+    "status": {
+      "ok": 28,
+      "timeout": 12
+    },
+    "total_ms_p50": 677.6,
+    "total_ms_p95": 22082.2
+  },
+  "requests_sent": 40,
+  "run_id": "v2-load-20261119T171412Z/tpm_halved/run-1",
+  "scenario": "tpm_halved",
+  "settings": {
+    "cache": {
+      "mode": "sqlite"
+    },
+    "guard": {
+      "daily_safety_fraction": 0.75,
+      "max_concurrency": 2,
+      "rpd": 1000,
+      "rpm": null,
+      "tpd": null,
+      "tpm": 8000
+    },
+    "ingestion": {
+      "max_attempts": 3,
+      "max_loaded_collections": 8,
+      "max_pages": 500,
+      "max_upload_mb": 50.0,
+      "poll_interval_s": 2.0
+    },
+    "lanes": [
+      {
+        "base_url": "http://127.0.0.1:59738/openai/v1",
+        "embedded": false,
+        "kind": "standin",
+        "max_completion_tokens": 512,
+        "model": "qwen/qwen3.8-27b",
+        "name": "standin",
+        "profile": null,
+        "reasoning_effort": null
+      }
+    ],
+    "paths": {
+      "collections_dir": "runs\\v2-load-20261119T171412Z\\tpm_halved\\run-1\\collections",
+      "index_dir": "data\\indexes",
+      "models_dir": "data\\models",
+      "papers_dir": "data\\papers",
+      "store_path": "runs\\v2-load-20261119T171412Z\\tpm_halved\\run-1\\store.sqlite3",
+      "uploads_dir": "runs\\v2-load-20261119T171412Z\\tpm_halved\\run-1\\uploads"
+    },
+    "queue": {
+      "capacity": 3,
+      "max_active": null,
+      "patience_median_s": 20.0,
+      "tokens_per_answer": 809.1
+    },
+    "retrieval": {
+      "settings": [
+        "small_fast",
+        "balanced_rerank",
+        "large_wide"
+      ]
+    },
+    "server": {
+      "host": "127.0.0.1",
+      "port": 8000
+    }
+  },
+  "spec": {
+    "cache_mode": "off",
+    "deadline_ms": 30000,
+    "description": "Poisson 8/min for 5 min while the provider's TPM is halved to 4000 and the Relay's guard still believes 8000.",
+    "guard_overrides": {},
+    "name": "tpm_halved",
+    "patience": {
+      "kind": "lognormal",
+      "max_s": null,
+      "median_s": 20.0,
+      "min_s": 1.0,
+      "sigma": 0.6
+    },
+    "phases": [
+      {
+        "count": null,
+        "draw": "random",
+        "duration_s": 300.0,
+        "name": "main",
+        "pool": "all",
+        "rate_per_min": 8.0,
+        "sequential": false,
+        "shape": "poisson",
+        "start_s": 0.0,
+        "window_s": 2.0
+      }
+    ],
+    "retrieval_setting": "small_fast",
+    "retry_budget_enabled": true,
+    "seed": 0,
+    "standin_overrides": {
+      "limits": {
+        "tpm": 4000
+      }
+    }
+  },
+  "standin_stats": {
+    "active": 0,
+    "by_status": {
+      "200": 27
+    },
+    "completed_streams": 22,
+    "completion_tokens": 2698,
+    "disconnects": 5,
+    "errors_injected": 0,
+    "label": "calibrated",
+    "limits": {
+      "RPD": {
+        "capacity": 1000,
+        "level": 976.431
+      },
+      "TPM": {
+        "capacity": 4000,
+        "level": 2802.333
+      }
+    },
+    "peak_active": 2,
+    "prompt_tokens": 12576,
+    "rate_limited": {},
+    "requests": 27,
+    "stalls": 0,
+    "stragglers": 0
+  },
+  "v1_reference_run": "exp-20261113T080532Z-c26f18c"
+}

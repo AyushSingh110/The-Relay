@@ -1,0 +1,152 @@
+{
+  "drained": true,
+  "first_status_ms_p50": 13.0,
+  "first_status_ms_p95": 19.2,
+  "metrics": {
+    "cache_hits": 0,
+    "coalesced": 0,
+    "delivered": 49,
+    "delivered_pct": 57.0,
+    "dropped": 16,
+    "dropped_pct": 18.6,
+    "error_codes": {
+      "citation_verification_failed": 6,
+      "client_gave_up": 16,
+      "queue_full": 21
+    },
+    "first_sentence_ms_p50": 2920.3,
+    "first_sentence_ms_p95": 35174.4,
+    "partial_answers": 2,
+    "provider_calls": 47,
+    "refused": 21,
+    "refused_pct": 24.4,
+    "requests": 86,
+    "status": {
+      "ok": 49,
+      "rate_limited": 21,
+      "timeout": 16
+    },
+    "total_ms_p50": 2107.0,
+    "total_ms_p95": 35443.8
+  },
+  "requests_sent": 86,
+  "run_id": "v2-load-20261119T171412Z/overload/run-1",
+  "scenario": "overload",
+  "settings": {
+    "cache": {
+      "mode": "sqlite"
+    },
+    "guard": {
+      "daily_safety_fraction": 0.75,
+      "max_concurrency": 2,
+      "rpd": 1000,
+      "rpm": null,
+      "tpd": null,
+      "tpm": 8000
+    },
+    "ingestion": {
+      "max_attempts": 3,
+      "max_loaded_collections": 8,
+      "max_pages": 500,
+      "max_upload_mb": 50.0,
+      "poll_interval_s": 2.0
+    },
+    "lanes": [
+      {
+        "base_url": "http://127.0.0.1:52400/openai/v1",
+        "embedded": false,
+        "kind": "standin",
+        "max_completion_tokens": 512,
+        "model": "qwen/qwen3.8-27b",
+        "name": "standin",
+        "profile": null,
+        "reasoning_effort": null
+      }
+    ],
+    "paths": {
+      "collections_dir": "runs\\v2-load-20261119T171412Z\\overload\\run-1\\collections",
+      "index_dir": "data\\indexes",
+      "models_dir": "data\\models",
+      "papers_dir": "data\\papers",
+      "store_path": "runs\\v2-load-20261119T171412Z\\overload\\run-1\\store.sqlite3",
+      "uploads_dir": "runs\\v2-load-20261119T171412Z\\overload\\run-1\\uploads"
+    },
+    "queue": {
+      "capacity": 3,
+      "max_active": null,
+      "patience_median_s": 20.0,
+      "tokens_per_answer": 809.1
+    },
+    "retrieval": {
+      "settings": [
+        "small_fast",
+        "balanced_rerank",
+        "large_wide"
+      ]
+    },
+    "server": {
+      "host": "127.0.0.1",
+      "port": 8000
+    }
+  },
+  "spec": {
+    "cache_mode": "off",
+    "deadline_ms": 30000,
+    "description": "Poisson arrivals at 20/min for 4 min, about 3x the service rate.",
+    "guard_overrides": {},
+    "name": "overload",
+    "patience": {
+      "kind": "lognormal",
+      "max_s": null,
+      "median_s": 20.0,
+      "min_s": 1.0,
+      "sigma": 0.6
+    },
+    "phases": [
+      {
+        "count": null,
+        "draw": "random",
+        "duration_s": 240.0,
+        "name": "main",
+        "pool": "all",
+        "rate_per_min": 20.0,
+        "sequential": false,
+        "shape": "poisson",
+        "start_s": 0.0,
+        "window_s": 2.0
+      }
+    ],
+    "retrieval_setting": "small_fast",
+    "retry_budget_enabled": true,
+    "seed": 0,
+    "standin_overrides": {}
+  },
+  "standin_stats": {
+    "active": 0,
+    "by_status": {
+      "200": 47
+    },
+    "completed_streams": 41,
+    "completion_tokens": 4698,
+    "disconnects": 6,
+    "errors_injected": 0,
+    "label": "calibrated",
+    "limits": {
+      "RPD": {
+        "capacity": 1000,
+        "level": 955.848
+      },
+      "TPM": {
+        "capacity": 8000,
+        "level": 6238.0
+      }
+    },
+    "peak_active": 2,
+    "prompt_tokens": 19735,
+    "rate_limited": {},
+    "requests": 47,
+    "stalls": 0,
+    "stragglers": 0
+  },
+  "v1_reference_run": "exp-20261113T074816Z-c26f18c"
+}

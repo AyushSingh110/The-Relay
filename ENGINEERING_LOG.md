@@ -1426,3 +1426,30 @@
 - **Real Groq calls:** 0. **Network:** npm registry for the package install; loopback for the tests.
 - **Owner approval status:** pending owner review
 - **Next action:** Owner reviews the rulings and decides whether to commit `src/relay/app/static/`; then V2-07.
+
+### Execution Entry
+
+- **Date and time:** 2026-11-20 IST
+- **Phase identifier:** `v2-14`: load re-validation, demo and launch
+- **Status:** in progress, **stopped for an owner decision.** Two delivery rates regressed against v1. The phase prompt says: "if any delivery rate drops, stop and explain before proceeding". Parts 3–5 (report table, README, demo scripts) are not done.
+- **Done:**
+  - **Part 1, cached-answer passages:** `CachedAnswer.sources` (new `CachedSource` model) is written by `/v1/ask` and replayed on a hit. Test `tests/test_v2_14_cache_sources.py` failed first (RED), then passed.
+  - **Part 2, load harness:**
+    - `src/relay/experiments/v2_load.py` and `scripts/run_v2_load.py` replay each canonical v1 run's recorded arrivals, guard, queue capacity, tokens-per-answer and stand-in overrides against `POST /v1/ask`.
+    - `StreamResult.final` was added. `tests/test_v2_14_load.py` has 8 tests, written first.
+  - **Runs:** all 5 scenarios × 2 into `runs/v2-load-20261119T171412Z/`. Stand-in only; 0 real calls.
+- **Scenario parameters:** taken from v1's canonical runs, not from the prompt's descriptions, which differ (for example, v1 steady ran with the cache off at Poisson 4/min for 5 min). The prompt says "use the same parameters as V1".
+- **Results:**
+  - Delivery against v1: steady 100 = 100; burst_cache_on 100 against 96.7; burst_cache_off 30.0 against 26.7.
+  - Regressed: **tpm_halved 72.5 against 77.5**; **overload 55.8 against 67.4**.
+- **Root cause of the regressions:**
+  - For the same questions, real provider usage is equal (within ±30 tokens). V2 made fewer provider calls in the same time (overload 47 against 56; tpm_halved 28 against 30). There were no 429s.
+  - Streams cancelled by the per-sentence verifier (`uncited`; 5–6 per run) never receive a usage report. `ProviderGuard.settle` (provider_guard.py:338-341) then keeps the full reservation: the prompt estimate plus the 512-token completion allowance.
+  - That uses TPM budget the provider never spent, so the guard waits longer, the queue backs up, and more clients give up.
+  - Secondary: `/v1/ask` has no `deadline_ms`, so v1's predicted-wait shedding (overload 8, tpm_halved 4) becomes queue waits and give-ups.
+- **Other findings:**
+  - A timing assertion in the new test was flaky (Windows timer resolution) → it now asserts the bound that matters.
+  - The code-review agent stopped early on an API usage limit, so no review result yet.
+- **Commands (final):** `python -m pytest -q` → **744 passed**; `ruff check .` → clean; `git status --short evidence results.csv` → empty; `results.csv` sha256 `8dfb10df…44efd`.
+- **Real Groq calls:** 0.
+- **Owner approval status:** pending owner decision on the ProviderGuard settlement rule for cancelled streams (and on `deadline_ms` for `/v1/ask`).
