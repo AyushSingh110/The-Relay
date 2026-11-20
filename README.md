@@ -1,105 +1,132 @@
 # The Relay
 
-Rate-limit-aware RAG Q&A that answers only from three pinned arXiv papers
-(`1706.03762v7`, `2410.00037v1`, `2507.07955v2`), verifies citations before
-delivery, and records every request in a recomputable `results.csv`.
+The Relay answers questions about your own PDFs, and every sentence it shows has been checked
+against the passage it cites before you see it. It is built to keep working on a tight model
+quota (such as Groq's free tier): it queues, caches, shares identical questions, and refuses
+plainly when the documents do not contain the answer.
 
-Design: [ARCHITECTURE.md](ARCHITECTURE.md). Phase plan: [IMPLEMENTATION_PLAN.md](IMPLEMENTATION_PLAN.md).
-Execution history: [ENGINEERING_LOG.md](ENGINEERING_LOG.md).
+## Architecture
 
-## Setup (Conda environment `the-relay`, Python 3.12)
-
-```powershell
-conda activate the-relay
-python -m pip install -e ".[dev]"
-copy .env.example .env   # then fill in GROQ_API_KEY; .env is gitignored
+```mermaid
+flowchart LR
+    UI[Web UI] --> API
+    SDK[API clients] --> API
+    subgraph Relay service
+      API[API gateway<br/>auth, SSE, REST] --> ADM[Admission<br/>per-tenant fairness, priority]
+      ADM --> PIPE[Query pipeline<br/>rewrite, retrieve, gate, generate]
+      PIPE --> VER[Streaming verifier<br/>structure, grounding, entailment]
+      PIPE --> ROUTER[Provider router]
+      ROUTER --> G1[ProviderGuard: model A]
+      ROUTER --> G2[ProviderGuard: model B]
+      API --> ING[Ingestion jobs]
+      PIPE --> IDX[(Per-collection indexes)]
+      ING --> IDX
+      API --> DB[(Metadata store)]
+      PIPE --> CACHE[(Answer cache + SingleFlight)]
+      API --> OBS[Metrics and traces]
+    end
+    G1 --> P1[Groq or other provider]
+    G2 --> P2[Second model or provider]
+    G1 -.demo or test.-> SI[Stand-in service]
 ```
 
-## Checks
+This is the target design ([docs/ARCHITECTURE_V2.md](docs/ARCHITECTURE_V2.md) §3). Not built
+yet: query rewriting, entailment, the provider router and second lane, per-tenant fairness,
+and metrics and traces. Today one lane (Groq or the stand-in) sits behind one ProviderGuard.
 
-```powershell
-python -m pytest -v
-python -m ruff check .
+## How it works
+
+- **Verified streaming:** the answer is split into sentences as it streams, and each sentence
+  is checked against its cited passage before it is sent, so nothing unverified is shown.
+- **SingleFlight and exact cache:** identical questions share one model call and repeats are
+  served from the cache, so a 30-request burst was fully delivered with 6 model calls.
+- **ProviderGuard:** every call reserves its tokens against the provider's per-minute and daily
+  limits first, so under pressure requests wait, are refused early, or get passage pointers
+  instead of failing.
+- **Collection-aware safety:** the scope check, evidence gate and verifier use the names and
+  passages of the collection's own documents, so an answer cannot cite another collection.
+
+## Measured numbers
+
+Burst of 30 requests in 2 seconds with the cache on, against the calibrated stand-in model.
+V1 used the same requests, limits and stand-in (`evidence/experiments/exp-20261113T074759Z-c26f18c`).
+V2 is `runs/v2-load-20261119T171412Z`. All five scenarios are compared in
+[reports/phase-v2-14-load-revalidation.md](reports/phase-v2-14-load-revalidation.md).
+
+| Metric | V1 | V2 |
+| :-- | --: | --: |
+| Requests delivered | 96.7 % | 100.0 % |
+| Model calls made | 6 | 6 |
+| Cache hits | 7 | 7 |
+| Median total time | 614.2 ms | 498.8 ms |
+| First verified sentence, median | n/a (answers were buffered) | 324.5 ms |
+
+Under heavy overload with high partial rates, throughput is ~5pp lower than V1 due to
+provider-side reservation costs for stopped streams (overload: 62.8 % delivered against 67.4 %).
+
+## Quickstart
+
+Needs Python 3.11+ and network access once, to fetch the three sample papers and the
+embedding models. The web UI is already built in the repository, so Node.js is not needed to
+run it.
+
+```bash
+git clone https://github.com/AyushSingh110/The-Relay
+cd The-Relay
+conda activate the-relay            # or: pip install -e ".[dev]"
+cp relay.example.toml relay.toml    # Windows: copy relay.example.toml relay.toml
+
+# One time: the sample papers, the embedding models and the sample collection's index
+python scripts/ingest_papers.py
+python scripts/build_indexes.py --download-models
+python scripts/build_indexes.py
+
+export RELAY_CACHE__MODE=sqlite     # collections and uploads need the metadata store
+                                    # Windows PowerShell: $env:RELAY_CACHE__MODE = "sqlite"
+relay serve                         # uses the stand-in model: no API key needed
+# Open http://localhost:8000
 ```
 
-## Web UI (V2-06)
+To use Groq instead, replace the stand-in `[[lanes]]` block in `relay.toml` with the
+commented Groq lane below it, then:
 
-The UI is a React + Vite app in `web/`. It is built to static files that `relay serve` serves at
-`http://127.0.0.1:8000/` on the same origin as the API, so it needs no second server. Building it
-needs Node.js 20 or newer; running it needs only Python.
-
-```powershell
-cd web
-npm ci                          # once: installs the build and test tools into web/node_modules
-cd ..
-relay ui build                  # npm run build in web/, copied to src/relay/app/static/
-$env:RELAY_CACHE__MODE = "sqlite"   # collections, uploads and /v1/ask need the metadata store
-relay serve                     # then open http://127.0.0.1:8000/
+```bash
+export GROQ_API_KEY=your_key_here
+export MAX_REAL_CALLS=50            # hard cap on real calls for this process
+relay serve
 ```
 
-The default lane is the stand-in model, so this needs no Groq key.
+`relay doctor` checks the settings, files and key without printing the key.
 
-**API key.** The UI sends `Authorization: Bearer <key>` on every `/v1` request. The key is read at
-build time from `VITE_API_KEY` (see `web/.env.example`), and the default is `relay-dev-key`. Until
-V2-10 the API accepts any Bearer key for the development tenant. The key is compiled into the
-JavaScript, so **never build a public UI with a real key**.
+## Upload a PDF and ask a question
 
-```powershell
-$env:VITE_API_KEY = "relay-dev-key"; relay ui build
+1. On the Collections page, choose **New collection**, give it a name and create it.
+2. Open **Add documents**, then drop a PDF on the page (or enter an exact arXiv ID such as
+   `1706.03762v7`). Wait until it shows **Ready**.
+3. Open the collection and ask about something the document discusses (for example "How does
+   multi-head attention work?"). Verified sentences appear with citation chips; select a chip
+   to see the passage it cites. A question the documents do not cover is refused.
+
+The sample collection `v1-papers` (three arXiv papers) is ready as soon as the server starts.
+
+## Run the tests
+
+```bash
+pytest                      # 757 backend tests, offline (no API key, no network)
+ruff check .                # lint
+cd web && npm ci && npm run build   # type-check and build the UI (Node.js 20+)
 ```
 
-**Frontend checks** (in `web/`): `npm test` (Jest + React Testing Library), `npm run lint`
-(ESLint with jsx-a11y), and `npm run build` (type-checks, then builds).
+`relay ui build` rebuilds the UI and copies it into `src/relay/app/static/`.
+`cd web && npm test` runs the UI tests.
 
-## Groq probes (`scripts/probe_groq.py`)
+## What is not built
 
-Default is a **dry run** that prints the planned calls and contacts nothing:
+- Fine-tuning of the model.
+- Agents that take actions.
+- Sources other than PDF (plain text and Markdown are planned; nothing else).
+- Enterprise sign-in (SSO). Until V2-10, any API key is accepted for one development tenant.
 
-```powershell
-python scripts/probe_groq.py discover
-python scripts/probe_groq.py baseline --model openai/gpt-oss-20b --max-real-calls 5
-```
-
-A live run (owner-approved runs only) needs all of: `--live`, `--max-real-calls N` covering
-the whole plan, `MAX_REAL_CALLS >= N` in `.env`, and `GROQ_API_KEY`. The `minute-limit` mode
-additionally needs `--owner-approved-rate-limit-probe`. Runs stop at the first daily-scope
-429, at any 429 outside `minute-limit`, and at `DAILY_SAFETY_FRACTION` of the
-`x-ratelimit-*-requests` headers. Exit codes: 0 ok/dry run, 1 failure, 2 refused by a safeguard.
-
-## Paper ingestion (`scripts/ingest_papers.py`)
-
-```powershell
-python scripts/ingest_papers.py            # download missing pinned PDFs from arXiv, then process
-python scripts/ingest_papers.py --offline  # never touch the network (PDFs must exist)
-python scripts/ingest_papers.py --check    # offline; exit 1 if data/papers/manifest.json would change
-```
-
-PDFs (`data/papers/*.pdf`) and generated text/chunks (`data/processed/`) are gitignored and
-regenerable; `data/papers/manifest.json` (checksums, page counts, extraction summary) is tracked.
-
-## Retrieval indexes and evaluation tooling
-
-```powershell
-python scripts/build_indexes.py --download-models  # one time only: fetch models into data/models
-python scripts/build_indexes.py                    # offline build of data/indexes/<preset>
-python scripts/build_indexes.py --check            # rebuild in memory; exit 1 on drift
-python scripts/validate_questions.py               # validate the owner's eval/questions.json
-python scripts/grade_answers.py --help             # propose / show / review / summary
-```
-
-Models (`data/models/`) and indexes (`data/indexes/`) are gitignored. Provenance (model
-revisions, ONNX SHA-256, digests) is in the tracked `data/retrieval_manifest.json`.
-How to write questions: [eval/README.md](eval/README.md).
-
-## Evidence and results
-
-- `evidence/groq_probes/<run_id>/`, `evidence/standin_calibration/<run_id>/`,
-  `evidence/experiments/<run_id>/` hold raw run evidence (tracked in Git).
-- `evidence/canonical_runs.json` lists the runs that make up the canonical results.
-- `results.csv` is produced **only** by:
-
-```powershell
-python scripts/build_results.py            # refuses to replace a differing results.csv
-python scripts/build_results.py --check    # validate only, write nothing
-python scripts/build_results.py --replace  # explicitly regenerate
-```
+More: the v2 design is in [docs/ARCHITECTURE_V2.md](docs/ARCHITECTURE_V2.md), the phase plan
+in [docs/IMPLEMENTATION_PLAN_V2.md](docs/IMPLEMENTATION_PLAN_V2.md), and the v1 runbook
+(probes, evidence, `results.csv`) in the README of tag `v1-submission`.

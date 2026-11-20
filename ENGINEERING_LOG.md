@@ -1514,3 +1514,36 @@
 - **Real Groq calls:** 0. `results.csv` sha256 is unchanged (`8dfb10df…44efd`); `evidence/` is
   unchanged.
 - **Owner approval status:** pending owner decision (options in the final report to the owner).
+
+### Execution Entry
+
+- **Date and time:** 2026-11-20 IST
+- **Phase identifier:** `v2-14`: final parts (report, README, demo scripts)
+- **Status:** completed, pending owner review. No code changes, no load re-runs, no real calls.
+- **Files created:**
+  - `reports/phase-v2-14-load-revalidation.md`: the owner's 5 sections, plus the 14-section
+    record (sections 6–19)
+  - `demo/DEMO_SCRIPT.md`, `demo/STAND_IN_DEMO.md`
+- **Files modified:** `README.md` (rewritten, 132 lines).
+- **Numbers:**
+  - Every table in the report was generated from the run files with `v2_load.metrics`.
+  - The brief's figures that differ from the measured data were replaced by the measured
+    values. The differences are listed in report §14: re-run first-sentence values, the
+    overload recovery counts, phantom tokens about 3,100 rather than about 3,220, steady 6.9 %
+    rather than 8 %, burst_cache_on not coalesced, and tpm_halved noise "not confirmed".
+- **Demo dry runs:** two local `relay serve` runs with the stand-in (sqlite mode, store and
+  uploads in the scratchpad).
+  - Start-up to healthy: 3.9 s.
+  - Upload: ready in 3.8 s; 15 pages, 0 empty.
+  - The brief's "What problem does this paper solve?" is refused up front on a freshly uploaded
+    paper, so it is replaced by "How does multi-head attention work?" (2 verified sentences).
+  - "What is the capital of France?" is answered on `v1-papers` (a Moshi passage), so it is not
+    used as the refusal example.
+  - The boiling-point question is refused in both collections.
+  - The stand-in demo needs `RELAY_CACHE__MODE=sqlite`.
+- **README deviations from the brief, needed for it to work as written:**
+  - sqlite mode, and the one-time papers, models and index setup;
+  - Groq needs the lane swap and `MAX_REAL_CALLS`;
+  - the repository's real clone URL instead of the placeholder;
+  - the v1 runbook is referenced through tag `v1-submission`.
+- **Owner approval status:** pending owner review.
