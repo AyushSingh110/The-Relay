@@ -24,7 +24,7 @@ from relay.store import Store, open_store
 from tests.test_index_registry import FakeEmbedder
 from tests.test_ingest_worker import make_pdf
 
-AUTH = {"Authorization": "Bearer any-dev-key"}
+AUTH = {"Authorization": "Bearer relay-dev-key"}
 
 
 class Api:

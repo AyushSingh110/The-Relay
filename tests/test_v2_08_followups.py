@@ -189,7 +189,7 @@ async def test_conversations_can_be_created_and_read_back(env: Env) -> None:
 
     cid = await speech(env)
     h = harness(env, [answer(ABOUT)])
-    auth = {"Authorization": "Bearer dev"}
+    auth = {"Authorization": "Bearer relay-dev-key"}
     async with httpx.AsyncClient(transport=httpx.ASGITransport(app=h.app),
                                  base_url="http://test") as client:
         created = await client.post("/v1/conversations", json={"collection_id": cid},

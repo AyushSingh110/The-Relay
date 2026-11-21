@@ -52,6 +52,7 @@ def log_fields(record: Mapping[str, Any]) -> dict[str, Any]:
     return {
         "request_id": record.get("request_id"),
         "collection_id": record.get("collection_id"),
+        "tenant_id": record.get("tenant_id"),  # V2-10
         "status": final.get("status"),
         "question_hash": record.get("question_sha256"),
         "ttft_ms": final.get("provider_first_token_ms"),

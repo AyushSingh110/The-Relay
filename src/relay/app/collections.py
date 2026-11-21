@@ -99,6 +99,11 @@ class StoreCollectionResolver:
     def documents(self) -> DocumentRegistry:
         return self._documents
 
+    def forget(self, collection_id: str) -> None:
+        """Drop a deleted collection's loaded index and safety rules (V2-10)."""
+        self._indexes.evict(collection_id)
+        self._safety.pop(collection_id, None)
+
     async def version(self, collection_id: str) -> int:
         collection = await self._store.collections.get_by_id(collection_id)
         if collection is None:

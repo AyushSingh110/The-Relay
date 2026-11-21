@@ -65,6 +65,11 @@ MIGRATIONS: Final[tuple[Migration, ...]] = (
         "ALTER TABLE request_log ADD COLUMN lane_name TEXT;\n"
         "ALTER TABLE request_log ADD COLUMN cost_usd REAL;\n"
         "ALTER TABLE request_log ADD COLUMN escalated INT DEFAULT 0;")),
+    # V2-10 (owner prompt): revocable, named API keys; created_at for `relay keys list`.
+    Migration(7, "api_key revoked, name, created_at", (
+        "ALTER TABLE api_key ADD COLUMN revoked INT DEFAULT 0;\n"
+        "ALTER TABLE api_key ADD COLUMN name TEXT;\n"
+        "ALTER TABLE api_key ADD COLUMN created_at TEXT;")),
 )
 LATEST_VERSION: Final = MIGRATIONS[-1].version
 

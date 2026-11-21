@@ -4,6 +4,10 @@
   relay doctor [--config relay.toml]
   relay ingest                         (stub until V2-03)
   relay ui build [--web-dir web]       build the web UI (npm run build) into relay/app/static
+  relay keys create --tenant T [--role admin|member] [--name N] [--daily-limit N]
+  relay keys list --tenant T           key ids, names, roles, hash prefixes (never the key)
+  relay keys revoke --id K
+  relay tenants create --name N | relay tenants list
 
 Settings: ``relay.toml`` if present, else built-in defaults (see ``relay.example.toml``),
 then ``RELAY_<SECTION>__<KEY>`` environment overrides. Secrets (``GROQ_API_KEY``,
@@ -340,6 +344,71 @@ def ui_build(web_dir: Path, static_dir: Path = STATIC_DIR, *, run: Runner = subp
     return EXIT_OK
 
 
+# --- keys and tenants (V2-10) ----------------------------------------------------------
+
+
+async def keys_command(args: argparse.Namespace, settings: RelaySettings,
+                       out: Out = print) -> int:
+    """API keys in the store at ``paths.store_path``. A raw key is printed once, at
+    creation; only its SHA-256 is stored, so it can never be shown again."""
+    from relay.app.bootstrap import ensure_dev_tenant
+    from relay.store.repositories import ForeignKeyViolationError, InvalidValueError
+
+    async with open_store(settings.paths.store_path) as store:
+        await ensure_dev_tenant(store)
+        if args.keys_command == "create":
+            limit = None if args.daily_limit == 0 else args.daily_limit
+            try:
+                raw, record = await store.api_keys.create(args.tenant, args.role, limit,
+                                                          name=args.name)
+            except ForeignKeyViolationError:
+                out(f"relay keys create: no tenant {args.tenant!r} (relay tenants list)")
+                return EXIT_FAILED
+            except InvalidValueError as exc:
+                out(f"relay keys create: {exc}")
+                return EXIT_FAILED
+            out(raw)
+            out(f"key id {record.id}, tenant {record.tenant_id}, role {record.role}, daily "
+                f"limit {record.daily_limit or 'none'}")
+            out("Store this key now: it is shown only once and cannot be recovered.")
+            return EXIT_OK
+        if args.keys_command == "list":
+            records = await store.api_keys.list_for_tenant(args.tenant)
+            if not records:
+                out(f"no keys for tenant {args.tenant!r}")
+            for r in records:
+                state = "revoked" if r.revoked else "active"
+                out(f"{r.id}  {r.name or '-':<16}  {r.role:<6}  hash {r.key_hash[:12]}…  "
+                    f"{state:<7}  created {r.created_at or '-'}")
+            return EXIT_OK
+        if await store.api_keys.revoke(args.id):
+            out(f"key {args.id} revoked; requests with it now get HTTP 401")
+            return EXIT_OK
+        known = await store.api_keys.get_by_id(args.id)
+        out(f"relay keys revoke: key {args.id} " + ("was already revoked" if known
+                                                    else "does not exist"))
+        return EXIT_FAILED if known is None else EXIT_OK
+
+
+async def tenants_command(args: argparse.Namespace, settings: RelaySettings,
+                          out: Out = print) -> int:
+    from relay.app.bootstrap import ensure_dev_tenant
+
+    async with open_store(settings.paths.store_path) as store:
+        await ensure_dev_tenant(store)
+        if args.tenants_command == "create":
+            if not args.name.strip():
+                out("relay tenants create: the name is blank")
+                return EXIT_FAILED
+            tenant = await store.tenants.create(args.name.strip())
+            out(f"tenant {tenant.id} ({tenant.name}); make a key: relay keys create "
+                f"--tenant {tenant.id}")
+            return EXIT_OK
+        for tenant in await store.tenants.list_all():
+            out(f"{tenant.id}  {tenant.name}  created {tenant.created_at}")
+        return EXIT_OK
+
+
 # --- entry point -----------------------------------------------------------------------
 
 
@@ -362,6 +431,24 @@ def parse_args(argv: Sequence[str] | None) -> argparse.Namespace:
     build = ui_sub.add_parser("build", help="npm run build in web/, copied to the API's static")
     build.add_argument("--web-dir", type=Path, default=DEFAULT_WEB_DIR,
                        help="the web project (default: the repository's web/)")
+    keys = sub.add_parser("keys", help="API keys (stored hashed; shown once)")
+    keys.add_argument("--config", type=Path, default=None)
+    keys_sub = keys.add_subparsers(dest="keys_command", required=True)
+    create = keys_sub.add_parser("create", help="make a key; prints it ONCE")
+    create.add_argument("--tenant", required=True)
+    create.add_argument("--role", choices=("admin", "member"), default="member")
+    create.add_argument("--name", default=None)
+    create.add_argument("--daily-limit", type=int, default=1000,
+                        help="/v1/ask requests per UTC day (0: no limit; default 1000)")
+    listing = keys_sub.add_parser("list", help="a tenant's keys (never the keys themselves)")
+    listing.add_argument("--tenant", required=True)
+    revoke = keys_sub.add_parser("revoke", help="revoke a key (its requests get 401)")
+    revoke.add_argument("--id", required=True)
+    tenants = sub.add_parser("tenants", help="tenants")
+    tenants.add_argument("--config", type=Path, default=None)
+    tenants_sub = tenants.add_subparsers(dest="tenants_command", required=True)
+    tenants_sub.add_parser("create", help="add a tenant").add_argument("--name", required=True)
+    tenants_sub.add_parser("list", help="list the tenants")
     return parser.parse_args(argv)
 
 
@@ -371,6 +458,14 @@ def main(argv: Sequence[str] | None = None) -> int:
         return ingest()
     if args.command == "ui":
         return ui_build(args.web_dir)
+    if args.command in ("keys", "tenants"):
+        try:
+            settings = load_relay_settings(args.config)
+            run = keys_command if args.command == "keys" else tenants_command
+            return asyncio.run(run(args, settings))
+        except (ConfigurationError, RelayError) as exc:
+            print(f"relay {args.command}: {sanitize_error(exc)}", file=sys.stderr)
+            return EXIT_FAILED
     try:
         settings, env, source = _load(args.config, args.env_file)
         if args.command == "doctor":

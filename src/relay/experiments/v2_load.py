@@ -66,7 +66,7 @@ V1_RUNS: Final[dict[str, str]] = {
     "tpm_halved": "exp-20261113T080532Z-c26f18c",
     "overload": "exp-20261113T074816Z-c26f18c",
 }
-AUTH: Final = "Bearer relay-load-harness"  # any Bearer key is the dev tenant until V2-10
+AUTH: Final = "Bearer relay-dev-key"  # the development key (V2-10: real keys are checked)
 DRAIN_TIMEOUT_S: Final = 180.0
 _FROZEN = ConfigDict(frozen=True, extra="forbid")
 

@@ -15,17 +15,19 @@ embedding and rerank models for collections load on first use.
 from __future__ import annotations
 
 import asyncio
+import ipaddress
 import logging
 import os
 from collections.abc import AsyncGenerator, Mapping
 from contextlib import AsyncExitStack, asynccontextmanager
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from pathlib import Path
 from typing import Final
 
 from fastapi import FastAPI
 
 from relay.api.app import MeteredProvider, RelayService, create_app
+from relay.api.auth import DEV_KEY, Authenticator
 from relay.api.routes.ask_v1 import AskV1Context, ask_v1_router
 from relay.app.bootstrap import V1_PRESET, ensure_dev_tenant, register_v1_papers
 from relay.app.collections import LazyEmbedder, LazyReranker, StoreCollectionResolver
@@ -150,6 +152,30 @@ def capacity_derivation(settings: RelaySettings) -> CapacityDerivation:
     if q.capacity is None:
         return derived
     return derived.model_copy(update={"capacity": q.capacity})
+
+
+def dev_key_enabled(settings: RelaySettings) -> bool:
+    """``[auth] dev_key_enabled``, or (unset) whether the server listens on loopback only."""
+    if settings.auth.dev_key_enabled is not None:
+        return settings.auth.dev_key_enabled
+    host = settings.server.host.strip("[]")
+    if host == "localhost":
+        return True
+    try:
+        return ipaddress.ip_address(host).is_loopback
+    except ValueError:
+        return False  # a host name other than localhost: assume it is reachable
+
+
+def admission_queue(settings: RelaySettings, capacity: CapacityDerivation) -> AdmissionQueue:
+    """The queue with per-tenant buckets, priorities and (unless the capacity is set by
+    hand) a capacity that follows the measured tokens per answer (V2-10)."""
+    q = settings.queue
+    return AdmissionQueue.from_derivation(
+        capacity, max_active=q.max_active or settings.guard.max_concurrency,
+        tenant_rate_per_s=capacity.service_rate_per_s * q.tenant_rate_share,
+        tenant_burst=q.tenant_burst, adaptive=q.adaptive_capacity and q.capacity is None,
+        ewma_alpha=q.ewma_alpha)
 
 
 def cache_mode(settings: RelaySettings) -> str:
@@ -353,8 +379,7 @@ async def open_runtime(settings: RelaySettings, env: Settings, *,
                 is_reasoning_model=spec.is_reasoning_model,
                 reasoning_effort=spec.reasoning_effort, escalate_to=spec.escalate_to))
         router = ProviderRouter(lanes, max_wait_ms=settings.providers.max_wait_ms)
-        queue = AdmissionQueue.from_derivation(
-            capacity, max_active=settings.queue.max_active or settings.guard.max_concurrency)
+        queue = admission_queue(settings, capacity)
         app = create_app(
             router=router, retrievers=retrievers,
             top_k={name: RETRIEVAL_SETTINGS[name].top_k for name in retrievers},
@@ -369,9 +394,27 @@ async def open_runtime(settings: RelaySettings, env: Settings, *,
         app.state.relay.rewriter, rewrite_note = make_rewriter(
             settings, lane, rewrite_generator(settings, router))
         ask_v1: AskV1Context | None = None
+        auth_note = "auth: /v1 routes are off (no metadata store)"
         if collections is not None and store is not None:
-            app.include_router(ingestion_router(collections.routes))
-            ask_v1 = AskV1Context(service=app.state.relay, store=store)
+            dev = dev_key_enabled(settings)
+            auth = Authenticator(store, dev_key=DEV_KEY if dev else None)
+            service: RelayService = app.state.relay
+            resolver = collections.resolver
+
+            ask_v1 = AskV1Context(service=service, store=store, auth=auth)
+            context = ask_v1
+
+            def forget(collection_id: str) -> None:  # a deleted collection
+                context.forget(collection_id)  # in-flight answers: no cache, no log
+                if service.cache is not None:
+                    service.cache.purge_collection(collection_id)
+                resolver.forget(collection_id)
+
+            app.include_router(ingestion_router(replace(collections.routes, auth=auth,
+                                                        on_deleted=forget)))
+            auth_note = ("auth: API keys (relay keys create); development key "
+                         + ("accepted (loopback only)" if dev and settings.auth.dev_key_enabled
+                            is None else "accepted" if dev else "NOT accepted"))
             app.include_router(ask_v1_router(ask_v1))
             stack.push_async_callback(ask_v1.aclose)  # runs first: before provider and store
         mount_ui(app)  # V2-06: the built web UI at / (after the API routes)
@@ -381,7 +424,7 @@ async def open_runtime(settings: RelaySettings, env: Settings, *,
                       collections=None if collections is None else collections.resolver,
                       ingest_worker=None if collections is None else collections.worker,
                       notes=(l4_note, rewrite_note) if collections is None
-                      else (collections.note, l4_note, rewrite_note),
+                      else (collections.note, l4_note, rewrite_note, auth_note),
                       ask_v1=ask_v1, fallback_lanes=tuple(settings.lanes[1:]))
 
 
@@ -405,6 +448,6 @@ async def _open_provider(lane: LaneSettings, env: Settings, stack: AsyncExitStac
     return provider, url, source
 
 
-__all__ = ["Runtime", "cache_mode", "capacity_derivation", "corpus_sha256", "guard_config",
-           "lane_pricing", "make_rewriter", "open_runtime", "rewrite_generator",
-           "standin_profile"]
+__all__ = ["Runtime", "admission_queue", "cache_mode", "capacity_derivation", "corpus_sha256",
+           "dev_key_enabled", "guard_config", "lane_pricing", "make_rewriter", "open_runtime",
+           "rewrite_generator", "standin_profile"]

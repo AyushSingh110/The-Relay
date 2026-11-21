@@ -49,16 +49,17 @@ import re
 import uuid
 from collections.abc import AsyncIterator, Callable, Hashable
 from dataclasses import dataclass, field
-from typing import Annotated, Any, Final
+from typing import Annotated, Any, Final, Literal
 
 from fastapi import APIRouter, Request
 from fastapi.responses import JSONResponse, Response, StreamingResponse
 from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
 from relay.api.app import UNAVAILABLE_MESSAGES, AskRequest, AskTarget, RelayService
+from relay.api.auth import Authenticator
 from relay.app.bootstrap import V1_COLLECTION_ID
-from relay.app.routes.ingestion import Rejected, caller_tenant
-from relay.control.admission import AdmissionRejectedError
+from relay.app.routes.rejected import Rejected
+from relay.control.admission import AdmissionRejectedError, Priority
 from relay.control.cache import CachedAnswer, CachedSource, normalise_question, question_hash
 from relay.control.pricing import total_cost
 from relay.errors import sanitize_error
@@ -106,6 +107,9 @@ class AskV1Body(BaseModel):
     # it bounds the provider guard's quota waits and retries, and a coalesced follower's
     # wait. It does not cut off an answer already being generated. None: no deadline.
     deadline_ms: Annotated[int, Field(gt=0)] | None = None
+    # V2-10: interactive (the UI, the default) is admitted before batch, and batch is shed
+    # first when the queue is full
+    priority: Literal["interactive", "batch"] = "interactive"
 
 
 # --- Replay channel ----------------------------------------------------------------------
@@ -183,6 +187,22 @@ class AskV1Context:
     keepalive_s: float = DEFAULT_KEEPALIVE_S
     default_collection_id: str = V1_COLLECTION_ID
     flights: dict[Hashable, Flight] = field(default_factory=dict)
+    auth: Authenticator | None = None  # V2-10; None: one over ``store`` (dev key on)
+    # V2-10: collections deleted while this process runs. An answer still in flight for
+    # one is delivered, but neither cached nor logged (its logs were deleted with it).
+    deleted: set[str] = field(default_factory=set)
+
+    def __post_init__(self) -> None:
+        if self.auth is None and self.store is not None:
+            self.auth = Authenticator(self.store)
+
+    def forget(self, collection_id: str) -> None:
+        self.deleted.add(collection_id)
+
+    def record(self, record: dict[str, Any]) -> None:
+        """A request trace, unless its collection has been deleted."""
+        if record.get("collection_id") not in self.deleted:
+            self.service.record_trace(record)
 
     async def aclose(self) -> None:
         """Shutdown: cancel every live flight (its generation and queue slot) and wait."""
@@ -381,7 +401,8 @@ def _shed_summary(error_code: str, *, setting: str, buffered: bool,
 async def _lead(ctx: AskV1Context, flight: Flight, target: AskTarget, *, request_id: str,
                 collection_id: str, buffered: bool, go: asyncio.Event,
                 deadline_ns: int | None = None,
-                scorer: EntailmentScore | None = None) -> None:
+                scorer: EntailmentScore | None = None, tenant: str | None = None,
+                priority: str = Priority.INTERACTIVE) -> None:
     channel, service = flight.channel, ctx.service
     ask = target.ask
     setting = ask.retrieval_setting or ""
@@ -393,7 +414,8 @@ async def _lead(ctx: AskV1Context, flight: Flight, target: AskTarget, *, request
         try:
             async with service.queue.admit(deadline_ns=deadline_ns,
                                            is_connected=lambda: channel.subscribers > 0,
-                                           on_queued=channel.queued) as ticket:
+                                           on_queued=channel.queued, tenant=tenant,
+                                           priority=priority) as ticket:
                 depth = ticket.queue_depth_at_entry
                 channel.status("retrieving")
                 plan = await service.pipeline.prepare_streaming(PipelineRequest(
@@ -409,12 +431,18 @@ async def _lead(ctx: AskV1Context, flight: Flight, target: AskTarget, *, request
                     outcome, released = await _streamed(ctx, channel, plan, spans, live,
                                                         deadline_ns, scorer)
         except AdmissionRejectedError as shed:
-            channel.publish(_SUMMARY, _shed_summary(shed.error_code, setting=setting,
-                                                    buffered=buffered,
-                                                    depth=shed.queue_depth_at_entry))
+            summary = _shed_summary(shed.error_code, setting=setting, buffered=buffered,
+                                    depth=shed.queue_depth_at_entry)
+            summary["shed_reason"] = shed.reason  # V2-10: e.g. shed_for_priority
+            channel.publish(_SUMMARY, summary)
             return
-        # Fully verified answers and verified refusals only (never a partial answer).
+        if outcome.provider_called and outcome.usage_source == "provider":
+            # V2-10: the queue's capacity follows the measured tokens per answer (EWMA)
+            service.queue.observe_tokens(outcome.tokens_in + outcome.tokens_out)
+        # Fully verified answers and verified refusals only (never a partial answer), and
+        # never for a collection deleted while it was being answered.
         if (service.cache is not None and outcome.delivered_text is not None
+                and collection_id not in ctx.deleted
                 and (outcome.kind, outcome.verification_verdict) in (
                     ("answer", "VERIFIED"), ("llm_refusal", "REFUSAL_VERIFIED"))):
             try:
@@ -534,7 +562,8 @@ async def _cached(ctx: AskV1Context, hit: CachedAnswer, *, request_id: str,
                   arrived_ns: int, collection_id: str, buffered: bool,
                   setting: str, accepted_sent: bool = False,
                   conversation: ConversationLog | None = None,
-                  rewrite: Rewrite | None = None) -> AsyncIterator[bytes]:
+                  rewrite: Rewrite | None = None,
+                  tenant: str | None = None) -> AsyncIterator[bytes]:
     clock = ctx.service.clock
     if not accepted_sent:
         yield sse("accepted", {"request_id": request_id, "queue_position": 0,
@@ -570,16 +599,17 @@ async def _cached(ctx: AskV1Context, hit: CachedAnswer, *, request_id: str,
              "rewritten_question": None if rewrite is None else rewrite.question,
              **_route_fields(None)}
     _charge(final, rewrite)
-    ctx.service.record_trace(_request_record(request_id, hit_question=None, final=final,
-                                             collection_id=collection_id, role="cache_hit"))
+    ctx.record(_request_record(request_id, hit_question=None, final=final,
+                               collection_id=collection_id, role="cache_hit", tenant=tenant))
     await _record_turn(ctx, conversation, final, sentences, request_id)
     yield sse("final", final)
 
 
 def _request_record(request_id: str, *, hit_question: str | None, final: dict[str, Any],
-                    collection_id: str, role: str) -> dict[str, Any]:
+                    collection_id: str, role: str, tenant: str | None = None
+                    ) -> dict[str, Any]:
     return {"record": "request", "endpoint": "/v1/ask", "request_id": request_id,
-            "role": role, "collection_id": collection_id,
+            "role": role, "collection_id": collection_id, "tenant_id": tenant,
             "question_sha256": None if hit_question is None else question_hash(hit_question),
             "final": {"status": final["status"], "cache_status": final["cache_status"],
                       "verification_verdict": final["verdict"],
@@ -597,7 +627,8 @@ async def _respond(ctx: AskV1Context, target: AskTarget, *, request_id: str, arr
                    scorer: EntailmentScore | None = None,
                    accepted_sent: bool = False,
                    conversation: ConversationLog | None = None,
-                   rewrite: Rewrite | None = None) -> AsyncIterator[bytes]:
+                   rewrite: Rewrite | None = None, tenant: str | None = None,
+                   priority: str = Priority.INTERACTIVE) -> AsyncIterator[bytes]:
     """One request. ``target.ask.question`` is the standalone question (a follow-up arrives
     here already rewritten, with ``accepted`` already sent)."""
     service, ask = ctx.service, target.ask
@@ -612,7 +643,8 @@ async def _respond(ctx: AskV1Context, target: AskTarget, *, request_id: str, arr
             async for chunk in _cached(ctx, hit, request_id=request_id, arrived_ns=arrived_ns,
                                        collection_id=collection_id, buffered=buffered,
                                        setting=setting, accepted_sent=accepted_sent,
-                                       conversation=conversation, rewrite=rewrite):
+                                       conversation=conversation, rewrite=rewrite,
+                                       tenant=tenant):
                 yield chunk
             return
     key: Hashable = (normalise_question(ask.question), target.cache_setting, buffered)
@@ -628,7 +660,8 @@ async def _respond(ctx: AskV1Context, target: AskTarget, *, request_id: str, arr
     if not follower:  # created now (so a disconnect can cancel it), started after accepted
         channel.task = asyncio.create_task(_lead(
             ctx, flight, target, request_id=request_id, collection_id=collection_id,
-            buffered=buffered, go=go, deadline_ns=deadline_ns, scorer=scorer),
+            buffered=buffered, go=go, deadline_ns=deadline_ns, scorer=scorer,
+            tenant=tenant, priority=priority),
             name=f"v1-ask-{request_id}")
         channel.task.add_done_callback(lambda _: _forget(ctx, flight))
     try:
@@ -688,9 +721,10 @@ async def _respond(ctx: AskV1Context, target: AskTarget, *, request_id: str, arr
                                   # its row must not count the leader's lane or escalation
                                   **_route_fields(None)})
                 _charge(final, rewrite)
-                service.record_trace(_request_record(
+                ctx.record(_request_record(
                     request_id, hit_question=ask.question, final=final,
-                    collection_id=collection_id, role="follower" if follower else "leader"))
+                    collection_id=collection_id, role="follower" if follower else "leader",
+                    tenant=tenant))
                 await _record_turn(ctx, conversation, final, sentences, request_id)
                 yield sse("final", final)
                 return
@@ -737,6 +771,12 @@ async def _follow_up(ctx: AskV1Context, target: AskTarget, turns: list[Turn],
         yield chunk
 
 
+def _authenticator(ctx: AskV1Context) -> Authenticator:
+    if ctx.auth is None:
+        raise RuntimeError("AskV1Context has no authenticator")
+    return ctx.auth
+
+
 class CreateConversation(BaseModel):
     model_config = ConfigDict(frozen=True, strict=True, extra="forbid")
 
@@ -759,8 +799,12 @@ def ask_v1_router(ctx: AskV1Context) -> APIRouter:
     async def ask_v1(request: Request) -> Response:
         service = ctx.service
         arrived_ns = service.clock()
+        auth = ctx.auth
+        if auth is None:
+            raise RuntimeError("AskV1Context has no authenticator")
         try:
-            tenant = caller_tenant(request)
+            caller = await auth.authenticate(request)
+            tenant = caller.tenant_id
             body = AskV1Body.model_validate_json(await request.body())
             if not body.question.strip():
                 raise Rejected(422, "invalid_request", "the question is blank")
@@ -781,6 +825,7 @@ def ask_v1_router(ctx: AskV1Context) -> APIRouter:
             request_id = f"v1ask-{uuid.uuid4().hex}"
             target = await service.target(AskRequest(
                 request_id=request_id, question=body.question, collection_id=collection_id))
+            auth.charge(caller)  # the key's daily limit (429 past it), once it is accepted
         except Rejected as exc:
             return _error(exc.status, exc.code, str(exc))
         except ValidationError as exc:
@@ -797,7 +842,8 @@ def ask_v1_router(ctx: AskV1Context) -> APIRouter:
             "buffered": collection.buffered,
             "scorer": service.entailment if collection.l4_enabled else None,
             "deadline_ns": None if body.deadline_ms is None
-            else arrived_ns + body.deadline_ms * _NS_PER_MS}
+            else arrived_ns + body.deadline_ms * _NS_PER_MS,
+            "tenant": tenant, "priority": body.priority}
         if turns and body.conversation_id is not None:  # a follow-up: rewrite first
             stream = _follow_up(ctx, target, turns, body.conversation_id, **respond)
         else:  # a first question: no rewrite (no model call, no latency)
@@ -811,7 +857,7 @@ def ask_v1_router(ctx: AskV1Context) -> APIRouter:
     @router.post("/conversations")
     async def create_conversation(request: Request) -> Response:
         try:
-            tenant = caller_tenant(request)
+            tenant = (await _authenticator(ctx).authenticate(request)).tenant_id
             body = CreateConversation.model_validate_json(await request.body())
             collection = await ctx.store.collections.get_by_id(body.collection_id)
             if collection is None or collection.tenant_id != tenant:
@@ -827,7 +873,7 @@ def ask_v1_router(ctx: AskV1Context) -> APIRouter:
     @router.get("/conversations/{conversation_id}")
     async def get_conversation(conversation_id: str, request: Request) -> Response:
         try:
-            tenant = caller_tenant(request)
+            tenant = (await _authenticator(ctx).authenticate(request)).tenant_id
             found = await ctx.store.conversations.get_by_id(conversation_id)
             collection = None if found is None else await ctx.store.collections.get_by_id(
                 found.collection_id)

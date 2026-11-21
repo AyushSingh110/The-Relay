@@ -64,6 +64,19 @@ daily_safety_fraction = 0.75     # stop new calls at 75 % of the daily limit
 [queue]
 patience_median_s = 20.0
 tokens_per_answer = 1513.0       # v1 P07: mean tokens per answer, real small_fast
+# Fair admission (V2-10). Each tenant's bucket refills at this share of the service rate;
+# a request over it is not refused, it waits behind other tenants' requests that are
+# within their rate. "interactive" requests go before "batch", and batch is shed first.
+tenant_rate_share = 0.5
+tenant_burst = 4.0               # requests a tenant may send at once before it is over rate
+adaptive_capacity = true         # capacity follows the measured tokens per answer (EWMA)
+ewma_alpha = 0.2
+
+# API keys (V2-10): `relay tenants create --name N`, then `relay keys create --tenant T`.
+# Keys are stored as SHA-256 hashes and printed once. The development key "relay-dev-key"
+# (the web UI's default) is accepted only while the server listens on loopback, unless set.
+[auth]
+# dev_key_enabled = false
 
 # Relative paths resolve against the working directory: run from the repository root.
 [paths]

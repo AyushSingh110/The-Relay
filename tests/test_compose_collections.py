@@ -28,7 +28,7 @@ from tests.test_ingest_worker import make_pdf
 from tests.test_pipeline_and_verifier import PASSAGES, StubRetriever
 from tests.test_standin import MODEL, profile
 
-AUTH = {"Authorization": "Bearer dev"}
+AUTH = {"Authorization": "Bearer relay-dev-key"}
 PAPERS_DIR, INDEX_DIR, MODELS_DIR = Path("data/papers"), Path("data/indexes"), Path("data/models")
 HAVE_V1_INDEX = (INDEX_DIR / "small_fast" / INDEX_MANIFEST).is_file() and MODELS_DIR.is_dir()
 

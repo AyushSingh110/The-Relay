@@ -129,7 +129,8 @@ class Stream:
         return next(t for t, n, _ in self.events if n == name)
 
 
-async def ask(app: Any, body: dict[str, Any], *, auth: str | None = "Bearer dev",
+async def ask(app: Any, body: dict[str, Any], *,
+              auth: str | None = "Bearer relay-dev-key",
               gone: asyncio.Event | None = None,
               on_event: Any = None) -> Stream:
     payload = json.dumps(body).encode("utf-8")

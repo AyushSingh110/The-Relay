@@ -124,7 +124,8 @@ async def test_a_malformed_stream_is_a_protocol_error_not_a_transport_error() ->
 
     async with httpx.AsyncClient(transport=httpx.MockTransport(handler),
                                  base_url="http://test") as client:
-        result = await stream_one(client, "q", "a?", collection_id=None, auth="Bearer x")
+        result = await stream_one(client, "q", "a?", collection_id=None,
+                                  auth="Bearer relay-dev-key")
     assert (result.http_status, result.error_code) == (-1, "protocol:JSONDecodeError")
 
 

@@ -129,6 +129,24 @@ class QueueSettings(BaseModel):
     tokens_per_answer: Annotated[float, Field(gt=0.0)] = 1513.0  # v1 P07, real small_fast
     capacity: PositiveInt | None = None  # explicit override of the derived capacity
     max_active: PositiveInt | None = None  # default: the guard's max_concurrency
+    # V2-10 fair admission. Each tenant's bucket refills at this share of the service rate;
+    # a request over it is not refused, it waits behind requests within their rate.
+    tenant_rate_share: Annotated[float, Field(gt=0.0, le=1.0)] = 0.5
+    tenant_burst: Annotated[float, Field(ge=1.0)] = 4.0  # requests a tenant may send at once
+    # re-derive the capacity from an EWMA of measured tokens per answer (off when
+    # `capacity` is set explicitly)
+    adaptive_capacity: bool = True
+    ewma_alpha: Annotated[float, Field(gt=0.0, le=1.0)] = 0.2
+
+
+class AuthSettings(BaseModel):
+    """API keys (V2-10). Keys are made with ``relay keys create``; only their SHA-256 is
+    stored. The development key ``relay-dev-key`` (the web UI's default) is the development
+    tenant: ``None`` accepts it only while the server listens on a loopback address."""
+
+    model_config = _MODEL
+
+    dev_key_enabled: bool | None = None
 
 
 class PathSettings(BaseModel):
@@ -244,6 +262,7 @@ class RelaySettings(BaseModel):
     ingestion: IngestionSettings = IngestionSettings()
     verifier: VerifierSettings = VerifierSettings()
     rewriter: RewriterSettings = RewriterSettings()
+    auth: AuthSettings = AuthSettings()
 
     @model_validator(mode="before")
     @classmethod
@@ -356,6 +375,7 @@ def load_relay_settings(path: Path | None = None, *,
 __all__ = [
     "CALIBRATED_PROFILE",
     "DEFAULT_CONFIG_FILE",
+    "AuthSettings",
     "CacheSettings",
     "GuardSettings",
     "IngestionSettings",

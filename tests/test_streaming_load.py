@@ -45,7 +45,7 @@ async def test_steady_streaming_records_first_status_and_first_sentence(env: Env
     async with serve_app_on_loopback(harness.app) as base_url, httpx.AsyncClient(
             base_url=base_url, timeout=30) as client:
         results = await run_streaming_scenario(client, scenario, questions,
-                                               collection_id=cid, auth="Bearer dev")
+                                               collection_id=cid, auth="Bearer relay-dev-key")
     summary = summarise_streaming(scenario, results)
     assert summary["requests"] == 5 and summary["http_200"] == 5
     assert summary["first_sentence_ms"]["n"] == 5
@@ -66,7 +66,7 @@ async def test_a_failed_stream_is_recorded_and_does_not_abort_the_run() -> None:
     async with httpx.AsyncClient(transport=httpx.MockTransport(handler),
                                  base_url="http://test") as client:
         results = await run_streaming_scenario(client, scenario, [("q1", "a?"), ("q2", "b?")],
-                                               collection_id=None, auth="Bearer dev")
+                                               collection_id=None, auth="Bearer relay-dev-key")
     assert [(r.http_status, r.error_code) for r in results] == [(0, "ConnectError")] * 2
     assert summarise_streaming(scenario, results)["http_200"] == 0
 
@@ -80,7 +80,7 @@ async def test_warm_up_rounds_are_reported_apart_from_the_steady_numbers(env: En
     async with serve_app_on_loopback(harness.app) as base_url, httpx.AsyncClient(
             base_url=base_url, timeout=30) as client:
         results = await run_streaming_scenario(client, scenario, questions,
-                                               collection_id=cid, auth="Bearer dev")
+                                               collection_id=cid, auth="Bearer relay-dev-key")
     assert [r.round for r in results] == [-1, -1, 0, 0]
     summary = summarise_streaming(scenario, results)
     assert summary["requests"] == 2 and summary["warmup"]["requests"] == 2

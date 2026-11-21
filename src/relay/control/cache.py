@@ -130,6 +130,15 @@ class ExactCache:
             self._entries.popitem(last=False)  # least recently used
         return True
 
+    def purge_collection(self, collection_id: str) -> int:
+        """Remove every answer cached for one collection (V2-10: a deleted collection).
+        Its keys carry ``setting@<collection_id>:v<version>:...``; returns the count."""
+        marker = f"@{collection_id}:"
+        doomed = [key for key in self._entries if marker in key[1]]
+        for key in doomed:
+            del self._entries[key]
+        return len(doomed)
+
     def clear(self) -> None:
         self._entries.clear()
         self.hits = self.misses = self.rejected = 0

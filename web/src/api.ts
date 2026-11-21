@@ -1,7 +1,7 @@
 // The Relay's HTTP API as the UI uses it (docs/ARCHITECTURE_V2.md §9). Every /v1 request
 // carries the Bearer key; errors come back as ApiError with the server's stable code.
 
-import { API_KEY, TENANT_ID } from "./buildConfig";
+import { API_KEY } from "./buildConfig";
 import { SSEParser } from "./sse";
 
 export type Preset = "small_fast" | "large_wide" | "balanced_rerank";
@@ -122,6 +122,17 @@ export interface Health {
   trace_sink?: { written: number; failed: number; dropped: number; pending: number };
 }
 
+/** GET /v1/whoami (V2-10): the tenant and key the UI is using (never the key itself). */
+export interface WhoAmI {
+  tenant_id: string;
+  tenant_name: string | null;
+  key_id: string | null;
+  role: string;
+  dev_key: boolean;
+  key: string;
+  daily_limit: number | null;
+}
+
 export interface RelayApi {
   listCollections(): Promise<Collection[]>;
   createCollection(input: { name: string; retrieval_preset: Preset }): Promise<{ id: string }>;
@@ -129,6 +140,7 @@ export interface RelayApi {
   addArxiv(collectionId: string, arxivId: string): Promise<Added>;
   getDocument(documentId: string): Promise<DocumentState>;
   health(): Promise<Health>;
+  whoami(): Promise<WhoAmI>;
   /** A new conversation in the collection: follow-up questions are read in its context. */
   createConversation(collectionId: string): Promise<{ id: string }>;
   /** Resolves when the stream ends; ``sawFinal`` is false if it ended early. */
@@ -189,7 +201,8 @@ export function createHttpApi(fetchImpl: typeof fetch = (...args) => fetch(...ar
       return (await call<{ collections: Collection[] }>("/v1/collections")).collections;
     },
     createCollection(input) {
-      return call("/v1/collections", json({ name: input.name, tenant_id: TENANT_ID,
+      // V2-10: the server creates it for the API key's own tenant
+      return call("/v1/collections", json({ name: input.name,
         retrieval_preset: input.retrieval_preset }));
     },
     uploadPdf(collectionId, file) {
@@ -209,6 +222,9 @@ export function createHttpApi(fetchImpl: typeof fetch = (...args) => fetch(...ar
     },
     createConversation(collectionId) {
       return call("/v1/conversations", json({ collection_id: collectionId }));
+    },
+    whoami() {
+      return call("/v1/whoami");
     },
     async health() {
       const response = await fetchImpl("/healthz");

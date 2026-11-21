@@ -55,15 +55,23 @@ test("an error reply becomes an ApiError with the server's code and message", as
   );
 });
 
-test("collections are created for the configured tenant", async () => {
+test("collections are created for the key's own tenant (V2-10: no tenant id is sent)", async () => {
   const calls: Call[] = [];
   const api = createHttpApi(fakeFetch({ status: 201, json: { id: "c", name: "x", version: 0 } }, calls));
   await api.createCollection({ name: "x", retrieval_preset: "balanced_rerank" });
   expect(JSON.parse(String(calls[0]?.init.body))).toEqual({
     name: "x",
-    tenant_id: "dev",
     retrieval_preset: "balanced_rerank",
   });
+});
+
+test("whoami asks who the key belongs to", async () => {
+  const calls: Call[] = [];
+  const who = { tenant_id: "acme", tenant_name: "Acme", key_id: "k1", role: "member",
+    dev_key: false, key: "rel_live_… (id k1)", daily_limit: 1000 };
+  const api = createHttpApi(fakeFetch({ status: 200, json: who }, calls));
+  expect(await api.whoami()).toEqual(who);
+  expect(calls[0]?.url).toBe("/v1/whoami");
 });
 
 test("ask streams parsed events and reports whether a final arrived", async () => {

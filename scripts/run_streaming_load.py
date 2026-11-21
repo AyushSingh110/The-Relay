@@ -75,7 +75,7 @@ async def run(args: argparse.Namespace) -> int:
                     base_url=base_url, timeout=120) as client:
                 results = await run_streaming_scenario(
                     client, scenario, questions, collection_id=V1_COLLECTION_ID,
-                    auth="Bearer local-dev")
+                    auth="Bearer relay-dev-key")
             describe = runtime.describe()
     summary = summarise_streaming(scenario, results)
     p50 = summary["first_sentence_ms"]["p50"]

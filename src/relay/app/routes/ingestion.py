@@ -29,6 +29,7 @@ import hashlib
 import json
 import logging
 import os
+import shutil
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -41,7 +42,8 @@ from fastapi.responses import JSONResponse
 from pydantic import BaseModel, ConfigDict, Field, ValidationError
 from starlette.datastructures import UploadFile
 
-from relay.app.bootstrap import DEV_TENANT_ID
+from relay.app.bootstrap import V1_COLLECTION_ID
+from relay.app.routes.rejected import Rejected
 from relay.errors import sanitize_error
 from relay.ingestion.arxiv_fetcher import (
     MAX_PDF_BYTES,
@@ -54,7 +56,13 @@ from relay.ingestion.registry import arxiv_source
 from relay.ingestion.worker import FileLocator, read_extraction_quality
 from relay.retrieval.hybrid_index import RETRIEVAL_SETTINGS
 from relay.store import Store
-from relay.store.repositories import Collection, Document, IngestJob
+from relay.store.repositories import (
+    Collection,
+    CollectionBusyError,
+    Document,
+    IngestJob,
+    NotFoundError,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -69,7 +77,8 @@ class CreateCollection(BaseModel):
     model_config = _STRICT
 
     name: Annotated[str, Field(min_length=1, max_length=128)]
-    tenant_id: Annotated[str, Field(min_length=1, max_length=64)]
+    # V2-10: optional; the collection always belongs to the API key's own tenant
+    tenant_id: Annotated[str, Field(min_length=1, max_length=64)] | None = None
     retrieval_preset: Annotated[str, Field(max_length=64)] = "small_fast"
     rerank: bool = False
     buffered: bool = False  # V2-05: POST /v1/ask answers in one piece for this collection
@@ -92,15 +101,10 @@ class IngestionContext:
     fetch_arxiv: ArxivFetch | None = None
     # serialises de-duplication and row creation (one process, one event loop)
     lock: asyncio.Lock = field(default_factory=asyncio.Lock)
-
-
-class Rejected(Exception):
-    """A request that is refused with ``status`` and a stable ``code``."""
-
-    def __init__(self, status: int, code: str, message: str) -> None:
-        super().__init__(message)
-        self.status = status
-        self.code = code
+    # V2-10: the API-key check (None: a default one over ``store`` with the dev key on),
+    # and what else must forget a deleted collection (answer cache, loaded index)
+    auth: Any = None
+    on_deleted: Callable[[str], None] | None = None
 
 
 def _error(status: int, code: str, message: str, **extra: Any) -> JSONResponse:
@@ -114,14 +118,6 @@ def _invalid(exc: ValidationError) -> JSONResponse:
     return _error(422, "invalid_request", "the request body is not valid",
                   details=[{"loc": [str(p) for p in err["loc"]], "type": err["type"]}
                            for err in exc.errors()])
-
-
-def caller_tenant(request: Request) -> str:
-    """Stub of the V2-05 API-key check: any Bearer key is the development tenant."""
-    scheme, _, key = request.headers.get("authorization", "").partition(" ")
-    if scheme.lower() != "bearer" or not key.strip():
-        raise Rejected(401, "unauthorized", "an API key is required: Authorization: Bearer <key>")
-    return DEV_TENANT_ID
 
 
 # --- PDF checks ------------------------------------------------------------------------
@@ -220,9 +216,24 @@ def _document_view(d: Document, job: IngestJob | None,
 # --- Router ----------------------------------------------------------------------------
 
 
+def _remove_collection_files(index_dir: Path, uploads: list[Path]) -> None:
+    """Blocking (run it in a thread): the collection's own folder (index builds, extraction
+    reports) and the upload files no other document uses."""
+    if index_dir.is_dir() and not index_dir.is_symlink():
+        shutil.rmtree(index_dir)
+    for path in uploads:
+        path.unlink(missing_ok=True)
+
+
 def ingestion_router(ctx: IngestionContext) -> APIRouter:
+    from relay.api.auth import Authenticator, TenantContext, require_admin
+
     router = APIRouter(prefix="/v1")
     store = ctx.store
+    auth: Authenticator = ctx.auth if ctx.auth is not None else Authenticator(store)
+
+    async def caller(request: Request) -> TenantContext:
+        return await auth.authenticate(request)
 
     async def own_collection(collection_id: str, tenant: str) -> Collection:
         collection = await store.collections.get_by_id(collection_id)
@@ -301,14 +312,27 @@ def ingestion_router(ctx: IngestionContext) -> APIRouter:
                 collection.id, source=source, sha256=sha, title=title, pages=info.pages)
         return JSONResponse({"id": document.id, "status": document.status}, status_code=202)
 
+    @router.get("/whoami")
+    async def whoami(request: Request) -> JSONResponse:
+        """V2-10: the tenant and key the caller is using (never the key itself)."""
+        try:
+            who = await caller(request)
+        except Rejected as exc:
+            return _error(exc.status, exc.code, str(exc))
+        tenant = await store.tenants.get_by_id(who.tenant_id)
+        return JSONResponse({"tenant_id": who.tenant_id,
+                             "tenant_name": None if tenant is None else tenant.name,
+                             "key_id": who.key_id, "role": who.role, "dev_key": who.dev,
+                             "key": who.masked_key(), "daily_limit": who.daily_limit})
+
     @router.post("/collections")
     async def create_collection(request: Request) -> JSONResponse:
         try:
-            tenant = caller_tenant(request)
+            tenant = (await caller(request)).tenant_id
             body = CreateCollection.model_validate_json(await request.body())
             if not body.name.strip():
                 raise Rejected(422, "invalid_request", "the collection name is blank")
-            if body.tenant_id != tenant:
+            if body.tenant_id is not None and body.tenant_id != tenant:
                 raise Rejected(403, "tenant_mismatch", "tenant_id is not the caller's tenant")
             if body.retrieval_preset not in RETRIEVAL_SETTINGS:
                 raise Rejected(422, "unknown_preset",
@@ -331,7 +355,7 @@ def ingestion_router(ctx: IngestionContext) -> APIRouter:
     @router.get("/collections")
     async def list_collections(request: Request) -> JSONResponse:
         try:
-            tenant = caller_tenant(request)
+            tenant = (await caller(request)).tenant_id
         except Rejected as exc:
             return _error(exc.status, exc.code, str(exc))
         collections = await store.collections.list_for_tenant(tenant)
@@ -340,10 +364,58 @@ def ingestion_router(ctx: IngestionContext) -> APIRouter:
         return JSONResponse({"collections": [
             {**_collection_view(c), "document_count": counts.get(c.id, 0)} for c in collections]})
 
+    @router.get("/collections/{collection_id}")
+    async def get_collection(collection_id: str, request: Request) -> JSONResponse:
+        try:
+            collection = await own_collection(collection_id, (await caller(request)).tenant_id)
+        except Rejected as exc:
+            return _error(exc.status, exc.code, str(exc))
+        counts = await store.documents.counts_by_collection([collection.id])
+        return JSONResponse({**_collection_view(collection),
+                             "document_count": counts.get(collection.id, 0)})
+
+    @router.delete("/collections/{collection_id}")
+    async def delete_collection(collection_id: str, request: Request) -> JSONResponse:
+        """V2-10 (ARCHITECTURE_V2 §12): the collection and everything of it: its rows
+        (documents, chunks, jobs, conversations, evaluation sets, request-log rows), its
+        folder on disk, upload files no other document uses, and its cached answers."""
+        try:
+            who = await caller(request)
+            collection = await own_collection(collection_id, who.tenant_id)
+            require_admin(who)
+            if collection.id == V1_COLLECTION_ID:
+                raise Rejected(409, "collection_protected",
+                               "v1-papers is the v1 corpus and cannot be deleted")
+            async with ctx.lock:  # no document is being added while it goes
+                try:
+                    deleted = await store.collections.delete_cascade(collection.id)
+                except CollectionBusyError:
+                    raise Rejected(409, "collection_busy", "a document is being ingested; "
+                                   "try again when it is ready") from None
+                except NotFoundError:
+                    raise Rejected(404, "collection_not_found", "no such collection") from None
+                if ctx.on_deleted is not None:
+                    ctx.on_deleted(collection.id)  # cached answers, loaded index, flights
+                # Still under the lock: an upload of the same PDF to another collection
+                # must not find the file, skip writing it, and then lose it here.
+                uploads = [ctx.files.upload_path(sha) for sha in deleted.orphan_upload_shas]
+                try:
+                    await asyncio.to_thread(_remove_collection_files,
+                                            ctx.collections_dir / collection.id, uploads)
+                    removed = True
+                except OSError as exc:  # the rows are gone; say what is left on disk
+                    logger.error("collection %s deleted, but its files were not all removed: "
+                                 "%s", collection.id, sanitize_error(exc))
+                    removed = False
+        except Rejected as exc:
+            return _error(exc.status, exc.code, str(exc))
+        return JSONResponse({"id": collection.id, "deleted": True, "files_removed": removed,
+                             "rows": deleted.rows}, status_code=200)
+
     @router.post("/collections/{collection_id}/documents")
     async def create_document(collection_id: str, request: Request) -> JSONResponse:
         try:
-            collection = await own_collection(collection_id, caller_tenant(request))
+            collection = await own_collection(collection_id, (await caller(request)).tenant_id)
             return await add_document(collection, request)
         except Rejected as exc:
             return _error(exc.status, exc.code, str(exc))
@@ -353,7 +425,7 @@ def ingestion_router(ctx: IngestionContext) -> APIRouter:
     @router.get("/documents/{document_id}")
     async def get_document(document_id: str, request: Request) -> JSONResponse:
         try:
-            tenant = caller_tenant(request)
+            tenant = (await caller(request)).tenant_id
             document = await store.documents.get_by_id(document_id)
             if document is None:
                 raise Rejected(404, "document_not_found", "no such document")
@@ -381,5 +453,5 @@ def _too_large(limit: int) -> str:
     return f"the PDF is larger than the {limit / (1024 * 1024):g} MB limit"
 
 
-__all__ = ["ArxivFetch", "IngestionContext", "caller_tenant", "fetch_arxiv_pdf",
+__all__ = ["ArxivFetch", "IngestionContext", "Rejected", "fetch_arxiv_pdf",
            "ingestion_router", "inspect_pdf"]

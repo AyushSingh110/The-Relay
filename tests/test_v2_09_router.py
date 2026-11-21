@@ -229,7 +229,7 @@ def test_an_unknown_escalation_lane_is_a_settings_error() -> None:
 
 # --- store ----------------------------------------------------------------------------------
 async def test_migration_6_adds_lane_cost_and_escalation_to_the_request_log() -> None:
-    assert LATEST_VERSION == 6
+    assert LATEST_VERSION >= 6
     async with open_store(":memory:") as store:
         entry = await store.request_log.insert(status="ok", lane_name="b", cost_usd=0.00042,
                                                escalated=True)

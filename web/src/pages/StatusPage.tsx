@@ -1,7 +1,7 @@
 // Status: what GET /healthz reports. Quota headroom arrives with V2-11.
 import { useCallback, useEffect, useState } from "react";
 
-import type { Health } from "../api";
+import type { Health, WhoAmI } from "../api";
 import { useApi } from "../ApiContext";
 
 function Row({ name, value, tone }: { name: string; value: string; tone?: "ok" | "warn" | "bad" }) {
@@ -18,11 +18,17 @@ export function StatusPage() {
   const [health, setHealth] = useState<Health | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [checkedAt, setCheckedAt] = useState<Date | null>(null);
+  const [who, setWho] = useState<WhoAmI | null>(null);
+  const [whoError, setWhoError] = useState<string | null>(null);
 
   const load = useCallback(() => {
     api.health().then(
       (h) => { setHealth(h); setError(null); setCheckedAt(new Date()); },
       (failure: Error) => setError(failure.message),
+    );
+    api.whoami().then(
+      (w) => { setWho(w); setWhoError(null); },
+      (failure: Error) => setWhoError(failure.message),
     );
   }, [api]);
 
@@ -44,6 +50,29 @@ export function StatusPage() {
         <button type="button" className="quiet" onClick={load}>Check again</button>
       </header>
       {error && <p role="alert" className="error">The service did not answer: {error}</p>}
+      {(who || whoError) && (
+        <div className="status-grid access-grid">
+        <table aria-label="Access">
+          <caption>Access</caption>
+          <tbody>
+            {who ? (
+              <>
+                <Row name="Tenant" value={who.tenant_name ? `${who.tenant_name} (${who.tenant_id})`
+                  : who.tenant_id} />
+                <Row name="API key" value={who.dev_key
+                  ? "Development key, for local use only" : who.key}
+                  tone={who.dev_key ? "warn" : "ok"} />
+                <Row name="Role" value={who.role} />
+                <Row name="Daily limit" value={who.daily_limit === null ? "None"
+                  : `${who.daily_limit} questions a day`} />
+              </>
+            ) : (
+              <Row name="API key" value={`not accepted: ${whoError}`} tone="bad" />
+            )}
+          </tbody>
+        </table>
+        </div>
+      )}
       {health && (
         <div className="status-grid">
           <table aria-label="Service">

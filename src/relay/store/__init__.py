@@ -28,6 +28,7 @@ from relay.store.migrations import (
     open_connection,
 )
 from relay.store.repositories import (
+    ApiKeyRepo,
     CollectionRepo,
     ConversationRepo,
     DocumentRepo,
@@ -58,6 +59,7 @@ class Store:
     ingest_jobs: IngestJobRepo
     request_log: RequestLogRepo
     conversations: ConversationRepo
+    api_keys: ApiKeyRepo  # V2-10
 
     @property
     def schema_version(self) -> int:
@@ -102,7 +104,8 @@ async def open_store(path: str | Path) -> AsyncGenerator[Store]:
         yield Store(path=target, conn=conn, migration=result, journal_mode=mode,
                     tenants=TenantRepo(conn), collections=CollectionRepo(conn),
                     documents=DocumentRepo(conn), ingest_jobs=IngestJobRepo(conn),
-                    request_log=RequestLogRepo(conn), conversations=ConversationRepo(conn))
+                    request_log=RequestLogRepo(conn), conversations=ConversationRepo(conn),
+                    api_keys=ApiKeyRepo(conn))
     finally:
         try:
             await conn.close()

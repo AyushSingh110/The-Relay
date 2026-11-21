@@ -1680,3 +1680,68 @@
   - Needs: a choice of the second lane (ARCHITECTURE_V2 §16 open decision 3) and its Groq
     prices.
   - Optional: a capped live check.
+
+### Execution Entry
+
+- **Date and time:** 2026-11-21 IST
+- **Phase identifier:** `v2-10`: Tenants, API keys and fair admission
+- **Status:** completed, pending owner review.
+- **Files:** listed in `reports/phase-v2-10-tenants-keys-fair-admission.md` §3–4.
+  - New: `src/relay/api/auth.py`, `src/relay/app/routes/rejected.py`, and 3 test files
+    (2 backend, 1 UI).
+  - Migration 7 adds `api_key.revoked`, `name` and `created_at`.
+- **Built:**
+  - Hashed keys `rel_live_<32 hex>`: the SHA-256 is stored and the key is shown once.
+  - `relay keys create|list|revoke` and `relay tenants create|list`.
+  - An Authenticator on every `/v1` route: 401 for revoked or unknown keys; the dev key only
+    on a loopback host by default; a per-key daily limit giving 429.
+  - Cross-tenant access gives 404.
+  - New routes: `GET /v1/collections/{id}`, `GET /v1/whoami`, and
+    `DELETE /v1/collections/{id}`. The delete is admin only and runs in one transaction
+    (rows, conversations, evaluation sets, request-log rows), then removes the folder and
+    orphan uploads under the ingestion lock, purges the cache and evicts the index. It gives
+    409 while a document is being ingested, and `v1-papers` is protected.
+  - Fair admission:
+    - per-tenant buckets (over-rate requests are demoted, not refused);
+    - interactive and batch ranks;
+    - round robin between tenants;
+    - the worst rank shed first;
+    - EWMA capacity;
+    - v1 FIFO unchanged when there is no tenant.
+  - UI: an Access table on the Status page; collections created without a tenant id.
+- **Noisy neighbour:** A sends 30 batch requests and B sends 1 interactive one.
+  - Queue 40: B finished after 1 of A's 30 answers and waited 0.41–0.54 s; all of A's 30
+    were still answered.
+  - Queue 8: B finished after 1; 22 of A's were shed, one of them for B.
+  - Two interactive tenants: B finished after 1 of A's 12.
+- **Rulings:**
+  - the dev key on loopback only;
+  - demote, don't refuse;
+  - shedding reuses `queue_full` plus a `shed_reason` field (the v1 `ErrorCode` is frozen);
+  - `DELETE` is admin only, 409 when busy, `v1-papers` protected;
+  - v1 `/ask` stays unauthenticated (ARCHITECTURE_V2 §9);
+  - the daily limit is counted in memory;
+  - migration 7 also adds `created_at`;
+  - the plan's "agreed floor" is not set and needs the owner.
+- **Errors:**
+  - 81 tests used "Bearer dev"; their helpers now send the dev key;
+  - a ruff fix stripped the `Literal` quotes;
+  - heredoc quoting failures;
+  - 4 test-side mistakes;
+  - a wrong FIFO contrast, replaced by a unit test without tenants.
+- **Code review** (agent): no cross-tenant leak. Fixed, each with a test that failed first:
+  - a delete-versus-upload race on a shared PDF;
+  - an in-flight answer re-caching and re-logging a deleted collection;
+  - the daily limit charged before the collection was resolved.
+- **Mutation checks:** without fairness, 8 failed; without the key check, 12; without the
+  delete cleanup, 1.
+- **Final commands:**
+  - `pytest -q` → **934 passed** in 125.21 s. One earlier full run had 1 failure:
+    `test_standin.py::test_stragglers_are_much_slower`, 189.6 ms against 190 ms, a timing
+    flake. It passed 5 of 5 alone and is unchanged in this phase.
+  - `ruff check .` clean.
+  - UI Jest **54 passed**; `tsc` and `eslint` exit 0; `relay ui build` OK.
+  - `results.csv` sha256 `8dfb10dfaadb…`; `evidence/` unchanged.
+- **Real Groq calls:** 0 (cap 0).
+- **Owner approval status:** pending owner review.
+  - Needs: the light-tenant delivery-rate floor, for a harness measurement.

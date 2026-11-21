@@ -22,7 +22,9 @@ with milliseconds.
 from __future__ import annotations
 
 import asyncio
+import hashlib
 import logging
+import secrets
 import uuid
 import weakref
 from collections.abc import Callable, Sequence
@@ -49,8 +51,26 @@ MESSAGE_ROLES: Final = frozenset({"user", "assistant", "system"})
 # --- Errors ----------------------------------------------------------------------------
 
 
+KEY_PREFIX: Final = "rel_live_"
+KEY_ROLES: Final = ("admin", "member")
+
+
+def hash_api_key(raw: str) -> str:
+    """The stored form of an API key: its SHA-256, hex."""
+    return hashlib.sha256(raw.encode("utf-8")).hexdigest()
+
+
+def new_api_key() -> str:
+    """``rel_live_`` and 32 random hex characters (128 bits)."""
+    return KEY_PREFIX + secrets.token_hex(16)
+
+
 class StoreError(RelayError):
     """Base class for metadata-store failures."""
+
+
+class CollectionBusyError(StoreError):
+    """The collection cannot be deleted now: a document is being ingested."""
 
 
 class NotFoundError(StoreError):
@@ -77,6 +97,30 @@ class Tenant:
     id: str
     name: str
     created_at: str
+
+
+@dataclass(frozen=True, slots=True)
+class ApiKeyRecord:
+    """An API key as stored: its SHA-256 hash, never the key itself (V2-10)."""
+
+    id: str
+    tenant_id: str
+    key_hash: str
+    role: str
+    daily_limit: int | None
+    revoked: bool
+    name: str | None
+    created_at: str | None
+
+
+@dataclass(frozen=True, slots=True)
+class DeletedCollection:
+    """What deleting a collection removed (V2-10), and the upload files no other document
+    uses any more (the caller deletes them from disk)."""
+
+    collection_id: str
+    rows: dict[str, int]
+    orphan_upload_shas: tuple[str, ...]
 
 
 @dataclass(frozen=True, slots=True)
@@ -266,6 +310,62 @@ class TenantRepo(_Repo):
                               (tenant_id,))
         return None if row is None else Tenant(*row)
 
+    async def list_all(self) -> list[Tenant]:
+        rows = await self._all("SELECT id, name, created_at FROM tenant "
+                               "ORDER BY created_at, rowid", ())
+        return [Tenant(*row) for row in rows]
+
+
+_KEY_COLUMNS: Final = "id, tenant_id, key_hash, role, daily_limit, revoked, name, created_at"
+
+
+def _api_key(row: tuple[Any, ...]) -> ApiKeyRecord:
+    values = list(row)
+    values[5] = bool(values[5])
+    return ApiKeyRecord(*values)
+
+
+class ApiKeyRepo(_Repo):
+    """Hashed API keys (V2-10). The raw key is returned once by ``create`` and never
+    stored; lookups are by its SHA-256."""
+
+    async def create(self, tenant_id: str, role: str = "member", daily_limit: int | None = 1000,
+                     *, name: str | None = None) -> tuple[str, ApiKeyRecord]:
+        if role not in KEY_ROLES:
+            raise InvalidValueError(f"role must be one of {KEY_ROLES}, not {role!r}")
+        if daily_limit is not None and daily_limit < 1:
+            raise InvalidValueError("daily_limit must be at least 1 (or None: unlimited)")
+        raw = new_api_key()
+        record = ApiKeyRecord(id=self._ids(), tenant_id=tenant_id, key_hash=hash_api_key(raw),
+                              role=role, daily_limit=daily_limit, revoked=False, name=name,
+                              created_at=self._now())
+        await self._write(f"INSERT INTO api_key ({_KEY_COLUMNS}) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+                          (record.id, record.tenant_id, record.key_hash, record.role,
+                           record.daily_limit, 0, record.name, record.created_at),
+                          context=f"create API key: tenant {tenant_id!r} does not exist")
+        return raw, record
+
+    async def get_by_hash(self, key_hash: str) -> ApiKeyRecord | None:
+        row = await self._one(f"SELECT {_KEY_COLUMNS} FROM api_key WHERE key_hash = ?",
+                              (key_hash,))
+        return None if row is None else _api_key(row)
+
+    async def get_by_id(self, key_id: str) -> ApiKeyRecord | None:
+        row = await self._one(f"SELECT {_KEY_COLUMNS} FROM api_key WHERE id = ?", (key_id,))
+        return None if row is None else _api_key(row)
+
+    async def revoke(self, key_id: str) -> bool:
+        """True when a key that was active is now revoked."""
+        changed = await self._write("UPDATE api_key SET revoked = 1 WHERE id = ? AND "
+                                    "COALESCE(revoked, 0) = 0", (key_id,),
+                                    context="revoke API key")
+        return changed > 0
+
+    async def list_for_tenant(self, tenant_id: str) -> list[ApiKeyRecord]:
+        rows = await self._all(f"SELECT {_KEY_COLUMNS} FROM api_key WHERE tenant_id = ? "
+                               "ORDER BY created_at, rowid", (tenant_id,))
+        return [_api_key(row) for row in rows]
+
 
 _COLLECTION_COLUMNS: Final = ("id, tenant_id, name, retrieval_preset, version, created_at, "
                               "rerank, buffered, l4_enabled")
@@ -310,6 +410,67 @@ class CollectionRepo(_Repo):
         rows = await self._all(f"SELECT {_COLLECTION_COLUMNS} FROM collection "
                                "WHERE tenant_id = ? ORDER BY created_at, rowid", (tenant_id,))
         return [_collection(row) for row in rows]
+
+    async def delete_cascade(self, collection_id: str) -> DeletedCollection:
+        """Delete the collection and everything that belongs to it, in ONE transaction:
+        conversations and messages, evaluation sets, documents, chunks, ingest jobs and its
+        request-log rows (V2-10; ARCHITECTURE_V2 §12). Refused with ``CollectionBusyError``
+        while a document is being parsed, embedded or indexed (the worker holds it)."""
+        sub_docs = "SELECT id FROM document WHERE collection_id = ?"
+        statements: list[tuple[str, str]] = [
+            ("message", "DELETE FROM message WHERE conversation_id IN "
+                        "(SELECT id FROM conversation WHERE collection_id = ?)"),
+            ("conversation", "DELETE FROM conversation WHERE collection_id = ?"),
+            ("grade", "DELETE FROM grade WHERE eval_question_id IN (SELECT q.id FROM "
+                      "eval_question q JOIN eval_set s ON q.eval_set_id = s.id "
+                      "WHERE s.collection_id = ?)"),
+            ("eval_question", "DELETE FROM eval_question WHERE eval_set_id IN "
+                              "(SELECT id FROM eval_set WHERE collection_id = ?)"),
+            ("eval_set", "DELETE FROM eval_set WHERE collection_id = ?"),
+            ("chunk", f"DELETE FROM chunk WHERE document_id IN ({sub_docs})"),
+            ("ingest_job", f"DELETE FROM ingest_job WHERE document_id IN ({sub_docs})"),
+            ("document", "DELETE FROM document WHERE collection_id = ?"),
+            ("request_log", "DELETE FROM request_log WHERE collection_id = ?"),
+            ("collection", "DELETE FROM collection WHERE id = ?"),
+        ]
+        busy_states = ("parsing", "embedding", "indexing")
+        async with write_lock(self._conn):
+            try:
+                async with self._conn.execute(
+                        "SELECT COUNT(*) FROM ingest_job j JOIN document d ON "
+                        "j.document_id = d.id WHERE d.collection_id = ? AND j.state IN "
+                        "(?, ?, ?)", (collection_id, *busy_states)) as cursor:
+                    busy = (await cursor.fetchone() or (0,))[0]
+                if busy:
+                    raise CollectionBusyError(
+                        f"collection {collection_id!r} has {busy} document(s) being ingested")
+                async with self._conn.execute(
+                        "SELECT DISTINCT sha256 FROM document WHERE collection_id = ? AND "
+                        "source = 'upload'", (collection_id,)) as cursor:
+                    shas = [str(row[0]) for row in await cursor.fetchall()]
+                rows: dict[str, int] = {}
+                for table, sql in statements:
+                    cursor = await self._conn.execute(sql, (collection_id,))
+                    rows[table] = cursor.rowcount
+                    await cursor.close()
+                if rows["collection"] == 0:
+                    raise NotFoundError(f"collection {collection_id!r} does not exist")
+                still: set[str] = set()
+                if shas:
+                    marks = ", ".join("?" for _ in shas)
+                    async with self._conn.execute(
+                            f"SELECT DISTINCT sha256 FROM document WHERE sha256 IN ({marks})",
+                            tuple(shas)) as cursor:
+                        still = {str(row[0]) for row in await cursor.fetchall()}
+                await self._conn.commit()
+            except (CollectionBusyError, NotFoundError) as exc:
+                await safe_rollback(self._conn, exc)
+                raise
+            except aiosqlite.Error as exc:
+                await safe_rollback(self._conn, exc)
+                raise
+        return DeletedCollection(collection_id, rows,
+                                 tuple(sha for sha in shas if sha not in still))
 
     async def bump_version(self, collection_id: str) -> int:
         """Increment the collection's version and return the new value."""
@@ -631,6 +792,8 @@ class ConversationRepo(_Repo):
 
 
 __all__ = [
+    "KEY_PREFIX", "KEY_ROLES", "ApiKeyRecord", "ApiKeyRepo", "CollectionBusyError",
+    "DeletedCollection", "hash_api_key", "new_api_key",
     "Collection", "CollectionRepo", "Conversation", "ConversationRepo", "Document",
     "DocumentRepo", "ForeignKeyViolationError", "IngestJob", "IngestJobRepo",
     "IntegrityViolationError", "InvalidValueError", "Message", "NotFoundError",
