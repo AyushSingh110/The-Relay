@@ -61,6 +61,10 @@ def log_fields(record: Mapping[str, Any]) -> dict[str, Any]:
         "cache_hit": cache_status == "exact_hit",
         "coalesced": cache_status == "coalesced",
         "verdict": final.get("verification_verdict"),
+        # V2-09: absent from records written before the router (and from v1 /ask records)
+        "lane_name": final.get("lane_name"),
+        "cost_usd": final.get("cost_usd"),
+        "escalated": bool(final.get("escalated", False)),
     }
 
 

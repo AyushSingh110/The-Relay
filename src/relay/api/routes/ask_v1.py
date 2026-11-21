@@ -60,6 +60,7 @@ from relay.app.bootstrap import V1_COLLECTION_ID
 from relay.app.routes.ingestion import Rejected, caller_tenant
 from relay.control.admission import AdmissionRejectedError
 from relay.control.cache import CachedAnswer, CachedSource, normalise_question, question_hash
+from relay.control.pricing import total_cost
 from relay.errors import sanitize_error
 from relay.ingestion.registry import CollectionNotFoundError
 from relay.orchestrator.pipeline import (
@@ -250,15 +251,9 @@ def _stop_reason(outcome: PipelineOutcome, stop: StoppedEvent | None,
 # --- The flight (leader work) ------------------------------------------------------------
 
 
-async def _streamed(ctx: AskV1Context, channel: ReplayChannel, plan: StreamPlan,
-                    spans: ServerSpanTracker, live: dict[str, Any],
-                    deadline_ns: int | None,
-                    scorer: EntailmentScore | None) -> tuple[PipelineOutcome, int]:
-    pipeline = ctx.service.pipeline
-    channel.status("generating")
-    tokens = pipeline.run_streaming(plan, spans, deadline_ns=deadline_ns)
-    live["tokens"], live["chat"] = tokens, plan.chat  # for the cancel record's spend
-    stream = SentenceStream(tokens, plan.passages, plan.streaming_verifier, scorer=scorer)
+async def _relay_stream(channel: ReplayChannel, stream: SentenceStream,
+                        live: dict[str, Any]) -> tuple[StoppedEvent | None, bool]:
+    """Publish a sentence stream's verified sentences; (its stop, whether it refused)."""
     stop: StoppedEvent | None = None
     refused = False
     async for event in stream:
@@ -271,6 +266,31 @@ async def _streamed(ctx: AskV1Context, channel: ReplayChannel, plan: StreamPlan,
             stop = event
         elif isinstance(event, StreamRefusal):
             refused = True
+    return stop, refused
+
+
+async def _streamed(ctx: AskV1Context, channel: ReplayChannel, plan: StreamPlan,
+                    spans: ServerSpanTracker, live: dict[str, Any],
+                    deadline_ns: int | None,
+                    scorer: EntailmentScore | None) -> tuple[PipelineOutcome, int]:
+    pipeline = ctx.service.pipeline
+    channel.status("generating")
+    tokens = pipeline.run_streaming(plan, spans, deadline_ns=deadline_ns)
+    live["tokens"], live["chat"] = tokens, plan.chat  # for the cancel record's spend
+    stream = SentenceStream(tokens, plan.passages, plan.streaming_verifier, scorer=scorer)
+    stop, refused = await _relay_stream(channel, stream, live)
+    # V2-09: a truncated or empty answer is retried once on the escalation lane, but only
+    # when nothing was delivered yet (the client never sees two different answers).
+    if not stream.sentences and not refused and (stop is None
+                                                 or stop.reason_class == "truncated"):
+        retry = pipeline.escalate_streaming(plan, tokens, spans, deadline_ns=deadline_ns)
+        if retry is not None:
+            channel.publish("status", {"stage": "generating", "queue_position": 0,
+                                       "escalated": True, "reason": retry.reason})
+            tokens = live["tokens"] = retry
+            stream = SentenceStream(tokens, plan.passages, plan.streaming_verifier,
+                                    scorer=scorer)
+            stop, refused = await _relay_stream(channel, stream, live)
     if stop is None:
         channel.status("verifying")  # the whole-answer pass
     outcome = await pipeline.complete_streaming(plan, tokens, stream, stop=stop,
@@ -314,7 +334,38 @@ def _summary(outcome: PipelineOutcome, *, released: int, buffered: bool,
         "retrieval_setting": outcome.retrieval_setting, "buffered": buffered,
         "queue_depth_at_entry": depth,
         "provider_first_token_ms": spans.snapshot().provider_first_token_ms,
+        **_route_fields(outcome),
     }
+
+
+def _route_fields(outcome: PipelineOutcome | None) -> dict[str, Any]:
+    """V2-09: which lane answered, what every call cost, and whether it was escalated."""
+    route = None if outcome is None else outcome.route
+    if route is None:  # no model call (early refusal), or an unrouted generator
+        called = outcome is not None and outcome.provider_called
+        return {"lane_name": None, "provider": None, "model": None, "escalated": False,
+                "fallback": False, "cost_usd": None if called else 0.0, "ledger": [],
+                "retry_after_ms": None}
+    return {"lane_name": route.lane, "provider": route.provider, "model": route.model,
+            "escalated": route.escalated, "fallback": route.fallback,
+            "cost_usd": route.cost_usd,
+            "ledger": [use.model_dump(mode="json") for use in route.uses],
+            "retry_after_ms": route.retry_after_ms}
+
+
+def _charge(final: dict[str, Any], rewrite: Rewrite | None) -> dict[str, Any]:
+    """Add the follow-up rewrite's call to this request's tokens, ledger and cost (the
+    request's full lifecycle; a follower or cache hit pays only for its own rewrite)."""
+    ledger = list(final.get("ledger") or [])
+    if rewrite is not None and rewrite.usage is not None:
+        use = rewrite.usage
+        ledger.insert(0, use.model_dump(mode="json"))
+        final["tokens_in"] = final.get("tokens_in", 0) + use.tokens_in
+        final["tokens_out"] = final.get("tokens_out", 0) + use.tokens_out
+    final["ledger"] = ledger
+    known = final.get("cost_usd", 0.0) is not None or not final.get("provider_called")
+    final["cost_usd"] = total_cost([u["cost_usd"] for u in ledger]) if known else None
+    return final
 
 
 def _shed_summary(error_code: str, *, setting: str, buffered: bool,
@@ -324,7 +375,7 @@ def _shed_summary(error_code: str, *, setting: str, buffered: bool,
             "message": UNAVAILABLE_MESSAGES.get(error_code), "tokens_in": 0, "tokens_out": 0,
             "usage_source": "none", "provider_called": False, "model_id": None,
             "retrieval_setting": setting, "buffered": buffered, "queue_depth_at_entry": depth,
-            "provider_first_token_ms": None}
+            "provider_first_token_ms": None, **_route_fields(None)}
 
 
 async def _lead(ctx: AskV1Context, flight: Flight, target: AskTarget, *, request_id: str,
@@ -431,10 +482,15 @@ def _cancelled_spend(live: dict[str, Any]) -> dict[str, Any]:
     if tokens is None or chat is None:
         return {"provider_called": False, "tokens_in": 0, "tokens_out": 0,
                 "usage_source": "none"}
-    return {"provider_called": True,
-            "tokens_in": math.ceil(chat.prompt_chars / CONSERVATIVE_CHARS_PER_TOKEN),
-            "tokens_out": math.ceil(tokens.received_chars / CONSERVATIVE_CHARS_PER_TOKEN),
-            "usage_source": "estimated"}
+    tokens_in = math.ceil(chat.prompt_chars / CONSERVATIVE_CHARS_PER_TOKEN)
+    tokens_out = math.ceil(tokens.received_chars / CONSERVATIVE_CHARS_PER_TOKEN)
+    route = tokens.estimated_route(tokens_in, tokens_out)
+    spend: dict[str, Any] = {"provider_called": True, "tokens_in": tokens_in,
+                             "tokens_out": tokens_out, "usage_source": "estimated"}
+    if route is not None:  # V2-09: the lane, and an escalation's replaced call
+        spend.update({"tokens_in": route.tokens_in, "tokens_out": route.tokens_out,
+                      "lane_name": route.lane, "cost_usd": route.cost_usd})
+    return spend
 
 
 @dataclass(frozen=True)
@@ -478,7 +534,7 @@ async def _cached(ctx: AskV1Context, hit: CachedAnswer, *, request_id: str,
                   arrived_ns: int, collection_id: str, buffered: bool,
                   setting: str, accepted_sent: bool = False,
                   conversation: ConversationLog | None = None,
-                  rewritten: str | None = None) -> AsyncIterator[bytes]:
+                  rewrite: Rewrite | None = None) -> AsyncIterator[bytes]:
     clock = ctx.service.clock
     if not accepted_sent:
         yield sse("accepted", {"request_id": request_id, "queue_position": 0,
@@ -511,7 +567,9 @@ async def _cached(ctx: AskV1Context, hit: CachedAnswer, *, request_id: str,
              "cache_status": "exact_hit", "coalesced": False,
              "ttft_ms": first, "total_ms": round(total, 3),
              "conversation_id": None if conversation is None else conversation.conversation_id,
-             "rewritten_question": rewritten}
+             "rewritten_question": None if rewrite is None else rewrite.question,
+             **_route_fields(None)}
+    _charge(final, rewrite)
     ctx.service.record_trace(_request_record(request_id, hit_question=None, final=final,
                                              collection_id=collection_id, role="cache_hit"))
     await _record_turn(ctx, conversation, final, sentences, request_id)
@@ -528,7 +586,9 @@ def _request_record(request_id: str, *, hit_question: str | None, final: dict[st
                       "provider_first_token_ms": final.get("provider_first_token_ms"),
                       "first_sentence_ms": final["ttft_ms"],
                       "server_total_ms": final["total_ms"], "tokens_in": final["tokens_in"],
-                      "tokens_out": final["tokens_out"]}}
+                      "tokens_out": final["tokens_out"],
+                      "lane_name": final.get("lane_name"), "cost_usd": final.get("cost_usd"),
+                      "escalated": final.get("escalated", False)}}
 
 
 async def _respond(ctx: AskV1Context, target: AskTarget, *, request_id: str, arrived_ns: int,
@@ -537,7 +597,7 @@ async def _respond(ctx: AskV1Context, target: AskTarget, *, request_id: str, arr
                    scorer: EntailmentScore | None = None,
                    accepted_sent: bool = False,
                    conversation: ConversationLog | None = None,
-                   rewritten: str | None = None) -> AsyncIterator[bytes]:
+                   rewrite: Rewrite | None = None) -> AsyncIterator[bytes]:
     """One request. ``target.ask.question`` is the standalone question (a follow-up arrives
     here already rewritten, with ``accepted`` already sent)."""
     service, ask = ctx.service, target.ask
@@ -552,7 +612,7 @@ async def _respond(ctx: AskV1Context, target: AskTarget, *, request_id: str, arr
             async for chunk in _cached(ctx, hit, request_id=request_id, arrived_ns=arrived_ns,
                                        collection_id=collection_id, buffered=buffered,
                                        setting=setting, accepted_sent=accepted_sent,
-                                       conversation=conversation, rewritten=rewritten):
+                                       conversation=conversation, rewrite=rewrite):
                 yield chunk
             return
     key: Hashable = (normalise_question(ask.question), target.cache_setting, buffered)
@@ -621,10 +681,13 @@ async def _respond(ctx: AskV1Context, target: AskTarget, *, request_id: str, arr
                          "total_ms": round(total, 3),
                          "conversation_id": None if conversation is None
                          else conversation.conversation_id,
-                         "rewritten_question": rewritten}
+                         "rewritten_question": None if rewrite is None else rewrite.question}
                 if follower:  # the leader paid for it
                     final.update({"tokens_in": 0, "tokens_out": 0, "usage_source": "none",
-                                  "provider_called": False, "queue_depth_at_entry": None})
+                                  "provider_called": False, "queue_depth_at_entry": None,
+                                  # its row must not count the leader's lane or escalation
+                                  **_route_fields(None)})
+                _charge(final, rewrite)
                 service.record_trace(_request_record(
                     request_id, hit_question=ask.question, final=final,
                     collection_id=collection_id, role="follower" if follower else "leader"))
@@ -670,7 +733,7 @@ async def _follow_up(ctx: AskV1Context, target: AskTarget, turns: list[Turn],
                            target.cache_setting)
     async for chunk in _respond(ctx, standalone, accepted_sent=True,
                                 conversation=ConversationLog(conversation_id, original),
-                                rewritten=rewrite.question, **respond):
+                                rewrite=rewrite, **respond):
         yield chunk
 
 

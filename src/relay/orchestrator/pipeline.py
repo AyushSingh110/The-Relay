@@ -6,10 +6,11 @@ import asyncio
 import math
 from collections.abc import AsyncIterator, Callable, Mapping
 from dataclasses import dataclass, field
-from typing import Annotated, Any, Final, Literal, Protocol
+from typing import Annotated, Any, Final, Literal, Protocol, runtime_checkable
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
+from relay.control.pricing import ROUTE_NOTE, RouteNote, RouteRecord
 from relay.errors import ContractViolationError, sanitize_error
 from relay.ingestion.v1_corpus import V1_CUE_SET
 from relay.orchestrator.evidence_gate import EvidenceGate, GateDecision, merge_expansion
@@ -133,6 +134,9 @@ class PipelineOutcome(BaseModel):
     usage_source: UsageSource
     model_id: str | None
     degraded: bool
+    # V2-09: the lane(s) that served it and what each call cost (None: no model call, or a
+    # generator without a router, as in some tests)
+    route: RouteRecord | None = None
     retrieval_ms: float
     trace: PipelineTrace
 
@@ -182,6 +186,7 @@ class GenerationResult:
     retries: int = 0
     attempts: int = 1
     tokens: TokenTotals | None = None
+    route: RouteRecord | None = None  # V2-09: set by the router
 
     def __post_init__(self) -> None:
         if (self.completion is None) == (self.error is None):
@@ -202,6 +207,65 @@ class AnswerGenerator(Protocol):
     ) -> GenerationResult:
         """``on_content`` (V2-05 streaming) receives each content piece as it arrives."""
         ...
+
+
+@runtime_checkable
+class Escalating(Protocol):
+    """A generator that can retry a truncated or empty answer once on a stronger lane
+    (V2-09). ``escalation`` returns the generator for that one retry, or None (no
+    escalation lane, it cannot admit, or the retry budget is spent)."""
+
+    def escalation(self, result: GenerationResult,
+                   request: ChatRequest) -> AnswerGenerator | None: ...
+
+
+def escalation_reason(result: GenerationResult | None) -> str | None:
+    """Why this result deserves one escalation retry, or None.
+
+    ``finish_reason == "length"`` is a truncated answer; with no content and some reasoning
+    it is the v1 gpt-oss case (the whole budget spent reasoning). An empty answer that ended
+    normally is escalated too: it can never be verified."""
+    if result is None or result.completion is None:
+        return None
+    completion = result.completion
+    empty = not completion.content.strip()
+    if completion.finish_reason == "length":
+        return "reasoning_exhausted" if empty and completion.reasoning else "truncated"
+    return "empty" if empty else None
+
+
+def _sources(*totals: TokenTotals | None) -> UsageSource:
+    seen = {t.usage_source for t in totals if t is not None}
+    return "estimated" if "estimated" in seen else "provider" if "provider" in seen else "none"
+
+
+def merge_escalation(prior: GenerationResult, second: GenerationResult, reason: str, *,
+                     keep_prior_on_failure: bool = True) -> GenerationResult:
+    """One result for a generation and its escalation retry: the retry's answer, every
+    call's tokens and cost. Buffered: when the retry failed, the first answer is kept (it is
+    still verified as usual). Streaming (``keep_prior_on_failure=False``): the retry's own
+    failure is the outcome, since the first answer's text is not what the stream holds."""
+    a, b = prior.tokens, second.tokens
+    tokens = TokenTotals((a.tokens_in if a else 0) + (b.tokens_in if b else 0),
+                         (a.tokens_out if a else 0) + (b.tokens_out if b else 0),
+                         _sources(a, b))
+    first, then = prior.route, second.route
+    uses = (first.uses if first else ()) + (then.uses if then else ())
+    keep_prior = keep_prior_on_failure and second.error is not None
+    chosen = prior if keep_prior else second
+    served = first if keep_prior or then is None or then.lane is None else then
+    route = RouteRecord(
+        lane=None if served is None else served.lane,
+        provider=None if served is None else served.provider,
+        model=None if served is None else served.model,
+        fallback=served is not None and served.fallback, escalated=True,
+        escalation_reason=reason, uses=uses,
+        skipped=(first.skipped if first else ()) + (then.skipped if then else ()))
+    attempts = prior.attempts + second.attempts
+    retries = prior.retries + second.retries + (1 if second.attempts else 0)
+    return GenerationResult(chosen.completion, chosen.error, chosen.stream_opened,
+                            chosen.received_chars, retries=retries, attempts=attempts,
+                            tokens=tokens, route=route)
 
 
 class PromptBudget(Protocol):
@@ -261,6 +325,7 @@ class _Spend:
     tokens_out: int = 0
     usage_source: UsageSource = "none"
     model_id: str | None = None
+    route: RouteRecord | None = None
 
 
 def _estimate_tokens(chars: int) -> int:
@@ -268,12 +333,14 @@ def _estimate_tokens(chars: int) -> int:
 
 
 def _spend(result: GenerationResult, request: ChatRequest) -> _Spend:
+    route = result.route
+    model = request.model if route is None or route.model is None else route.model
     if result.attempts == 0:
-        return _Spend()  # refused locally: the provider was never called
+        return _Spend(route=route)  # refused locally: the provider was never called
     if result.tokens is not None:
         return _Spend(provider_called=True, retries=result.retries,
                       tokens_in=result.tokens.tokens_in, tokens_out=result.tokens.tokens_out,
-                      usage_source=result.tokens.usage_source, model_id=request.model)
+                      usage_source=result.tokens.usage_source, model_id=model, route=route)
     usage = None if result.completion is None else result.completion.usage
     if usage is not None:
         tokens: tuple[int, int, UsageSource] = (usage.prompt_tokens, usage.completion_tokens,
@@ -284,7 +351,7 @@ def _spend(result: GenerationResult, request: ChatRequest) -> _Spend:
         tokens = (_estimate_tokens(request.prompt_chars),
                   _estimate_tokens(result.received_chars), "estimated")
     return _Spend(provider_called=True, retries=result.retries, tokens_in=tokens[0],
-                  tokens_out=tokens[1], usage_source=tokens[2], model_id=request.model)
+                  tokens_out=tokens[1], usage_source=tokens[2], model_id=model, route=route)
 
 
 @dataclass
@@ -327,6 +394,7 @@ class _Run:
             provider_called=spent.provider_called, retries=spent.retries,
             tokens_in=spent.tokens_in, tokens_out=spent.tokens_out,
             usage_source=spent.usage_source, model_id=spent.model_id, degraded=degraded,
+            route=spent.route,
             retrieval_ms=round(float(sum(c.elapsed_ms for c in self.tool_calls)), 3),
             trace=trace or self.trace(),
         )
@@ -424,7 +492,8 @@ class TokenStream:
     task; ``aclose`` cancels it (generation stops; what was spent is estimated)."""
 
     def __init__(self, generator: AnswerGenerator, chat: ChatRequest,
-                 spans: ServerSpanTracker, deadline_ns: int | None) -> None:
+                 spans: ServerSpanTracker, deadline_ns: int | None, *,
+                 prior: GenerationResult | None = None, reason: str | None = None) -> None:
         self._generator = generator
         self._chat = chat
         self._spans = spans
@@ -433,12 +502,18 @@ class TokenStream:
         self._task: asyncio.Task[GenerationResult] | None = None
         self.received_chars = 0
         self.cancelled = False
+        # V2-09: an escalation retry carries the generation it replaces (its tokens and
+        # cost count too) and why it was made; the router notes the lane it picks.
+        self.prior = prior
+        self.reason = reason
+        self.note = RouteNote()
 
     def _push(self, text: str) -> None:
         self.received_chars += len(text)
         self._queue.put_nowait(text)
 
     async def _produce(self) -> GenerationResult:
+        ROUTE_NOTE.set(self.note)  # this task's own context: the router fills it in
         try:
             return await self._generator.generate(self._chat, self._spans,
                                                   deadline_ns=self._deadline_ns,
@@ -478,10 +553,45 @@ class TokenStream:
 
     @property
     def result(self) -> GenerationResult | None:
-        """The generation result; None while running or when it was cancelled."""
+        """The generation result (with an escalation, both calls merged); None while running
+        or when it was cancelled."""
+        own = self._own_result
+        if own is None or self.prior is None:
+            return own
+        return merge_escalation(self.prior, own, self.reason or "escalated",
+                                keep_prior_on_failure=False)
+
+    @property
+    def _own_result(self) -> GenerationResult | None:
         if self._task is None or not self._task.done() or self._task.cancelled():
             return None
         return self._task.result()
+
+    @property
+    def truncated(self) -> bool:
+        """The model stopped at the completion-token limit (its last words are cut off)."""
+        own = self._own_result
+        return (own is not None and own.completion is not None
+                and own.completion.finish_reason == "length")
+
+    @property
+    def escalation_reason(self) -> str | None:
+        """Why this stream may be escalated; None for an escalation retry itself (exactly
+        one escalation per request)."""
+        return None if self.prior is not None else escalation_reason(self._own_result)
+
+    def estimated_route(self, tokens_in: int, tokens_out: int) -> RouteRecord | None:
+        """The route of a stream cancelled mid-way: the noted lane, with estimated tokens
+        (and the replaced generation's calls, for an escalation retry)."""
+        use = self.note.use(tokens_in, tokens_out, "estimated")
+        prior = None if self.prior is None else self.prior.route
+        if use is None and prior is None:
+            return None
+        uses = (prior.uses if prior else ()) + ((use,) if use else ())
+        return RouteRecord(lane=self.note.lane, provider=self.note.provider,
+                           model=self.note.model, fallback=self.note.fallback,
+                           escalated=self.prior is not None, escalation_reason=self.reason,
+                           uses=uses, skipped=tuple(self.note.skipped))
 
 
 def _merged_citations(sentences: tuple[Any, ...]) -> tuple[CitedPassage, ...]:
@@ -625,6 +735,23 @@ class Pipeline:
             raise ContractViolationError("this plan ended early; there is nothing to generate")
         return TokenStream(self._generator, plan.chat, spans, deadline_ns)
 
+    def escalate_streaming(self, plan: StreamPlan, tokens: TokenStream,
+                           spans: ServerSpanTracker, *,
+                           deadline_ns: int | None = None) -> TokenStream | None:
+        """The one escalation retry of a streamed answer that ended truncated or empty
+        (V2-09), or None. The caller only asks when no sentence was delivered yet."""
+        reason = tokens.escalation_reason
+        first = tokens.result
+        if reason is None or first is None or plan.chat is None:
+            return None
+        if not isinstance(self._generator, Escalating):
+            return None
+        generator = self._generator.escalation(first, plan.chat)
+        if generator is None:
+            return None
+        return TokenStream(generator, plan.chat, spans, deadline_ns, prior=first,
+                           reason=reason)
+
     async def complete_streaming(self, plan: StreamPlan, tokens: TokenStream,
                                  stream: SentenceStream, *, stop: StoppedEvent | None,
                                  refused: bool) -> PipelineOutcome:
@@ -636,9 +763,15 @@ class Pipeline:
         await tokens.aclose()
         result = tokens.result
         if result is None:  # cancelled after a failed sentence: estimate what was spent
-            spend = _Spend(provider_called=True, tokens_in=_estimate_tokens(chat.prompt_chars),
-                           tokens_out=_estimate_tokens(tokens.received_chars),
-                           usage_source="estimated", model_id=chat.model)
+            tokens_in = _estimate_tokens(chat.prompt_chars)
+            tokens_out = _estimate_tokens(tokens.received_chars)
+            route = tokens.estimated_route(tokens_in, tokens_out)
+            if route is not None:  # an escalation retry: the replaced call counts too
+                tokens_in, tokens_out = route.tokens_in, route.tokens_out
+            spend = _Spend(provider_called=True, tokens_in=tokens_in, tokens_out=tokens_out,
+                           usage_source="estimated",
+                           model_id=chat.model if route is None or route.model is None
+                           else route.model, route=route)
         else:
             spend = _spend(result, chat)
         released = tuple(stream.sentences)
@@ -765,6 +898,7 @@ __all__ = [
     "AnswerGenerator",
     "ContentSink",
     "CollectionResolver",
+    "Escalating",
     "CorpusSafety",
     "StreamPlan",
     "StreamStop",
@@ -779,4 +913,6 @@ __all__ = [
     "PromptBudget",
     "SingleCallGenerator",
     "TokenTotals",
+    "escalation_reason",
+    "merge_escalation",
 ]

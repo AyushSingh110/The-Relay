@@ -52,8 +52,31 @@ class ServerSettings(BaseModel):
     port: Annotated[int, Field(ge=1, le=65535)] = 8000
 
 
+class LanePricingSettings(BaseModel):
+    """US dollars per million tokens, from the provider's price list. Unset: cost unknown."""
+
+    model_config = _MODEL
+
+    input_per_m: Annotated[float, Field(ge=0.0)]
+    output_per_m: Annotated[float, Field(ge=0.0)]
+
+
+class LaneGuardSettings(BaseModel):
+    """Per-lane overrides of ``[guard]`` (V2-09). An unset field takes the ``[guard]``
+    value; every lane still gets its own ProviderGuard (its own windows and budget)."""
+
+    model_config = _MODEL
+
+    max_concurrency: PositiveInt | None = None
+    rpm: PositiveInt | None = None
+    tpm: PositiveInt | None = None
+    rpd: PositiveInt | None = None
+    tpd: PositiveInt | None = None
+    daily_safety_fraction: Annotated[float, Field(gt=0.0, le=1.0)] | None = None
+
+
 class LaneSettings(BaseModel):
-    """One (provider, model) pair. V2-01 serves from the first lane only."""
+    """One (provider, model) pair. The first lane is the primary (V2-09 router)."""
 
     model_config = _MODEL
 
@@ -69,6 +92,11 @@ class LaneSettings(BaseModel):
     profile: Path | None = None
     max_completion_tokens: PositiveInt = 512
     reasoning_effort: str | None = None
+    # V2-09 router
+    pricing: LanePricingSettings | None = None
+    guard: LaneGuardSettings | None = None
+    escalate_to: Slug | None = None  # a truncated or empty answer is retried there once
+    is_reasoning_model: bool = False
 
     @model_validator(mode="after")
     def _check(self) -> LaneSettings:
@@ -181,9 +209,24 @@ class RewriterSettings(BaseModel):
     max_completion_tokens: Annotated[int, Field(ge=8, le=256)] = 64
 
 
+class ProvidersSettings(BaseModel):
+    """``[providers]``: the router's settings. The lanes are ``[[providers.lanes]]`` (the
+    older top-level ``[[lanes]]`` still works)."""
+
+    model_config = _MODEL
+
+    # Rules 1-2: a lane is used when its guard can admit the request within this wait;
+    # otherwise the next lane is tried. Past every lane: the shortest wait, up to the
+    # deadline (rule 3). With one lane this has no effect.
+    max_wait_ms: Annotated[float, Field(ge=0.0)] = 2000.0
+
+
 def _default_lanes() -> tuple[LaneSettings, ...]:
+    # The stand-in is simulated: no money is spent, so its price is 0 (a Groq lane has no
+    # default price: its cost stays unknown until the owner sets one).
     return (LaneSettings(name="standin", kind="standin", model="qwen/qwen3.8-27b",
-                         embedded=True, profile=CALIBRATED_PROFILE),)
+                         embedded=True, profile=CALIBRATED_PROFILE,
+                         pricing=LanePricingSettings(input_per_m=0.0, output_per_m=0.0)),)
 
 
 class RelaySettings(BaseModel):
@@ -192,6 +235,7 @@ class RelaySettings(BaseModel):
     server: ServerSettings = ServerSettings()
     lanes: Annotated[tuple[LaneSettings, ...], Field(min_length=1)] = Field(
         default_factory=_default_lanes)
+    providers: ProvidersSettings = ProvidersSettings()
     guard: GuardSettings = GuardSettings()
     queue: QueueSettings = QueueSettings()
     paths: PathSettings = PathSettings()
@@ -201,11 +245,29 @@ class RelaySettings(BaseModel):
     verifier: VerifierSettings = VerifierSettings()
     rewriter: RewriterSettings = RewriterSettings()
 
+    @model_validator(mode="before")
+    @classmethod
+    def _provider_lanes(cls, data: Any) -> Any:
+        """``[[providers.lanes]]`` (V2-09) is the same list as the older ``[[lanes]]``."""
+        if not isinstance(data, dict):
+            return data
+        providers = data.get("providers")
+        if not isinstance(providers, dict) or "lanes" not in providers:
+            return data
+        if "lanes" in data:
+            raise ValueError("set the lanes once: [[providers.lanes]] or [[lanes]], not both")
+        rest = {key: value for key, value in providers.items() if key != "lanes"}
+        return {**data, "providers": rest, "lanes": providers["lanes"]}
+
     @model_validator(mode="after")
     def _unique_lanes(self) -> RelaySettings:
         names = [lane.name for lane in self.lanes]
         if len(set(names)) != len(names):
             raise ValueError(f"lane names must be unique: {names}")
+        for lane in self.lanes:
+            if lane.escalate_to is not None and (lane.escalate_to not in names
+                                                 or lane.escalate_to == lane.name):
+                raise ValueError(f"lane {lane.name!r}: escalate_to must name another lane")
         return self
 
     @property
@@ -297,7 +359,10 @@ __all__ = [
     "CacheSettings",
     "GuardSettings",
     "IngestionSettings",
+    "LaneGuardSettings",
+    "LanePricingSettings",
     "LaneSettings",
+    "ProvidersSettings",
     "PathSettings",
     "QueueSettings",
     "RelaySettings",

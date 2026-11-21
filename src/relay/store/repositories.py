@@ -155,6 +155,10 @@ class RequestLogEntry:
     coalesced: bool
     verdict: str | None
     created_at: str
+    # V2-09 (migration 6)
+    lane_name: str | None = None
+    cost_usd: float | None = None  # None: some call ran on a lane without a price
+    escalated: bool = False
 
 
 # --- Base ------------------------------------------------------------------------------
@@ -514,12 +518,13 @@ class IngestJobRepo(_Repo):
 
 _LOG_COLUMNS: Final = ("id, request_id, collection_id, tenant_id, question_hash, status, "
                        "ttft_ms, total_ms, tokens_in, tokens_out, cache_hit, coalesced, "
-                       "verdict, created_at")
+                       "verdict, created_at, lane_name, cost_usd, escalated")
 
 
 def _log_entry(row: tuple[Any, ...]) -> RequestLogEntry:
     values = list(row)
     values[10], values[11] = bool(values[10]), bool(values[11])
+    values[16] = bool(values[16])
     return RequestLogEntry(*values)
 
 
@@ -530,21 +535,24 @@ class RequestLogRepo(_Repo):
                      cache_hit: bool = False, coalesced: bool = False,
                      verdict: str | None = None, collection_id: str | None = None,
                      tenant_id: str | None = None, entry_id: str | None = None,
-                     request_id: str | None = None) -> RequestLogEntry:
+                     request_id: str | None = None, lane_name: str | None = None,
+                     cost_usd: float | None = None,
+                     escalated: bool = False) -> RequestLogEntry:
         """One row per completed request."""
         entry = RequestLogEntry(
             id=entry_id or self._ids(), request_id=request_id, collection_id=collection_id,
             tenant_id=tenant_id,
             question_hash=question_hash, status=status, ttft_ms=ttft_ms, total_ms=total_ms,
             tokens_in=tokens_in, tokens_out=tokens_out, cache_hit=cache_hit,
-            coalesced=coalesced, verdict=verdict, created_at=self._now())
+            coalesced=coalesced, verdict=verdict, created_at=self._now(),
+            lane_name=lane_name, cost_usd=cost_usd, escalated=escalated)
         await self._write(
             f"INSERT INTO request_log ({_LOG_COLUMNS}) "
-            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
             (entry.id, request_id, collection_id, tenant_id, question_hash, status, ttft_ms,
              total_ms,
              tokens_in, tokens_out, int(cache_hit), int(coalesced), verdict,
-             entry.created_at),
+             entry.created_at, lane_name, cost_usd, int(escalated)),
             context="insert request log entry")
         return entry
 

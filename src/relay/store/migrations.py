@@ -59,6 +59,12 @@ MIGRATIONS: Final[tuple[Migration, ...]] = (
     # V2-07 (owner prompt): per-collection switch for the advisory L4 entailment score.
     Migration(5, "collection l4_enabled",
               "ALTER TABLE collection ADD COLUMN l4_enabled INT DEFAULT 1;"),
+    # V2-09 (owner prompt; numbered 6 because 5 is taken): the lane that served a request,
+    # its full cost (answer, escalation and rewrite calls) and whether it was escalated.
+    Migration(6, "request_log lane, cost and escalation", (
+        "ALTER TABLE request_log ADD COLUMN lane_name TEXT;\n"
+        "ALTER TABLE request_log ADD COLUMN cost_usd REAL;\n"
+        "ALTER TABLE request_log ADD COLUMN escalated INT DEFAULT 0;")),
 )
 LATEST_VERSION: Final = MIGRATIONS[-1].version
 

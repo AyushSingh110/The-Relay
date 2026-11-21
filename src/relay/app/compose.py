@@ -25,14 +25,14 @@ from typing import Final
 
 from fastapi import FastAPI
 
-from relay.api.app import RelayService, create_app
+from relay.api.app import MeteredProvider, RelayService, create_app
 from relay.api.routes.ask_v1 import AskV1Context, ask_v1_router
 from relay.app.bootstrap import V1_PRESET, ensure_dev_tenant, register_v1_papers
 from relay.app.collections import LazyEmbedder, LazyReranker, StoreCollectionResolver
 from relay.app.request_log import RequestLogSink
 from relay.app.routes.ingestion import IngestionContext, fetch_arxiv_pdf, ingestion_router
 from relay.app.routes.ui import mount_ui
-from relay.app.settings import LaneSettings, RelaySettings
+from relay.app.settings import LaneGuardSettings, LaneSettings, RelaySettings
 from relay.config import Settings
 from relay.control.admission import (
     AdmissionQueue,
@@ -41,7 +41,9 @@ from relay.control.admission import (
     derive_capacity,
 )
 from relay.control.cache import corpus_digest
+from relay.control.pricing import LanePricing
 from relay.control.provider_guard import GuardConfig, ProviderGuard
+from relay.control.router import ProviderLane, ProviderRouter, RoutedGenerator
 from relay.errors import ConfigurationError, sanitize_error
 from relay.ingestion.arxiv_fetcher import load_corpus_manifest
 from relay.ingestion.worker import FileLocator, IngestWorker
@@ -71,7 +73,7 @@ class Runtime:
     """What ``relay serve`` runs, and what it reports at start-up (no secrets)."""
 
     app: FastAPI
-    lane: LaneSettings
+    lane: LaneSettings  # the primary lane
     source: Source
     provider_url: str
     capacity: CapacityDerivation
@@ -82,6 +84,7 @@ class Runtime:
     ingest_worker: IngestWorker | None = None
     notes: tuple[str, ...] = ()
     ask_v1: AskV1Context | None = None  # POST /v1/ask (V2-05), sqlite mode
+    fallback_lanes: tuple[LaneSettings, ...] = ()  # V2-09: the lanes after the primary
 
     @property
     def service(self) -> RelayService:
@@ -93,6 +96,10 @@ class Runtime:
             f"lane: {self.lane.name} ({self.lane.kind}, model {self.lane.model}, "
             f"source {self.source})",
             f"provider: {self.provider_url}",
+            *(f"fallback lane: {lane.name} ({lane.kind}, model {lane.model})"
+              + (f", escalation target of {', '.join(_escalating(self, lane))}"
+                 if _escalating(self, lane) else "")
+              for lane in self.fallback_lanes),
             f"admission: capacity {cap.capacity} (bound {cap.binding_bound}, "
             f"service rate {cap.service_rate_per_s * 60:.1f}/min)",
         ]
@@ -106,11 +113,26 @@ class Runtime:
         return lines
 
 
-def guard_config(settings: RelaySettings) -> GuardConfig:
+def _escalating(runtime: Runtime, target: LaneSettings) -> list[str]:
+    lanes = (runtime.lane, *runtime.fallback_lanes)
+    return [lane.name for lane in lanes if lane.escalate_to == target.name]
+
+
+def guard_config(settings: RelaySettings, lane: LaneSettings | None = None) -> GuardConfig:
+    """``[guard]``, with the lane's own overrides (V2-09). Each lane gets its own guard."""
     g = settings.guard
-    return GuardConfig(max_concurrency=g.max_concurrency, rpm_limit=g.rpm, tpm_limit=g.tpm,
-                       rpd_limit=g.rpd, tpd_limit=g.tpd,
-                       daily_safety_fraction=g.daily_safety_fraction)
+    own = (None if lane is None else lane.guard) or LaneGuardSettings()
+    return GuardConfig(
+        max_concurrency=own.max_concurrency or g.max_concurrency,
+        rpm_limit=own.rpm or g.rpm, tpm_limit=own.tpm or g.tpm, rpd_limit=own.rpd or g.rpd,
+        tpd_limit=own.tpd or g.tpd,
+        daily_safety_fraction=own.daily_safety_fraction or g.daily_safety_fraction)
+
+
+def lane_pricing(lane: LaneSettings) -> LanePricing | None:
+    p = lane.pricing
+    return None if p is None else LanePricing(input_per_m=float(p.input_per_m),
+                                              output_per_m=float(p.output_per_m))
 
 
 def capacity_derivation(settings: RelaySettings) -> CapacityDerivation:
@@ -224,6 +246,20 @@ async def _open_collections(settings: RelaySettings, store: Store, *,
     return _Collections(StoreCollectionResolver(store, indexes), worker, routes, note)
 
 
+def rewrite_generator(settings: RelaySettings, router: ProviderRouter) -> AnswerGenerator:
+    """The rewriter's calls go through the router (V2-09): its lanes, guards and prices,
+    with the rewriter's own 64-token budget and no escalation. ``[rewriter].model`` pins
+    them to the lane serving that model."""
+    routed = RoutedGenerator(router, purpose="rewrite", escalate=False)
+    model = settings.rewriter.model
+    if model is None:
+        return routed
+    for lane in router.lanes:
+        if lane.model == model:
+            return routed.pinned(lane, "rewrite")
+    raise ConfigurationError(f"[rewriter] model {model!r} is not the model of any lane")
+
+
 def make_rewriter(settings: RelaySettings, lane: LaneSettings,
                   generator: AnswerGenerator) -> tuple[QueryRewriter, str]:
     """The follow-up rewriter (V2-08). ``auto`` uses the model only on a Groq lane: the
@@ -293,46 +329,45 @@ async def open_runtime(settings: RelaySettings, env: Settings, *,
         corpus = await asyncio.to_thread(corpus_sha256, settings)
         if retrievers is None:
             retrievers, vocabulary = await asyncio.to_thread(_default_retrievers, settings)
-        profile = standin_profile(lane) if lane.kind == "standin" and lane.embedded else None
-        provider: ChatProvider
         real_cap: int | None = None
-        if lane.kind == "standin":
-            url = lane.base_url or ""
-            if profile is not None:
-                url = await stack.enter_async_context(
-                    serve_on_loopback(create_standin_app(profile)))
-            source: Source = "stand-in"
-            provider = HttpOpenAIProvider(base_url=url, source=source)
-        else:
-            if env.groq_api_key is None or not env.groq_api_key.get_secret_value().strip():
-                raise ConfigurationError("the groq lane needs GROQ_API_KEY in the "
-                                         "environment or .env")
-            if env.max_real_calls < 1:
-                raise ConfigurationError("the groq lane needs MAX_REAL_CALLS >= 1: it is the "
-                                         "hard cap on real calls for this process")
-            real_cap = env.max_real_calls
-            url = lane.base_url or env.groq_base_url
-            source = "real"
-            provider = HttpOpenAIProvider(base_url=url, source=source,
-                                          api_key=env.groq_api_key,
-                                          call_budget=RealCallBudget(real_cap))
-        stack.push_async_callback(provider.aclose)
-        guard = ProviderGuard(guard_config(settings))
+        budget: RealCallBudget | None = None  # one hard cap shared by every Groq lane
+        lanes: list[ProviderLane] = []
+        url, source = "", "stand-in"
+        for spec in settings.lanes:
+            if spec.kind == "groq" and budget is None:
+                if env.groq_api_key is None or not env.groq_api_key.get_secret_value().strip():
+                    raise ConfigurationError("a groq lane needs GROQ_API_KEY in the "
+                                             "environment or .env")
+                if env.max_real_calls < 1:
+                    raise ConfigurationError("a groq lane needs MAX_REAL_CALLS >= 1: it is "
+                                             "the hard cap on real calls for this process")
+                real_cap = env.max_real_calls
+                budget = RealCallBudget(real_cap)
+            provider, lane_url, lane_source = await _open_provider(spec, env, stack, budget)
+            if not lanes:
+                url, source = lane_url, lane_source
+            lanes.append(ProviderLane(
+                name=spec.name, provider=MeteredProvider(provider), model=spec.model,
+                guard=ProviderGuard(guard_config(settings, spec)),
+                pricing=lane_pricing(spec), max_completion_tokens=spec.max_completion_tokens,
+                is_reasoning_model=spec.is_reasoning_model,
+                reasoning_effort=spec.reasoning_effort, escalate_to=spec.escalate_to))
+        router = ProviderRouter(lanes, max_wait_ms=settings.providers.max_wait_ms)
         queue = AdmissionQueue.from_derivation(
             capacity, max_active=settings.queue.max_active or settings.guard.max_concurrency)
         app = create_app(
-            provider=provider, retrievers=retrievers,
+            router=router, retrievers=retrievers,
             top_k={name: RETRIEVAL_SETTINGS[name].top_k for name in retrievers},
             pipeline_config=PipelineConfig(model_id=lane.model,
                                            max_completion_tokens=lane.max_completion_tokens,
                                            reasoning_effort=lane.reasoning_effort),
-            guard=guard, queue=queue, corpus_sha256=corpus,
+            queue=queue, corpus_sha256=corpus,
             cache_mode=mode, vocabulary=vocabulary, run=sink,  # type: ignore[arg-type]
             collections=None if collections is None else collections.resolver,
         )
         app.state.relay.entailment, l4_note = await _open_l4(settings)
         app.state.relay.rewriter, rewrite_note = make_rewriter(
-            settings, lane, app.state.relay.pipeline.generator)
+            settings, lane, rewrite_generator(settings, router))
         ask_v1: AskV1Context | None = None
         if collections is not None and store is not None:
             app.include_router(ingestion_router(collections.routes))
@@ -347,8 +382,29 @@ async def open_runtime(settings: RelaySettings, env: Settings, *,
                       ingest_worker=None if collections is None else collections.worker,
                       notes=(l4_note, rewrite_note) if collections is None
                       else (collections.note, l4_note, rewrite_note),
-                      ask_v1=ask_v1)
+                      ask_v1=ask_v1, fallback_lanes=tuple(settings.lanes[1:]))
+
+
+async def _open_provider(lane: LaneSettings, env: Settings, stack: AsyncExitStack,
+                         budget: RealCallBudget | None) -> tuple[ChatProvider, str, Source]:
+    """One lane's provider (and its embedded stand-in, if any), closed with ``stack``."""
+    provider: ChatProvider
+    if lane.kind == "standin":
+        url = lane.base_url or ""
+        if lane.embedded:
+            url = await stack.enter_async_context(
+                serve_on_loopback(create_standin_app(standin_profile(lane))))
+        source: Source = "stand-in"
+        provider = HttpOpenAIProvider(base_url=url, source=source)
+    else:
+        url = lane.base_url or env.groq_base_url
+        source = "real"
+        provider = HttpOpenAIProvider(base_url=url, source=source, api_key=env.groq_api_key,
+                                      call_budget=budget)
+    stack.push_async_callback(provider.aclose)
+    return provider, url, source
 
 
 __all__ = ["Runtime", "cache_mode", "capacity_derivation", "corpus_sha256", "guard_config",
-           "make_rewriter", "open_runtime", "standin_profile"]
+           "lane_pricing", "make_rewriter", "open_runtime", "rewrite_generator",
+           "standin_profile"]

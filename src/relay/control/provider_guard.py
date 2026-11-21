@@ -95,6 +95,18 @@ class _TokenEntry:
 
 
 @dataclass(frozen=True)
+class Admission:
+    """A forecast of ``acquire``: the quota wait in ns, or why it would refuse."""
+
+    wait_ns: int | None  # None: it would refuse (see ``refusal``)
+    refusal: ErrorCode | None = None
+
+    @property
+    def admits(self) -> bool:
+        return self.wait_ns is not None
+
+
+@dataclass(frozen=True)
 class Permit:
     """A reservation for one provider attempt. Settle it exactly once."""
 
@@ -255,6 +267,22 @@ class ProviderGuard:
             needed -= entry.tokens
             wait = max(wait, entry.at_ns + WINDOW_NS - now)
         return wait
+
+    def predict(self, request: ChatRequest) -> Admission:
+        """What ``acquire`` would decide now, without reserving anything (V2-09: the router
+        chooses a lane with it). Concurrency slots are not part of the forecast."""
+        now = self._clock()
+        self._trim(now)
+        state = self.circuit_state()
+        if state == "open" or (state == "half_open" and self._trial_in_flight):
+            return Admission(None, "circuit_open")
+        if self.daily_stop_reason() is not None:
+            return Admission(None, "daily_budget_exhausted")
+        estimate = self.estimate(request)
+        limit = self.tpm_limit
+        if limit is not None and estimate > limit:
+            return Admission(None, "payload_too_large")
+        return Admission(self._quota_wait_ns(now, estimate), None)
 
     # -- circuit breaker --
 
@@ -434,8 +462,12 @@ class GuardedGenerator:
 
     def __init__(self, provider: ChatProvider, guard: ProviderGuard,
                  retry: RetryPolicy | None = None, *, sleep: Sleep = asyncio.sleep,
-                 clock: MonotonicClock = time.perf_counter_ns) -> None:
+                 clock: MonotonicClock = time.perf_counter_ns,
+                 record_first: bool = True) -> None:
         self._call = SingleCallGenerator(provider)
+        # V2-09: under the router, the RoutedGenerator records one first attempt per
+        # request (an escalation or a skipped lane is not a new request)
+        self._record_first = record_first
         self._guard = guard
         self._retry = retry or RetryPolicy()
         self._sleep = sleep
@@ -447,7 +479,8 @@ class GuardedGenerator:
         """With ``on_content`` (streaming), content is forwarded as it arrives, and an
         attempt that already forwarded content is never retried: the client has seen it,
         and a retry would produce a different answer."""
-        self._retry.budget.record_first_attempt()
+        if self._record_first:
+            self._retry.budget.record_first_attempt()
         forwarded = False
         attempt_chars = 0  # content and reasoning characters received by the current attempt
 
@@ -519,6 +552,7 @@ class GuardedGenerator:
 
 
 __all__ = [
+    "Admission",
     "CircuitOpenError",
     "DailyBudgetExhaustedError",
     "DeadlineExpiredError",

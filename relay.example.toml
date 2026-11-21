@@ -16,23 +16,38 @@
 host = "127.0.0.1"
 port = 8000
 
-# Provider lanes. V2-01 serves from the first lane only; routing across lanes is V2-09.
-[[lanes]]
+# Provider router (V2-09). Lanes are tried in order; the first is the primary. A lane is
+# used when its guard can admit the request within max_wait_ms (or the next one is tried);
+# if none can, the request waits for the lane that frees up first, up to its deadline.
+# Every lane has its own ProviderGuard (RPM/TPM windows, daily budget, circuit breaker).
+# The older top-level [[lanes]] spelling still works (not both).
+[providers]
+max_wait_ms = 2000
+
+[[providers.lanes]]
 name = "standin"
 kind = "standin"                 # "standin" or "groq"
 model = "qwen/qwen3.8-27b"
 embedded = true                  # start the stand-in in-process on 127.0.0.1
 profile = "evidence/standin_calibration/cal-20261113T022403Z-3f687c6/profile.json"
 max_completion_tokens = 512
+# USD per million tokens, for cost_usd. The stand-in is simulated, so no money is spent.
+# A lane without pricing reports cost_usd = null (unknown); no price is ever guessed.
+pricing = { input_per_m = 0.0, output_per_m = 0.0 }
+# escalate_to = "stronger"       # retry a truncated or empty answer once on that lane
+# is_reasoning_model = false
+# guard = { rpm = 30 }           # this lane's own overrides of [guard] below
 
 # To use real Groq instead, replace the lane above with this one. It needs GROQ_API_KEY in
-# the environment or .env, and MAX_REAL_CALLS > 0 as a hard cap on real calls per process.
+# the environment or .env, and MAX_REAL_CALLS > 0 as a hard cap on real calls per process
+# (shared by every Groq lane). Copy the rates from Groq's pricing page into `pricing`.
 #
-# [[lanes]]
+# [[providers.lanes]]
 # name = "groq"
 # kind = "groq"
 # model = "qwen/qwen3.8-27b"
 # max_completion_tokens = 512
+# pricing = { input_per_m = <from Groq's price list>, output_per_m = <...> }
 
 # ProviderGuard limits per lane. tpm and rpd default to the values Groq reported in v1, so
 # removing them from this file does NOT disable them. TOML has no null: to switch a limit

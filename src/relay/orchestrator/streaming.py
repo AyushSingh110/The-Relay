@@ -18,7 +18,8 @@
 - ``SentenceStream`` consumes tokens and yields ``VerifiedSentence`` events. On the first
   sentence that fails it closes the token generator (cancelling generation) and yields a
   ``StoppedEvent``. A failed sentence is never yielded. A lone refusal marker yields
-  ``StreamRefusal``.
+  ``StreamRefusal``. A stream that ended at the token limit (``finish_reason == "length"``)
+  never releases its cut-off last unit and ends with ``StoppedEvent("truncated")`` (V2-09).
 """
 
 from __future__ import annotations
@@ -301,13 +302,23 @@ class SentenceStream:
                 self.completed = True
                 return
             tail = self._splitter.flush()
+            # V2-09: the model stopped at its token limit. Its last unit is cut off, so it
+            # is never judged or released (even when it happens to verify): the answer
+            # stops "truncated", and the caller may escalate it.
+            truncated = bool(getattr(self._tokens, "truncated", False))
+            if truncated:
+                tail = tail[:-1]
             for n, unit in enumerate(tail, start=1):
                 index += 1
-                for event in self._judge(unit, index=index, is_last=n == len(tail)):
+                for event in self._judge(unit, index=index,
+                                         is_last=n == len(tail) and not truncated):
                     yield await self._scored(event)
                     if isinstance(event, StoppedEvent):
                         return
             self.completed = True
+            if truncated:
+                yield StoppedEvent("truncated", self._released > 0, None)
+                return
             if self._marker_held:
                 yield self._end_of_marker()
             elif self._refusal_held:

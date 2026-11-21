@@ -90,6 +90,11 @@ export interface Final {
   total_ms: number;
   conversation_id?: string | null;
   rewritten_question?: string | null;
+  // V2-09: the lane that answered and the request's full cost (null: a price is unknown)
+  lane_name?: string | null;
+  fallback?: boolean;
+  escalated?: boolean;
+  cost_usd?: number | null;
   // per-stage times, when the server sends them (planned in ARCHITECTURE_V2 §11)
   spans?: { queue_ms: number; retrieval_ms: number; model_ms: number; verification_ms: number };
 }

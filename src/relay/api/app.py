@@ -28,8 +28,9 @@ from relay.control.cache import (
     normalise_question,
     question_hash,
 )
-from relay.control.provider_guard import GuardedGenerator, ProviderGuard, Sleep
+from relay.control.provider_guard import ProviderGuard, Sleep
 from relay.control.retry import RetryPolicy
+from relay.control.router import ProviderLane, ProviderRouter, RoutedGenerator
 from relay.errors import ContractViolationError, RunStoreError, sanitize_error
 from relay.ingestion.registry import CollectionNotFoundError
 from relay.orchestrator.pipeline import (
@@ -385,6 +386,8 @@ class RelayService:
         # V2-08: standalone-question rewriting for follow-ups on POST /v1/ask (compose.py
         # sets the LLM rewriter for a Groq lane; the rule rewriter is the safe default).
         self.rewriter: QueryRewriter = RuleQueryRewriter()
+        # V2-09: the provider router (create_app sets it); /healthz reports each lane.
+        self.router: ProviderRouter | None = None
         self._run = run
         self._flight_ids = itertools.count(1)
 
@@ -624,6 +627,8 @@ class RelayService:
             "circuit": None if guard is None else guard.circuit,
             "trace_failures": self.trace_failures,
         }
+        if self.router is not None and len(self.router.lanes) > 1:  # V2-09: per lane
+            report["lanes"] = [_lane_health(lane) for lane in self.router.lanes]
         stats = getattr(self._run, "stats", None)  # v2 sinks report their own counters
         if callable(stats):
             report["trace_sink"] = stats()
@@ -714,20 +719,46 @@ def build_app(service: RelayService) -> FastAPI:
     return app
 
 
-def create_app(*, provider: ChatProvider, retrievers: Mapping[str, PassageRetriever],
+def _lane_health(lane: ProviderLane) -> dict[str, Any]:
+    snap = lane.guard.snapshot()
+    return {"name": lane.name, "model": lane.model, "source": lane.source,
+            "circuit": snap.circuit, "daily_stop": snap.daily_stop,
+            "requests_last_minute": snap.requests_last_minute,
+            "tpm_available": snap.tpm_available, "day_requests": snap.day_requests}
+
+
+def single_lane_router(provider: ChatProvider, guard: ProviderGuard,
+                       config: PipelineConfig, *, retry: RetryPolicy | None = None,
+                       sleep: Sleep = asyncio.sleep,
+                       clock: MonotonicClock = time.perf_counter_ns) -> ProviderRouter:
+    """One lane, as before V2-09: the pipeline's model on the given provider and guard."""
+    return ProviderRouter([ProviderLane(
+        name="primary", provider=MeteredProvider(provider), model=config.model_id,
+        guard=guard, max_completion_tokens=config.max_completion_tokens,
+        reasoning_effort=config.reasoning_effort)], retry=retry, sleep=sleep, clock=clock)
+
+
+def create_app(*, provider: ChatProvider | None = None,
+               retrievers: Mapping[str, PassageRetriever],
                top_k: Mapping[str, int], pipeline_config: PipelineConfig,
-               guard: ProviderGuard, queue: AdmissionQueue, corpus_sha256: str,
+               guard: ProviderGuard | None = None, queue: AdmissionQueue, corpus_sha256: str,
                cache_mode: CacheMode = "exact", retry: RetryPolicy | None = None,
                vocabulary: frozenset[str] | None = None, run: TraceSink | None = None,
                tool_timeout_s: float = DEFAULT_TOOL_TIMEOUT_S, sleep: Sleep = asyncio.sleep,
                clock: MonotonicClock = time.perf_counter_ns,
-               collections: Collections | None = None) -> FastAPI:
-    """Wire pipeline + ProviderGuard + admission + exact cache + SingleFlight into an app."""
+               collections: Collections | None = None,
+               router: ProviderRouter | None = None) -> FastAPI:
+    """Wire pipeline + provider router + admission + exact cache + SingleFlight into an
+    app. Without ``router``, ``provider`` and ``guard`` make the single primary lane."""
     gateway = ToolGateway(retrievers, timeout_s=tool_timeout_s, clock=clock)
-    generator = GuardedGenerator(MeteredProvider(provider), guard, retry, sleep=sleep,
-                                 clock=clock)
+    if router is None:
+        if provider is None or guard is None:
+            raise ValueError("create_app needs a router, or a provider and a guard")
+        router = single_lane_router(provider, guard, pipeline_config, retry=retry,
+                                    sleep=sleep, clock=clock)
+    generator = RoutedGenerator(router)
     pipeline = Pipeline(gateway=gateway, generator=generator, config=pipeline_config,
-                        top_k=top_k, vocabulary=vocabulary, budget=guard,
+                        top_k=top_k, vocabulary=vocabulary, budget=router,
                         collections=collections)
     cache = None
     if cache_mode == "exact":
@@ -736,8 +767,9 @@ def create_app(*, provider: ChatProvider, retrievers: Mapping[str, PassageRetrie
                                       model_id=pipeline_config.model_id))
     service = RelayService(pipeline=pipeline, queue=queue,
                            retrieval_settings=gateway.settings, cache=cache,
-                           model_id=pipeline_config.model_id, guard=guard, run=run,
-                           clock=clock, collections=collections)
+                           model_id=pipeline_config.model_id, guard=router.primary.guard,
+                           run=run, clock=clock, collections=collections)
+    service.router = router
     return build_app(service)
 
 
@@ -754,4 +786,5 @@ __all__ = [
     "create_app",
     "http_status_for",
     "render_sse",
+    "single_lane_router",
 ]

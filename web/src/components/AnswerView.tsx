@@ -238,7 +238,11 @@ export function AnswerView({ answer, onOpenSource, onRetry, retryBlocked = false
             {final.tokens_in + final.tokens_out} tokens ({final.tokens_in} in,{" "}
             {final.tokens_out} out), {(final.total_ms / 1000).toFixed(2)} s total
             {final.cache_status === "exact_hit" ? ", from the cache" : ""}
-            {final.coalesced ? ", shared with an identical question" : ""}.
+            {final.coalesced ? ", shared with an identical question" : ""}
+            {final.fallback && final.lane_name ? `, answered by the ${final.lane_name} lane` : ""}
+            {final.escalated ? ", retried once on a stronger model" : ""}
+            {typeof final.cost_usd === "number" && final.cost_usd > 0
+              ? `, cost $${final.cost_usd.toPrecision(3)}` : ""}.
           </p>
         </footer>
       )}

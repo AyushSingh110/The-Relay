@@ -1626,3 +1626,57 @@
 - **Real Groq calls:** 0 of 15. The LLM rewriter is verified offline only.
 - **Owner approval status:** pending owner review (report §11). Recommended next: optionally,
   a capped live check of the rewriter, and the owner-written follow-up questions.
+
+### Execution Entry
+
+- **Date and time:** 2026-11-21 IST
+- **Phase identifier:** `v2-09`: Provider router and cost tracking
+- **Status:** completed, pending owner review.
+- **Files:** listed in `reports/phase-v2-09-provider-router.md` §3–4.
+  - New: `src/relay/control/router.py`, `src/relay/control/pricing.py`, and 3 test files
+    (2 backend, 1 UI).
+  - Migration 6 adds `request_log.lane_name`, `cost_usd` and `escalated`.
+- **Built:**
+  - Lanes, each with its own ProviderGuard. `ProviderGuard.predict()` forecasts admission.
+  - Routing rules:
+    1. the primary lane, if it admits within `max_wait_ms`;
+    2. otherwise the next lane that does;
+    3. otherwise the lane that frees first, waiting up to the deadline.
+  - `NoLaneAvailableError` with `retry_after_ms`.
+  - One escalation retry for a truncated, reasoning-exhausted or empty answer, within the
+    shared retry budget. In streaming, only before the first sentence.
+  - A truncated stream never releases its cut-off unit.
+  - Per-call ledger and `cost_usd`, including rewrites, in `final` and `request_log`.
+  - `[[providers.lanes]]`, with the older `[[lanes]]` still accepted; one real-call cap
+    shared by all Groq lanes.
+  - UI footer: fallback lane, escalation and cost.
+- **Rulings:**
+  - migration 6 (5 is taken);
+  - rule 3 waits up to the deadline (ARCHITECTURE_V2 §7 rule 4), so one lane behaves as
+    before;
+  - no streaming escalation after delivery;
+  - no within-request failover on a provider error (the circuit breaker handles it);
+  - no invented prices (an unpriced lane gives `cost_usd` null);
+  - refusal escalation not built (the plan scoped this phase to truncation).
+- **Errors:**
+  - heredoc `\n` in the migration SQL;
+  - stand-in base URL missing `/openai/v1` (HTTP 404);
+  - request-log sink not started in the test harness;
+  - example-file test failing on the new price, so the default stand-in is priced 0/0;
+  - one E501;
+  - a blocked UI heredoc, redone with the Edit tool.
+- **Code review** (agent): 1 Important finding, a failed streaming escalation reported as a
+  citation failure. 2 Minor: follower routing fields, and retry-budget first attempts. One
+  further edge case of my own: an expired-deadline code. All fixed; each has a regression
+  test that failed first.
+- **Mutation checks:** with escalation off, 5 failed; with fallback off, 2; with cost off, 3.
+- **Final commands:**
+  - `pytest -q` → **900 passed** in 128.79 s;
+  - `ruff check .` clean;
+  - UI Jest **50 passed**; `tsc` and `eslint` exit 0; `relay ui build` OK;
+  - `results.csv` sha256 `8dfb10dfaadb…`; `evidence/` unchanged.
+- **Real Groq calls:** 0 of 20.
+- **Owner approval status:** pending owner review.
+  - Needs: a choice of the second lane (ARCHITECTURE_V2 §16 open decision 3) and its Groq
+    prices.
+  - Optional: a capped live check.

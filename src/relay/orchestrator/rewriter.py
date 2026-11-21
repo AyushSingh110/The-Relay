@@ -16,13 +16,15 @@ never grows with the conversation. Any failure falls back to the original questi
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import re
 import time
 from collections.abc import Sequence
 from dataclasses import dataclass
 from typing import Final, Protocol
 
-from relay.orchestrator.pipeline import AnswerGenerator
+from relay.control.pricing import ROUTE_NOTE, LaneUse, RouteNote
+from relay.orchestrator.pipeline import AnswerGenerator, GenerationResult
 from relay.orchestrator.verifier import TAG_PATTERN
 from relay.providers.base import ChatMessage, ChatRequest
 from relay.store.repositories import Turn
@@ -42,8 +44,14 @@ class Rewrite:
     rewritten: bool
     method: str  # "none" (first question), "rules" or "llm"
     fallback: str | None = None  # why the original was kept: timeout, provider_error, ...
-    tokens: int = 0  # model tokens the rewrite cost
     ms: float = 0.0
+    # V2-09: the model call's ledger entry (lane, tokens, cost); None when no call was made
+    usage: LaneUse | None = None
+
+    @property
+    def tokens(self) -> int:
+        """Model tokens the rewrite cost (prompt + completion)."""
+        return 0 if self.usage is None else self.usage.tokens_in + self.usage.tokens_out
 
 
 class QueryRewriter(Protocol):
@@ -55,10 +63,32 @@ async def rewrite(rewriter: QueryRewriter, question: str, history: Sequence[Turn
     return (await rewriter.resolve(question, history)).question
 
 
-def _unchanged(question: str, method: str, *, fallback: str | None = None, tokens: int = 0,
-               started: float | None = None) -> Rewrite:
+def _unchanged(question: str, method: str, *, fallback: str | None = None,
+               usage: LaneUse | None = None, started: float | None = None) -> Rewrite:
     ms = 0.0 if started is None else round((time.perf_counter() - started) * 1000, 1)
-    return Rewrite(question, question, False, method, fallback, tokens, ms)
+    return Rewrite(question, question, False, method, fallback, ms, usage)
+
+
+def _usage(result: GenerationResult, model: str) -> LaneUse | None:
+    """The rewrite call's ledger entry: the router's (with its lane and price), else the
+    provider's reported usage on an unrouted generator (no price: cost unknown)."""
+    if result.route is not None and result.route.uses:
+        return result.route.uses[0]
+    usage = None if result.completion is None else result.completion.usage
+    if usage is None:
+        return None
+    return LaneUse(lane="unrouted", provider="unknown", model=model, purpose="rewrite",
+                   tokens_in=usage.prompt_tokens, tokens_out=usage.completion_tokens,
+                   usage_source="provider", cost_usd=None)
+
+
+def _timed_out_usage(note: RouteNote) -> LaneUse | None:
+    """A rewrite cancelled by its timeout: the lane is known, what it spent is not."""
+    if note.lane is None or note.provider is None or note.model is None:
+        return None  # it never reached a lane
+    return LaneUse(lane=note.lane, provider=note.provider, model=note.model,
+                   purpose="rewrite", tokens_in=0, tokens_out=0, usage_source="none",
+                   cost_usd=None)
 
 
 # --- rules ---------------------------------------------------------------------------------
@@ -196,21 +226,27 @@ class LLMQueryRewriter:
         request = ChatRequest(model=self._model, messages=rewrite_messages(question, history),
                               max_completion_tokens=self._max_tokens, temperature=0.0,
                               reasoning_effort=self._reasoning_effort)
+        note = RouteNote()
+        token = ROUTE_NOTE.set(note)  # the router notes the lane, even if the call times out
         try:
             result = await asyncio.wait_for(
                 self._generator.generate(request, ServerSpanTracker()), self._timeout_s)
         except TimeoutError:
-            return _unchanged(question, "llm", fallback="timeout", started=started)
+            return _unchanged(question, "llm", fallback="timeout",
+                              usage=_timed_out_usage(note), started=started)
+        finally:
+            with contextlib.suppress(ValueError):  # set in this context, so reset works
+                ROUTE_NOTE.reset(token)
+        usage = _usage(result, self._model)
         if result.error is not None or result.completion is None:
-            return _unchanged(question, "llm", fallback="provider_error", started=started)
-        usage = result.completion.usage
-        tokens = 0 if usage is None else usage.prompt_tokens + usage.completion_tokens
+            return _unchanged(question, "llm", fallback="provider_error", usage=usage,
+                              started=started)
         cleaned = clean_output(result.completion.content, question)
         if cleaned is None:
-            return _unchanged(question, "llm", fallback="unusable_output", tokens=tokens,
+            return _unchanged(question, "llm", fallback="unusable_output", usage=usage,
                               started=started)
         ms = round((time.perf_counter() - started) * 1000, 1)
-        return Rewrite(cleaned, question, cleaned != question, "llm", None, tokens, ms)
+        return Rewrite(cleaned, question, cleaned != question, "llm", None, ms, usage)
 
 
 __all__ = ["DEFAULT_TIMEOUT_S", "HISTORY_CHARS", "HISTORY_TURNS", "LLMQueryRewriter",

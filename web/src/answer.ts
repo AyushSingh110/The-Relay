@@ -177,6 +177,7 @@ const REASONS: Record<string, string> = {
   refusal_with_content: "the model mixed a refusal with an answer",
   refusal_as_claim: "the next sentence said the passages do not contain the answer",
   final_verification_failed: "the whole answer did not pass the final check",
+  truncated: "the model reached its length limit mid-sentence",
   provider_error: "the model provider failed mid-answer",
   client_gave_up: "the request was abandoned",
   internal_error: "the service hit an internal error",
