@@ -1,0 +1,33 @@
+# Settings for `docker compose up` (mounted as /app/relay.toml). The full stack, with no API
+# key: the relay service answers with the stand-in service (calibrated from real Groq
+# measurements), and Redis shares the answer cache, coalescing and quota counters, so more
+# relay workers can be added. See relay.example.toml for every setting.
+
+[server]
+host = "0.0.0.0"
+port = 8000
+
+[[providers.lanes]]
+name = "standin"
+kind = "standin"
+model = "qwen/qwen3.8-27b"
+base_url = "http://standin:8001/openai/v1"   # the standin service in compose.yaml
+max_completion_tokens = 512
+pricing = { input_per_m = 0.0, output_per_m = 0.0 }
+
+[auth]
+# The web UI is built with the development key. The server listens on 0.0.0.0 inside the
+# container, so the key is enabled explicitly. compose.yaml publishes port 8000 on
+# 127.0.0.1 only. For anything reachable by others, set this to false and use
+# `relay keys create`.
+dev_key_enabled = true
+
+[cache]
+mode = "sqlite"                  # collections, uploads and the request log
+
+[paths]
+store_path = "data/relay.sqlite3"
+
+[state]
+backend = "redis"
+redis_url = "redis://redis:6379/0"

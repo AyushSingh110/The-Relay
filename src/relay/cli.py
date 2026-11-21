@@ -163,6 +163,30 @@ def _store_check(settings: RelaySettings) -> Check:
     return Check("ok", "store", detail)
 
 
+async def _ping_state(url: str, socket_timeout_s: float) -> None:
+    from relay.control.state import RedisStateStore
+
+    store = RedisStateStore.from_url(url, socket_timeout_s=socket_timeout_s)
+    try:
+        await store.ping()
+    finally:
+        await store.aclose()
+
+
+def _state_check(settings: RelaySettings) -> Check:
+    """V2-13: the shared state backend. Redis is pinged; its URL is shown as host, port
+    and database only, never with credentials."""
+    state = settings.state
+    if state.backend == "memory":
+        return Check("ok", "state store", "memory (one process; no Redis needed)")
+    where = f"redis at {compose.redis_location(state.redis_url)}"
+    try:
+        asyncio.run(_ping_state(state.redis_url, state.socket_timeout_s))
+    except Exception as exc:  # reported, never raised: doctor lists every problem
+        return Check("fail", "state store", f"{where}: cannot reach it ({type(exc).__name__})")
+    return Check("ok", "state store", f"{where}: ping ok")
+
+
 def _rule_check(name: str, rule: Callable[[], str]) -> Check:
     try:
         return Check("ok", name, rule())
@@ -171,7 +195,8 @@ def _rule_check(name: str, rule: Callable[[], str]) -> Check:
 
 
 def run_checks(settings: RelaySettings, env: Settings) -> list[Check]:
-    """Files and settings only: fast, offline, and nothing secret is reported."""
+    """Files and settings, plus a ping of Redis when it is the state backend. Nothing
+    secret is reported."""
     checks = [_corpus_check(settings), _index_check(settings), _models_check(settings),
               *_key_checks(settings, env)]
     checks += [_lane_check(i, settings) for i in range(len(settings.lanes))]
@@ -194,6 +219,7 @@ def run_checks(settings: RelaySettings, env: Settings) -> list[Check]:
 
     checks.append(_rule_check("admission capacity", capacity))
     checks.append(_store_check(settings))
+    checks.append(_state_check(settings))
     return checks
 
 

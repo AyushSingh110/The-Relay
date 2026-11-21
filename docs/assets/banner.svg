@@ -1,0 +1,89 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="400" viewBox="0 0 1280 400" role="img" aria-labelledby="t d">
+  <title id="t">The Relay</title>
+  <desc id="d">Answers from your PDFs. Every sentence is checked against the passage it cites before you see it.</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#0d1620"/>
+      <stop offset="1" stop-color="#132a33"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="0.82" cy="0.35" r="0.55">
+      <stop offset="0" stop-color="#1fa18c" stop-opacity="0.22"/>
+      <stop offset="1" stop-color="#1fa18c" stop-opacity="0"/>
+    </radialGradient>
+    <pattern id="grid" width="32" height="32" patternUnits="userSpaceOnUse">
+      <path d="M32 0H0V32" fill="none" stroke="#ffffff" stroke-opacity="0.035" stroke-width="1"/>
+    </pattern>
+    <filter id="shadow" x="-10%" y="-10%" width="120%" height="130%">
+      <feDropShadow dx="0" dy="14" stdDeviation="18" flood-color="#000" flood-opacity="0.45"/>
+    </filter>
+  </defs>
+
+  <rect width="1280" height="400" rx="18" fill="url(#bg)"/>
+  <rect width="1280" height="400" rx="18" fill="url(#grid)"/>
+  <rect width="1280" height="400" rx="18" fill="url(#glow)"/>
+
+  <!-- the mark: a baton handed between two points, the second one checked -->
+  <g transform="translate(72 104)">
+    <circle cx="10" cy="0" r="8" fill="#8a96a3"/>
+    <rect x="18" y="-2" width="30" height="4" rx="2" fill="#4a5a68"/>
+    <circle cx="64" cy="0" r="16" fill="#1fa18c"/>
+    <path d="M56 0l6 6 11-12" fill="none" stroke="#0d1620" stroke-width="3.6" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+
+  <g font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif">
+    <text x="70" y="196" fill="#f2f6f8" font-size="70" font-weight="760" letter-spacing="-1.5">The Relay</text>
+    <text x="72" y="244" fill="#b9c6cf" font-size="23">Answers from your PDFs, where every sentence is</text>
+    <text x="72" y="276" fill="#b9c6cf" font-size="23">checked against the passage it cites before you see it.</text>
+
+    <g font-size="15" font-weight="600">
+      <rect x="72" y="314" width="150" height="34" rx="17" fill="#1fa18c" fill-opacity="0.16" stroke="#1fa18c" stroke-opacity="0.5"/>
+      <text x="147" y="336" fill="#7fdcc9" text-anchor="middle">Verified streaming</text>
+      <rect x="234" y="314" width="160" height="34" rx="17" fill="#5b74e6" fill-opacity="0.16" stroke="#5b74e6" stroke-opacity="0.55"/>
+      <text x="314" y="336" fill="#aab8ff" text-anchor="middle">Rate-limit aware</text>
+      <rect x="406" y="314" width="186" height="34" rx="17" fill="#d69a3a" fill-opacity="0.15" stroke="#d69a3a" stroke-opacity="0.55"/>
+      <text x="499" y="336" fill="#f0c784" text-anchor="middle">Cache + SingleFlight</text>
+    </g>
+  </g>
+
+  <!-- an answer card -->
+  <g transform="translate(724 64)" filter="url(#shadow)">
+    <rect width="488" height="272" rx="14" fill="#182430" stroke="#2b3b49"/>
+    <g font-family="system-ui, -apple-system, 'Segoe UI', Roboto, Arial, sans-serif">
+      <text x="26" y="42" fill="#e9eff3" font-size="17" font-weight="700">How many attention heads does the base model use?</text>
+      <rect x="26" y="62" width="3" height="128" rx="1.5" fill="#1fa18c"/>
+
+      <!-- verified sentence 1 -->
+      <circle cx="52" cy="82" r="9" fill="#1fa18c"/>
+      <path d="M47.5 82l3 3 5.5-6" fill="none" stroke="#0d1620" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+      <rect x="70" y="76" width="236" height="11" rx="5.5" fill="#c9d4dc" fill-opacity="0.75"/>
+      <rect x="316" y="72" width="128" height="20" rx="10" fill="#2a3a75"/>
+      <text x="380" y="86" fill="#c4cdfa" font-size="12" font-weight="700" text-anchor="middle">attention §3.2.2</text>
+      <rect x="70" y="100" width="300" height="11" rx="5.5" fill="#c9d4dc" fill-opacity="0.45"/>
+
+      <!-- verified sentence 2 -->
+      <circle cx="52" cy="140" r="9" fill="#1fa18c"/>
+      <path d="M47.5 140l3 3 5.5-6" fill="none" stroke="#0d1620" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+      <rect x="70" y="134" width="196" height="11" rx="5.5" fill="#c9d4dc" fill-opacity="0.75"/>
+      <rect x="276" y="130" width="110" height="20" rx="10" fill="#2a3a75"/>
+      <text x="331" y="144" fill="#c4cdfa" font-size="12" font-weight="700" text-anchor="middle">moshi §3.4.1</text>
+      <rect x="70" y="158" width="250" height="11" rx="5.5" fill="#c9d4dc" fill-opacity="0.45"/>
+
+      <!-- a sentence held back by the verifier -->
+      <circle cx="52" cy="186" r="9" fill="none" stroke="#6b7a87" stroke-width="2" stroke-dasharray="3 3"/>
+      <rect x="70" y="181" width="170" height="10" rx="5" fill="#6b7a87" fill-opacity="0.35"/>
+      <text x="252" y="190" fill="#8a96a3" font-size="12" font-style="italic">not shown until verified</text>
+
+      <!-- the timing bar: queue, retrieval, model, verification -->
+      <rect x="26" y="220" width="10" height="8" rx="4" fill="#8a96a3"/>
+      <rect x="39" y="220" width="70" height="8" rx="2" fill="#5b74e6"/>
+      <rect x="112" y="220" width="276" height="8" rx="2" fill="#1fa18c"/>
+      <rect x="391" y="220" width="71" height="8" rx="4" fill="#d69a3a"/>
+      <g font-size="11.5" fill="#8a96a3">
+        <text x="26" y="250">queue</text>
+        <text x="70" y="250">retrieval</text>
+        <text x="220" y="250">model</text>
+        <text x="400" y="250">verification</text>
+      </g>
+    </g>
+  </g>
+</svg>

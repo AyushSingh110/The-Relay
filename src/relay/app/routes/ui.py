@@ -4,7 +4,8 @@
 origin, so the UI needs no CORS:
 
     GET /                         index.html
-    GET /status, /collections/... index.html (the UI's own routes; it routes in the browser)
+    GET /status, /eval,           index.html (the UI's own routes; it routes in the browser)
+        /collections/...
     GET /static/...               the built assets (Vite ``base`` is ``/static/``)
 
 Only these paths are claimed: ``/v1``, ``/ask`` and ``/healthz`` stay the API's, and an
@@ -23,7 +24,7 @@ from fastapi.responses import FileResponse, HTMLResponse, Response
 from fastapi.staticfiles import StaticFiles
 
 STATIC_DIR: Final = Path(__file__).resolve().parent.parent / "static"
-UI_PATHS: Final = ("/", "/status", "/collections/{rest:path}")
+UI_PATHS: Final = ("/", "/status", "/eval", "/collections/{rest:path}")
 NOT_BUILT: Final = (
     "<!doctype html><html lang=en><head><meta charset=utf-8><title>The Relay</title></head>"
     "<body><h1>The web UI is not built</h1>"

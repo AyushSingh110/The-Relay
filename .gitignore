@@ -37,3 +37,15 @@ uv.lock
 # --- v2 web UI (V2-06): Node dependencies and the Vite build output ---
 web/node_modules/
 web/dist/
+
+# --- Local-only project records (kept on the owner's machine, not published) ---
+CLAUDE.md
+.claude/
+ENGINEERING_LOG.md
+IMPLEMENTATION_PLAN.md
+reports/*
+!reports/phase-v2-14-load-revalidation.md
+!reports/v2-07-l4-labels.json
+
+# --- Local tool output ---
+.playwright-mcp/

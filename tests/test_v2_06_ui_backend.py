@@ -60,13 +60,27 @@ def client_for(static: Path) -> httpx.AsyncClient:
 
 async def test_the_built_ui_is_served_at_root_and_at_every_app_route(tmp_path: Path) -> None:
     async with client_for(built(tmp_path)) as client:
-        for path in ("/", "/status", "/collections/abc/chat", "/collections/abc/upload"):
+        for path in ("/", "/status", "/eval", "/collections/abc/chat",
+                     "/collections/abc/upload"):
             reply = await client.get(path)
             assert reply.status_code == 200, path
             assert reply.text == INDEX and reply.headers["content-type"].startswith("text/html")
             assert reply.headers["cache-control"] == "no-cache"  # a new build is picked up
         asset = await client.get("/static/assets/app.js")
         assert asset.status_code == 200 and asset.text == "console.log(1)"
+
+
+def test_every_top_level_page_of_the_ui_router_is_served() -> None:
+    """A page added to web/src/router.tsx must also be served by the API, or opening or
+    reloading its URL gives a JSON 404 (found for /eval in the v2 release check)."""
+    import re
+
+    from relay.app.routes.ui import UI_PATHS
+
+    router = Path(__file__).resolve().parent.parent / "web" / "src" / "router.tsx"
+    pages = set(re.findall(r'trimmed === "(/[^"]*)"', router.read_text(encoding="utf-8")))
+    assert pages, "no page paths found in router.tsx; update this test's pattern"
+    assert pages <= set(UI_PATHS), sorted(pages - set(UI_PATHS))
 
 
 async def test_the_ui_does_not_shadow_the_api(tmp_path: Path) -> None:

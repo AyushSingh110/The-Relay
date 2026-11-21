@@ -1,0 +1,35 @@
+# Keep the build context small and free of secrets and local state.
+.git
+.github
+.claude
+.env
+.env.*
+**/__pycache__
+**/*.py[cod]
+.pytest_cache
+.ruff_cache
+.venv
+venv
+*.egg-info
+
+# local working data (the container builds its own in the ./data volume)
+data/
+!data/papers/manifest.json
+!data/retrieval_manifest.json
+scratch/
+runs/
+
+# evidence: only the stand-in calibration profile is needed in the image
+evidence/
+!evidence/standin_calibration/
+
+# web: dependencies and builds are made inside the image
+web/node_modules
+web/dist
+src/relay/app/static
+
+tests/
+reports/
+demo/
+eval/
+uv.lock

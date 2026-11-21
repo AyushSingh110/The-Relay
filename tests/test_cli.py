@@ -123,3 +123,36 @@ def test_unknown_commands_are_usage_errors() -> None:
     with pytest.raises(SystemExit) as caught:
         cli.parse_args(["launch"])
     assert caught.value.code == 2
+
+
+# --- release: doctor checks the [state] backend --------------------------------------------
+
+
+def test_doctor_reports_the_memory_state_store_as_healthy(tmp_path: Path) -> None:
+    code, text = run_doctor(RelaySettings(paths=ready_paths(tmp_path)), env())  # type: ignore[arg-type]
+    assert code == cli.EXIT_OK
+    assert "[  OK] state store: memory (one process; no Redis needed)" in text
+
+
+def test_doctor_pings_redis_and_never_prints_its_password(
+        tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    import fakeredis
+
+    from relay.control.state import RedisStateStore
+
+    url = "redis://relay:s3cret@redis.internal:6380/2"
+    settings = RelaySettings(paths=ready_paths(tmp_path),  # type: ignore[arg-type]
+                             state={"backend": "redis", "redis_url": url})  # type: ignore[arg-type]
+    server = fakeredis.FakeServer()
+    monkeypatch.setattr(RedisStateStore, "from_url", classmethod(
+        lambda cls, *_a, **_k: cls(fakeredis.FakeAsyncRedis(server=server))))
+    code, text = run_doctor(settings, env())
+    assert code == cli.EXIT_OK
+    assert "[  OK] state store: redis at redis.internal:6380/2: ping ok" in text
+    assert "s3cret" not in text and "relay:" not in text
+
+    server.connected = False  # the server goes away
+    code, text = run_doctor(settings, env())
+    assert code == cli.EXIT_FAILED
+    assert "[FAIL] state store: redis at redis.internal:6380/2: cannot reach it" in text
+    assert "s3cret" not in text

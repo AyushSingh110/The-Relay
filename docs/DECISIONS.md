@@ -43,3 +43,27 @@ Owner decisions for v2 work, newest last. Each entry records what was decided, b
 - **V2-07: L4 calibration labels.** The v1 grades are per answer, rubric-proposed and unreviewed. So the calibration table is computed against **per-sentence labels proposed by Claude Code** ("supported / not supported by its cited passage"), marked as unreviewed proposals. The owner reviews them before any blocking threshold is set (owner, 2026-11-20).
 - **V2-07: L3 in streaming.** A refusal-shaped first sentence is **held, and decided at the end**, as the INSUFFICIENT_EVIDENCE marker is. If only refusal-shaped sentences (or nothing) follow, the answer is a verified refusal and is cached. If a real claim follows, the answer stops at once and is refused, not cached. The user sees the collection's refusal message, not the model's sentence. After verified sentences, a refusal-shaped sentence stops the answer as partial (owner, 2026-11-20).
 - **V2-07: L3 in the whole-answer (buffered) verifier, including v1's `POST /ask`.** A refusal-shaped sentence among claims makes the answer **BLOCKED**, as v1 treats any failed sentence (buffered mode has no partials). An answer made only of refusal-shaped sentences is `REFUSAL_VERIFIED`. The Table 3 verdicts this changes are intended changes (owner, 2026-11-20).
+
+- **V2-13: shared state and multi-worker, completed** (implementation commit 95fdf8e;
+  owner, 2026-11-21).
+  - A `StateStore` (`src/relay/control/state.py`) shares the answer cache, `/v1/ask`
+    SingleFlight coalescing and each lane's quota counters across workers.
+    - The default `[state] backend = "memory"` needs no Redis and keeps the in-process
+      objects unchanged.
+    - `backend = "redis"` uses Lua scripts for the sliding window and the flight lock.
+    - Followers replay a per-flight event log; Pub/Sub only wakes them.
+  - A dead leader's followers end with `internal_error` and `shed_reason: leader_lost`
+    once its lock expires; there is no takeover.
+  - The cache and coalescing fail open; the shared quota fails closed.
+  - `redis` and `fakeredis` are approved dependencies (CLAUDE.md section 4.1), as is Docker
+    for packaging.
+- **v2 release (owner, 2026-11-21).** With V2-13 done, every phase of
+  `docs/IMPLEMENTATION_PLAN_V2.md` is implemented. Work moves to release packaging:
+  - the `Dockerfile` and `compose.yaml` (relay + Redis + stand-in);
+  - `relay doctor` checking the state backend;
+  - the README quickstarts;
+  - the final verification before the `v2.0.0` tag.
+
+  V2-14 remains as recorded: overload and halved-TPM deliver less than v1, with the cause
+  explained in `reports/phase-v2-14-load-revalidation.md`. The owner-review items of V2-12
+  (the 80 v1 answers; 100 owner-authored questions) remain the owner's.

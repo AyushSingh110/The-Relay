@@ -1,0 +1,62 @@
+# The Relay, full stack: `docker compose up`, then open http://localhost:8000
+#
+#   relay    the API and the web UI (relay serve), settings in docker/relay.compose.toml
+#   standin  the stand-in model service: answers like the real model, no API key
+#   redis    shared state: the answer cache, coalescing and quota counters across workers
+#
+# ./data holds the metadata store, the sample papers, the embedding models and the indexes.
+# The first start fetches and builds them (network needed once); later starts reuse them.
+
+services:
+  relay:
+    build: .
+    image: the-relay:2.0.0
+    depends_on:
+      redis:
+        condition: service_healthy
+      standin:
+        condition: service_healthy
+    ports:
+      - "127.0.0.1:8000:8000"     # this machine only (the development key is enabled)
+    volumes:
+      - ./data:/app/data
+      - ./docker/relay.compose.toml:/app/relay.toml:ro
+    environment:
+      RELAY_STATE__REDIS_URL: redis://redis:6379/0
+    restart: unless-stopped
+
+  standin:
+    image: the-relay:2.0.0
+    build: .
+    command:
+      - python
+      - -m
+      - relay.standin.server
+      - --host
+      - 0.0.0.0
+      - --port
+      - "8001"
+      - --profile
+      - evidence/standin_calibration/cal-20261113T022403Z-3f687c6/profile.json
+    expose:
+      - "8001"
+    # The image's own health check probes the relay port (8000); the stand-in serves 8001.
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8001/openai/v1/models', timeout=4).status == 200 else 1)"]
+      interval: 15s
+      timeout: 5s
+      start_period: 20s
+      retries: 5
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    command: ["redis-server", "--save", "", "--appendonly", "no"]   # state is a cache
+    ports:
+      - "127.0.0.1:6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    restart: unless-stopped

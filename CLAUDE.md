@@ -78,6 +78,12 @@ The following dependencies are allowed in v2 work (`docs/ARCHITECTURE_V2.md` §4
 - `opentelemetry-sdk` — request tracing.
 - `python-multipart` — file uploads in FastAPI.
 
+Added by the owner on 2026-11-21 (V2-13 and the v2 release):
+
+- `redis` — the optional shared `StateStore` backend for multi-worker deployments (`[state] backend = "redis"`; the `redis` extra). The default `memory` backend must keep working without it.
+- `fakeredis` — dev and test only: an in-process Redis, so the multi-worker tests run offline without a Redis server.
+- Docker (`Dockerfile`, `compose.yaml`) — packaging only (`docs/ARCHITECTURE_V2.md` §13). Kubernetes is still not approved.
+
 ---
 
 ## 5. Absolute Engineering Restrictions
