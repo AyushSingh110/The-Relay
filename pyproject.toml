@@ -30,6 +30,7 @@ dev = [
     "pytest>=8",
     "pytest-asyncio>=0.24",
     "ruff>=0.5",
+    "huggingface_hub>=0.20",  # scripts/download_l4_model.py (V2-07 L4 model)
 ]
 
 [tool.setuptools.packages.find]

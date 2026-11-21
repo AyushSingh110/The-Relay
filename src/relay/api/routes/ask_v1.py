@@ -2,7 +2,10 @@
 
 Events, in order, on one SSE connection:
 
-    accepted  request_id, queue_position, expected_wait_ms   (first, before any work)
+    accepted  request_id, queue_position, expected_wait_ms, conversation_id   (first, before
+              any work)
+    status    rewriting (V2-08, follow-ups only): sent at once; then again with
+              rewritten_question, original_question, rewritten, fallback
     status    stage: queued | retrieving | generating | verifying   (+ keepalives)
     sources   passages: [{id, chunk_id, paper_id, short_name, page_range, section,
                           text_excerpt, text}]   (text: the whole passage, V2-06)
@@ -65,6 +68,7 @@ from relay.orchestrator.pipeline import (
     PipelineRequest,
     StreamPlan,
 )
+from relay.orchestrator.rewriter import HISTORY_TURNS, Rewrite
 from relay.orchestrator.streaming import (
     SentenceStream,
     StoppedEvent,
@@ -77,6 +81,7 @@ from relay.providers.probing import CONSERVATIVE_CHARS_PER_TOKEN, status_for_err
 from relay.retrieval.hybrid_index import RetrievedPassage
 from relay.retrieval.registry import CollectionNotReadyError
 from relay.store import Store
+from relay.store.repositories import Turn
 from relay.telemetry.spans import ServerSpanTracker
 
 logger = logging.getLogger(__name__)
@@ -432,10 +437,35 @@ def _cancelled_spend(live: dict[str, Any]) -> dict[str, Any]:
             "usage_source": "estimated"}
 
 
-def _accepted(ctx: AskV1Context, channel: ReplayChannel, request_id: str, *,
+@dataclass(frozen=True)
+class ConversationLog:
+    """Where a request's turn is recorded (V2-08): the user's ORIGINAL question and the text
+    actually delivered (its verified sentences, or the refusal message)."""
+
+    conversation_id: str
+    question: str
+
+
+async def _record_turn(ctx: AskV1Context, log: ConversationLog | None, final: dict[str, Any],
+                       sentences: list[str], request_id: str) -> None:
+    """Append the turn when an answer reached the user (status ok). A store failure is
+    logged and never changes the answer."""
+    if log is None or final.get("status") != "ok":
+        return
+    text = " ".join(sentences) or final.get("message")
+    if not text:
+        return
+    try:
+        await ctx.store.conversations.append_turn(log.conversation_id, log.question, text)
+    except Exception as exc:  # the answer is already decided: keep it
+        logger.warning("/v1/ask request %s: conversation turn not recorded: %s", request_id,
+                       sanitize_error(exc))
+
+
+def _accepted(ctx: AskV1Context, channel: ReplayChannel | None, request_id: str, *,
               follower: bool) -> dict[str, Any]:
     queue = ctx.service.queue
-    if follower:  # it waits for the flight it joined
+    if follower and channel is not None:  # it waits for the flight it joined
         position = channel.position()
     else:
         busy = queue.active >= queue.max_active or queue.depth > 0
@@ -446,10 +476,15 @@ def _accepted(ctx: AskV1Context, channel: ReplayChannel, request_id: str, *,
 
 async def _cached(ctx: AskV1Context, hit: CachedAnswer, *, request_id: str,
                   arrived_ns: int, collection_id: str, buffered: bool,
-                  setting: str) -> AsyncIterator[bytes]:
+                  setting: str, accepted_sent: bool = False,
+                  conversation: ConversationLog | None = None,
+                  rewritten: str | None = None) -> AsyncIterator[bytes]:
     clock = ctx.service.clock
-    yield sse("accepted", {"request_id": request_id, "queue_position": 0,
-                           "expected_wait_ms": 0.0})
+    if not accepted_sent:
+        yield sse("accepted", {"request_id": request_id, "queue_position": 0,
+                               "expected_wait_ms": 0.0,
+                               "conversation_id": None if conversation is None
+                               else conversation.conversation_id})
     if hit.sources:  # cached by /v1/ask: the same passages the live answer sent
         yield sse("sources", {"passages": [s.model_dump() for s in hit.sources]})
     else:  # cached by v1's POST /ask, which keeps only the cited pages
@@ -458,9 +493,11 @@ async def _cached(ctx: AskV1Context, hit: CachedAnswer, *, request_id: str,
             "short_name": None, "page_range": _page_range(c.page_start, c.page_end),
             "section": None, "text_excerpt": None, "text": None} for c in hit.citations]})
     first: float | None = None
+    sentences: list[str] = []
     if not hit.refused:  # a refusal's text is a message, never a sentence
         for sentence in split_sentences(hit.delivered_text):
             first = first if first is not None else (clock() - arrived_ns) / _NS_PER_MS
+            sentences.append(sentence)
             yield sse("sentence", {"text": sentence, "citations": tags_in(sentence),
                                    "confidence": None})  # not re-scored on a cache hit
     total = (clock() - arrived_ns) / _NS_PER_MS
@@ -472,9 +509,12 @@ async def _cached(ctx: AskV1Context, hit: CachedAnswer, *, request_id: str,
              "retrieval_setting": setting, "collection_id": collection_id,
              "buffered": buffered, "queue_depth_at_entry": None,
              "cache_status": "exact_hit", "coalesced": False,
-             "ttft_ms": first, "total_ms": round(total, 3)}
+             "ttft_ms": first, "total_ms": round(total, 3),
+             "conversation_id": None if conversation is None else conversation.conversation_id,
+             "rewritten_question": rewritten}
     ctx.service.record_trace(_request_record(request_id, hit_question=None, final=final,
                                              collection_id=collection_id, role="cache_hit"))
+    await _record_turn(ctx, conversation, final, sentences, request_id)
     yield sse("final", final)
 
 
@@ -494,7 +534,12 @@ def _request_record(request_id: str, *, hit_question: str | None, final: dict[st
 async def _respond(ctx: AskV1Context, target: AskTarget, *, request_id: str, arrived_ns: int,
                    collection_id: str, buffered: bool,
                    deadline_ns: int | None = None,
-                   scorer: EntailmentScore | None = None) -> AsyncIterator[bytes]:
+                   scorer: EntailmentScore | None = None,
+                   accepted_sent: bool = False,
+                   conversation: ConversationLog | None = None,
+                   rewritten: str | None = None) -> AsyncIterator[bytes]:
+    """One request. ``target.ask.question`` is the standalone question (a follow-up arrives
+    here already rewritten, with ``accepted`` already sent)."""
     service, ask = ctx.service, target.ask
     clock = service.clock
     setting = ask.retrieval_setting or ""
@@ -506,7 +551,8 @@ async def _respond(ctx: AskV1Context, target: AskTarget, *, request_id: str, arr
                 or (hit.verification_verdict == "REFUSAL_VERIFIED" and hit.refused)):
             async for chunk in _cached(ctx, hit, request_id=request_id, arrived_ns=arrived_ns,
                                        collection_id=collection_id, buffered=buffered,
-                                       setting=setting):
+                                       setting=setting, accepted_sent=accepted_sent,
+                                       conversation=conversation, rewritten=rewritten):
                 yield chunk
             return
     key: Hashable = (normalise_question(ask.question), target.cache_setting, buffered)
@@ -526,10 +572,14 @@ async def _respond(ctx: AskV1Context, target: AskTarget, *, request_id: str, arr
             name=f"v1-ask-{request_id}")
         channel.task.add_done_callback(lambda _: _forget(ctx, flight))
     try:
-        yield sse("accepted", _accepted(ctx, channel, request_id, follower=follower))
+        if not accepted_sent:
+            yield sse("accepted", {**_accepted(ctx, channel, request_id, follower=follower),
+                                   "conversation_id": None if conversation is None
+                                   else conversation.conversation_id})
         go.set()
         index = 0
         first: float | None = None
+        sentences: list[str] = []
         # A follower's own deadline bounds its wait (v1: follower_timeout); the leader's
         # deadline, if any, already bounds the flight itself.
         own_deadline = deadline_ns if follower else None
@@ -568,21 +618,66 @@ async def _respond(ctx: AskV1Context, target: AskTarget, *, request_id: str, arr
                          "cache_status": ("coalesced" if follower else
                                           "off" if service.cache is None else "miss"),
                          "coalesced": follower, "ttft_ms": first,
-                         "total_ms": round(total, 3)}
+                         "total_ms": round(total, 3),
+                         "conversation_id": None if conversation is None
+                         else conversation.conversation_id,
+                         "rewritten_question": rewritten}
                 if follower:  # the leader paid for it
                     final.update({"tokens_in": 0, "tokens_out": 0, "usage_source": "none",
                                   "provider_called": False, "queue_depth_at_entry": None})
                 service.record_trace(_request_record(
                     request_id, hit_question=ask.question, final=final,
                     collection_id=collection_id, role="follower" if follower else "leader"))
+                await _record_turn(ctx, conversation, final, sentences, request_id)
                 yield sse("final", final)
                 return
-            if name == "sentence" and first is None:
-                first = round((clock() - arrived_ns) / _NS_PER_MS, 3)
+            if name == "sentence":
+                sentences.append(data["text"])
+                if first is None:
+                    first = round((clock() - arrived_ns) / _NS_PER_MS, 3)
             yield sse(name, data)
     finally:
         go.set()  # "accepted" went out (or the client left): followers must not wait
         channel.leave()
+
+
+async def _follow_up(ctx: AskV1Context, target: AskTarget, turns: list[Turn],
+                     conversation_id: str, **respond: Any) -> AsyncIterator[bytes]:
+    """A follow-up: ``accepted`` at once, then the rewrite (bounded by the rewriter's own
+    timeout; any failure keeps the original), then the ordinary flow on the standalone
+    question, so the cache and SingleFlight see the rewritten question."""
+    request_id: str = respond["request_id"]
+    original = target.ask.question
+    yield sse("accepted", {**_accepted(ctx, None, request_id, follower=False),
+                           "conversation_id": conversation_id})
+    yield sse("status", {"stage": "rewriting", "queue_position": 0})
+    try:
+        rewrite = await ctx.service.rewriter.resolve(original, turns)
+    except Exception as exc:  # never let a rewrite fail the question
+        logger.warning("/v1/ask request %s: rewrite failed, original kept: %s", request_id,
+                       sanitize_error(exc))
+        rewrite = Rewrite(original, original, False, "error", fallback=type(exc).__name__)
+    yield sse("status", {"stage": "rewriting", "queue_position": 0,
+                         "rewritten_question": rewrite.question, "original_question": original,
+                         "rewritten": rewrite.rewritten, "method": rewrite.method,
+                         "fallback": rewrite.fallback})
+    ctx.service.record_trace({"record": "rewrite", "endpoint": "/v1/ask",
+                              "request_id": request_id, "conversation_id": conversation_id,
+                              "method": rewrite.method, "rewritten": rewrite.rewritten,
+                              "fallback": rewrite.fallback, "tokens": rewrite.tokens,
+                              "ms": rewrite.ms, "turns": len(turns)})
+    standalone = AskTarget(target.ask.model_copy(update={"question": rewrite.question}),
+                           target.cache_setting)
+    async for chunk in _respond(ctx, standalone, accepted_sent=True,
+                                conversation=ConversationLog(conversation_id, original),
+                                rewritten=rewrite.question, **respond):
+        yield chunk
+
+
+class CreateConversation(BaseModel):
+    model_config = ConfigDict(frozen=True, strict=True, extra="forbid")
+
+    collection_id: Annotated[str, Field(min_length=1, max_length=64)]
 
 
 # --- Router ------------------------------------------------------------------------------
@@ -613,10 +708,13 @@ def ask_v1_router(ctx: AskV1Context) -> APIRouter:
             collection = await ctx.store.collections.get_by_id(collection_id)
             if collection is None or collection.tenant_id != tenant:
                 raise Rejected(404, "collection_not_found", "no such collection")
+            turns: list[Turn] = []
             if body.conversation_id is not None:
                 conversation = await ctx.store.conversations.get_by_id(body.conversation_id)
                 if conversation is None or conversation.collection_id != collection_id:
                     raise Rejected(404, "conversation_not_found", "no such conversation")
+                turns = await ctx.store.conversations.get_recent_turns(
+                    body.conversation_id, limit=HISTORY_TURNS)
             request_id = f"v1ask-{uuid.uuid4().hex}"
             target = await service.target(AskRequest(
                 request_id=request_id, question=body.question, collection_id=collection_id))
@@ -631,14 +729,54 @@ def ask_v1_router(ctx: AskV1Context) -> APIRouter:
         except CollectionNotReadyError:
             return _error(409, "collection_not_ready",
                           "the collection has no indexed documents yet")
-        return StreamingResponse(
-            _respond(ctx, target, request_id=request_id, arrived_ns=arrived_ns,
-                     collection_id=collection_id, buffered=collection.buffered,
-                     scorer=service.entailment if collection.l4_enabled else None,
-                     deadline_ns=None if body.deadline_ms is None
-                     else arrived_ns + body.deadline_ms * _NS_PER_MS),
-            media_type="text/event-stream",
-            headers={"cache-control": "no-store", "x-accel-buffering": "no"})
+        respond: dict[str, Any] = {
+            "request_id": request_id, "arrived_ns": arrived_ns, "collection_id": collection_id,
+            "buffered": collection.buffered,
+            "scorer": service.entailment if collection.l4_enabled else None,
+            "deadline_ns": None if body.deadline_ms is None
+            else arrived_ns + body.deadline_ms * _NS_PER_MS}
+        if turns and body.conversation_id is not None:  # a follow-up: rewrite first
+            stream = _follow_up(ctx, target, turns, body.conversation_id, **respond)
+        else:  # a first question: no rewrite (no model call, no latency)
+            log = None if body.conversation_id is None else ConversationLog(
+                body.conversation_id, body.question)
+            stream = _respond(ctx, target, conversation=log, **respond)
+        return StreamingResponse(stream, media_type="text/event-stream",
+                                 headers={"cache-control": "no-store",
+                                          "x-accel-buffering": "no"})
+
+    @router.post("/conversations")
+    async def create_conversation(request: Request) -> Response:
+        try:
+            tenant = caller_tenant(request)
+            body = CreateConversation.model_validate_json(await request.body())
+            collection = await ctx.store.collections.get_by_id(body.collection_id)
+            if collection is None or collection.tenant_id != tenant:
+                raise Rejected(404, "collection_not_found", "no such collection")
+            created = await ctx.store.conversations.create(collection.id)
+        except Rejected as exc:
+            return _error(exc.status, exc.code, str(exc))
+        except ValidationError:
+            return _error(422, "invalid_request", "send JSON {\"collection_id\": ...}")
+        return JSONResponse({"id": created.id, "collection_id": created.collection_id,
+                             "created_at": created.created_at}, status_code=201)
+
+    @router.get("/conversations/{conversation_id}")
+    async def get_conversation(conversation_id: str, request: Request) -> Response:
+        try:
+            tenant = caller_tenant(request)
+            found = await ctx.store.conversations.get_by_id(conversation_id)
+            collection = None if found is None else await ctx.store.collections.get_by_id(
+                found.collection_id)
+            if found is None or collection is None or collection.tenant_id != tenant:
+                raise Rejected(404, "conversation_not_found", "no such conversation")
+        except Rejected as exc:
+            return _error(exc.status, exc.code, str(exc))
+        messages = await ctx.store.conversations.list_messages(found.id)
+        return JSONResponse({"id": found.id, "collection_id": found.collection_id,
+                             "created_at": found.created_at,
+                             "messages": [{"role": m.role, "content": m.content,
+                                           "created_at": m.created_at} for m in messages]})
 
     return router
 

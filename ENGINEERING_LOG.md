@@ -1582,3 +1582,47 @@
   eslint and tsc clean; `results.csv` sha256 `8dfb10df…44efd`; `evidence/` unchanged.
 - **Real Groq calls:** 0. **Network:** Hugging Face metadata lookups and model downloads only.
 - **Owner approval status:** pending owner review (report §11).
+
+### Execution Entry
+
+- **Date and time:** 2026-11-21 IST
+- **Phase identifier:** `v2-08`: Conversations and query rewriting
+- **Status:** completed, pending owner review.
+- **Files:** listed in `reports/phase-v2-08-conversations.md` §3–4.
+  - New: `src/relay/orchestrator/rewriter.py` and 5 test files (4 backend, 1 UI).
+- **L4 prerequisites:**
+  - `huggingface_hub` is a dev dependency.
+  - ONNX threads are capped at 4.
+  - Top 2 of the 2-sentence windows (by word overlap) are scored in one batched call.
+    Scratch measurement: p50 178 ms, p95 298 ms. AUROC 0.771; all windows give 0.768.
+  - Calibration regenerated: at 0.3, TPR 61.5 % and FPR 13.1 %. L4 stays advisory.
+- **Built:**
+  - LLM and rule rewriters;
+  - `ConversationRepo.append_turn` (atomic) and `get_recent_turns(limit=2)`;
+  - the `/v1/ask` follow-up flow: `accepted` first, then `status: rewriting` twice, then the
+    standalone question into the cache, SingleFlight and pipeline;
+  - turns recorded only on an ok final;
+  - POST and GET `/v1/conversations`;
+  - the `[rewriter]` setting (`auto`: LLM on a Groq lane, rules on a stand-in lane);
+  - UI: one conversation per chat page, and "Interpreted as: …".
+- **Rulings:**
+  - the rewrite runs in the route, before the cache;
+  - the result goes on `status: rewriting` and `final`, not on `accepted`;
+  - the timeout includes the wait at the guard;
+  - no rewriter model is suggested;
+  - plan task 4 (owner questions) was not done.
+- **Errors:**
+  - scoring all windows was slow, so only the top 2 are scored;
+  - ruff SIM905 produced long lines, wrapped by hand;
+  - the test helper was missing fields, so the real generator is used;
+  - the citation tag "P1" was taken as a subject; fixed, with a regression test;
+  - a patch anchor mismatch was caught before any write;
+  - the code-review agent hit an API rate limit (HTTP 429), so I reviewed the code myself.
+- **Final commands:**
+  - `pytest -q` → **866 passed** in 107.64 s;
+  - `ruff check .` clean;
+  - UI: Jest **47 passed**, `tsc` exit 0, `eslint` exit 0, and `relay ui build` OK;
+  - `results.csv` sha256 `8dfb10dfaadb…`; `evidence/` unchanged.
+- **Real Groq calls:** 0 of 15. The LLM rewriter is verified offline only.
+- **Owner approval status:** pending owner review (report §11). Recommended next: optionally,
+  a capped live check of the rewriter, and the owner-written follow-up questions.

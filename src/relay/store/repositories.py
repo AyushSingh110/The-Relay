@@ -132,6 +132,14 @@ class Message:
 
 
 @dataclass(frozen=True, slots=True)
+class Turn:
+    """One exchange of a conversation (V2-08): the user's question and the answer given."""
+
+    user: str
+    assistant: str
+
+
+@dataclass(frozen=True, slots=True)
 class RequestLogEntry:
     id: str
     request_id: str | None
@@ -579,6 +587,34 @@ class ConversationRepo(_Repo):
             context=f"append message: conversation {conversation_id!r} does not exist")
         return message
 
+    async def append_turn(self, conversation_id: str, user: str, assistant: str) -> None:
+        """One question and its answer, written in one transaction (both or neither)."""
+        now = self._now()
+        sql = ("INSERT INTO message (id, conversation_id, role, content, created_at) "
+               "VALUES (?, ?, ?, ?, ?)")
+        await self._write_many(
+            [(sql, (self._ids(), conversation_id, "user", user, now)),
+             (sql, (self._ids(), conversation_id, "assistant", assistant, now))],
+            context=f"append turn: conversation {conversation_id!r} does not exist")
+
+    async def get_recent_turns(self, conversation_id: str, limit: int = 2) -> list[Turn]:
+        """The last ``limit`` complete turns (a user message followed by its answer), oldest
+        first. Bounded by ``limit`` whatever the conversation's length (V2-08)."""
+        if limit <= 0:
+            return []
+        rows = await self._all("SELECT role, content FROM message WHERE conversation_id = ? "
+                               "ORDER BY created_at DESC, rowid DESC LIMIT ?",
+                               (conversation_id, limit * 2 + 2))
+        turns: list[Turn] = []
+        pending: str | None = None
+        for role, content in reversed(rows):  # oldest first
+            if role == "user":
+                pending = content
+            elif role == "assistant" and pending is not None:
+                turns.append(Turn(pending, content))
+                pending = None
+        return turns[-limit:]
+
     async def list_messages(self, conversation_id: str) -> list[Message]:
         rows = await self._all("SELECT id, conversation_id, role, content, created_at "
                                "FROM message WHERE conversation_id = ? "
@@ -590,5 +626,5 @@ __all__ = [
     "Collection", "CollectionRepo", "Conversation", "ConversationRepo", "Document",
     "DocumentRepo", "ForeignKeyViolationError", "IngestJob", "IngestJobRepo",
     "IntegrityViolationError", "InvalidValueError", "Message", "NotFoundError",
-    "RequestLogEntry", "RequestLogRepo", "StoreError", "Tenant", "TenantRepo",
+    "RequestLogEntry", "RequestLogRepo", "StoreError", "Tenant", "TenantRepo", "Turn",
 ]

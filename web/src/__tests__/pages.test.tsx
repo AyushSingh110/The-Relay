@@ -123,7 +123,8 @@ test("the chat page appends a sentence event's text to the answer", async () => 
   const answer = await screen.findByRole("region", { name: "Answer" });
   await waitFor(() => expect(answer).toHaveTextContent("Experts route tokens"));
   expect(answer).toHaveTextContent("Attention maps a query to an output");
-  expect(api.ask).toHaveBeenCalledWith({ question: "What is attention?", collection_id: "geo" },
+  expect(api.ask).toHaveBeenCalledWith({ question: "What is attention?", collection_id: "geo",
+    conversation_id: "conv1" }, // V2-08: every chat page keeps one conversation
     expect.any(Function), expect.any(AbortSignal));
   expect(await screen.findByText(/960 tokens/)).toBeInTheDocument(); // the footer
 });

@@ -40,6 +40,7 @@ export function fakeApi(over: Partial<RelayApi> = {},
     uploadPdf: jest.fn(async () => ({ id: "doc1", status: "queued" })),
     addArxiv: jest.fn(async () => ({ id: "doc1", status: "queued" })),
     getDocument: jest.fn(async () => document()),
+    createConversation: jest.fn(async () => ({ id: "conv1" })),
     health: jest.fn(async () => ({
       status: "ok", cache_mode: "sqlite", cache_entries: 2, in_flight: 0, queue_depth: 0,
       queue_active: 0, queue_capacity: 8, daily_stop: false, circuit: "closed",

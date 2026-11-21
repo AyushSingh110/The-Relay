@@ -41,6 +41,7 @@ from relay.orchestrator.pipeline import (
     PipelineRequest,
 )
 from relay.orchestrator.prompt import PROMPT_VERSION
+from relay.orchestrator.rewriter import QueryRewriter, RuleQueryRewriter
 from relay.orchestrator.tools import DEFAULT_TOOL_TIMEOUT_S, PassageRetriever, ToolGateway
 from relay.orchestrator.verifier import CitedPassage, EntailmentScore
 from relay.providers.base import (
@@ -381,6 +382,9 @@ class RelayService:
         # V2-07 L4 (advisory): the entailment scorer, set at start-up when the model is
         # installed (compose.py); None means no confidence is computed.
         self.entailment: EntailmentScore | None = None
+        # V2-08: standalone-question rewriting for follow-ups on POST /v1/ask (compose.py
+        # sets the LLM rewriter for a Groq lane; the rule rewriter is the safe default).
+        self.rewriter: QueryRewriter = RuleQueryRewriter()
         self._run = run
         self._flight_ids = itertools.count(1)
 

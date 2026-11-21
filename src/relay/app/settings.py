@@ -162,10 +162,23 @@ class VerifierSettings(BaseModel):
     model_config = _MODEL
 
     l4_model_dir: Path = Path("data/models/nli/nli-MiniLM2-L6-H768")
-    # V2-07 spike (14-core laptop, real Table 3 pairs): int8 for AVX2 CPUs at 8 threads per
-    # call is 142 ms per sentence at the median, 90 MB. Use "onnx/model.onnx" without AVX2.
+    # V2-07 spike (14-core laptop, real Table 3 pairs): int8 for AVX2 CPUs, ~90 MB. Use
+    # "onnx/model.onnx" without AVX2. V2-08: ONNX threads per call are capped at 4 so
+    # concurrent requests do not starve the CPU (the scorer enforces the cap).
     l4_model_file: str = "onnx/model_quint8_avx2.onnx"
-    l4_threads: PositiveInt = 8  # ONNX threads per scoring call
+    l4_threads: PositiveInt = 4  # ONNX threads per scoring call (at most 4)
+
+
+class RewriterSettings(BaseModel):
+    """Follow-up rewriting on POST /v1/ask (V2-08). ``auto``: the LLM rewriter on a Groq
+    lane, the rule rewriter on a stand-in lane (the stand-in cannot rewrite)."""
+
+    model_config = _MODEL
+
+    mode: Literal["auto", "llm", "rules"] = "auto"
+    model: Annotated[str, Field(min_length=1, max_length=128)] | None = None  # None: lane's
+    timeout_s: Annotated[float, Field(gt=0, le=10)] = 1.5  # then the original question
+    max_completion_tokens: Annotated[int, Field(ge=8, le=256)] = 64
 
 
 def _default_lanes() -> tuple[LaneSettings, ...]:
@@ -186,6 +199,7 @@ class RelaySettings(BaseModel):
     retrieval: RetrievalConfig = RetrievalConfig()
     ingestion: IngestionSettings = IngestionSettings()
     verifier: VerifierSettings = VerifierSettings()
+    rewriter: RewriterSettings = RewriterSettings()
 
     @model_validator(mode="after")
     def _unique_lanes(self) -> RelaySettings:

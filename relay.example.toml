@@ -75,7 +75,16 @@ max_loaded_collections = 8       # collection indexes kept in memory (least rece
 [verifier]
 l4_model_dir = "data/models/nli/nli-MiniLM2-L6-H768"
 l4_model_file = "onnx/model_quint8_avx2.onnx"   # int8 for AVX2 CPUs; else "onnx/model.onnx"
-l4_threads = 8                                   # ONNX threads per scoring call
+l4_threads = 4                                   # ONNX threads per scoring call (at most 4)
+
+# Follow-ups on POST /v1/ask (V2-08): a question in a conversation with earlier turns is
+# rewritten into a standalone question before retrieval and the cache. First questions are
+# never rewritten. "auto" = the model on a Groq lane, rules on a stand-in lane.
+[rewriter]
+mode = "auto"                 # auto | llm | rules
+# model = "<a smaller model id>"   # default: the lane's model (none verified yet)
+timeout_s = 1.5               # slower than this: the original question is used
+max_completion_tokens = 64
 
 [retrieval]
 settings = ["small_fast", "balanced_rerank", "large_wide"]

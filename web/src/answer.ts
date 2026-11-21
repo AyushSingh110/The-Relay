@@ -18,6 +18,7 @@ export interface Answer {
   expectedWaitMs: number | null; // quoted by "accepted", for acceptedPosition
   acceptedPosition: number | null;
   stage: Stage | null;
+  rewrittenQuestion: string | null; // set only when the server changed the question (V2-08)
   sources: Passage[];
   sentences: Sentence[];
   stopped: { reason_class: string; partial: boolean } | null;
@@ -36,7 +37,7 @@ export type Action =
 export function initialAnswer(question: string, at: number): Answer {
   return {
     question, phase: "connecting", requestId: null, queuePosition: null, expectedWaitMs: null,
-    acceptedPosition: null, stage: null, sources: [], sentences: [], stopped: null, final: null, error: null,
+    acceptedPosition: null, stage: null, rewrittenQuestion: null, sources: [], sentences: [], stopped: null, final: null, error: null,
     marks: { start: at },
   };
 }
@@ -74,6 +75,8 @@ function apply(answer: Answer, event: AskEvent, at: number): Answer {
       return {
         ...streaming, stage: event.data.stage, queuePosition: event.data.queue_position,
         marks: mark(answer, event.data.stage, at),
+        rewrittenQuestion: event.data.rewritten === true && event.data.rewritten_question
+          ? event.data.rewritten_question : answer.rewrittenQuestion,
       };
     case "sources":
       return { ...streaming, sources: event.data.passages };
@@ -116,6 +119,7 @@ export function segments(answer: Answer): Segments | null {
     from === undefined ? 0 : Math.max(0, Math.round((to ?? end) - from));
   const cached = final.cache_status === "exact_hit";
   return { estimated: true, parts: [
+    // a follow-up's rewrite happens before retrieval: it counts as queue time here
     { label: "Queue", ms: cached ? 0 : span(begin, m.retrieving ?? m.generating) },
     { label: "Retrieval", ms: span(m.retrieving, m.generating) },
     { label: "Model", ms: span(m.generating, m.verifying ?? m.lastSentence) },

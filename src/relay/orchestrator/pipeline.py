@@ -513,6 +513,12 @@ class Pipeline:
         self._collections = collections
         self._v1_safety = CorpusSafety.for_cues(V1_CUE_SET)
 
+    @property
+    def generator(self) -> AnswerGenerator:
+        """The guarded generator every model call goes through (V2-08: the rewriter uses it,
+        so its call obeys the same ProviderGuard limits and real-call budget)."""
+        return self._generator
+
     async def _corpus(self, request: PipelineRequest) -> tuple[PipelineRequest, _Corpus]:
         """The v1 corpus, or the request's collection (its retriever, cues, vocabulary)."""
         if request.collection_id is None:

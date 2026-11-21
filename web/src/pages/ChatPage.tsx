@@ -25,6 +25,8 @@ export function ChatPage({ collectionId }: { collectionId: string }) {
   const [busy, setBusy] = useState(false);
   const focusTurn = useRef<number | null>(null);
   const questionBox = useRef<HTMLTextAreaElement>(null);
+  // one conversation per page visit (V2-08): follow-ups are read in its context
+  const conversation = useRef<string | null>(null);
 
   useEffect(() => {
     // after a retry the button that was pressed is gone: keep the user on that answer
@@ -46,18 +48,32 @@ export function ChatPage({ collectionId }: { collectionId: string }) {
     setTurns((all) => all.map((turn, i) => (i === index ? reduce(turn, action) : turn)));
   }, []);
 
+  const conversationId = useCallback(async (): Promise<string | null> => {
+    if (conversation.current === null) {
+      try {
+        conversation.current = (await api.createConversation(collectionId)).id;
+      } catch {
+        return null; // asked without context; the next question tries again
+      }
+    }
+    return conversation.current;
+  }, [api, collectionId]);
+
   const run = useCallback(async (text: string, index: number) => {
     const controller = new AbortController();
     running.current.set(index, controller);
     setBusy(true);
     try {
-      await api.ask({ question: text, collection_id: collectionId },
+      const id = await conversationId();
+      await api.ask(id === null ? { question: text, collection_id: collectionId }
+        : { question: text, collection_id: collectionId, conversation_id: id },
         (event) => dispatch(index, { type: "event", event, at: performance.now() }),
         controller.signal);
       dispatch(index, { type: "ended", at: performance.now() });
     } catch (error) {
       if (controller.signal.aborted) dispatch(index, { type: "cancelled" });
       else if (error instanceof ApiError) {
+        if (error.code === "conversation_not_found") conversation.current = null; // start anew
         dispatch(index, { type: "rejected",
           error: { status: error.status, code: error.code, message: error.message } });
       } else dispatch(index, { type: "lost", at: performance.now() });
@@ -65,7 +81,7 @@ export function ChatPage({ collectionId }: { collectionId: string }) {
       running.current.delete(index);
       setBusy(running.current.size > 0);
     }
-  }, [api, collectionId, dispatch]);
+  }, [api, collectionId, conversationId, dispatch]);
 
   const submit = (event?: FormEvent) => {
     event?.preventDefault();

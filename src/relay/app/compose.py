@@ -45,7 +45,8 @@ from relay.control.provider_guard import GuardConfig, ProviderGuard
 from relay.errors import ConfigurationError, sanitize_error
 from relay.ingestion.arxiv_fetcher import load_corpus_manifest
 from relay.ingestion.worker import FileLocator, IngestWorker
-from relay.orchestrator.pipeline import PipelineConfig
+from relay.orchestrator.pipeline import AnswerGenerator, PipelineConfig
+from relay.orchestrator.rewriter import LLMQueryRewriter, QueryRewriter, RuleQueryRewriter
 from relay.orchestrator.tools import PassageRetriever
 from relay.orchestrator.verifier import EntailmentScore, EntailmentScorer
 from relay.providers.base import ChatProvider, RealCallBudget
@@ -223,6 +224,23 @@ async def _open_collections(settings: RelaySettings, store: Store, *,
     return _Collections(StoreCollectionResolver(store, indexes), worker, routes, note)
 
 
+def make_rewriter(settings: RelaySettings, lane: LaneSettings,
+                  generator: AnswerGenerator) -> tuple[QueryRewriter, str]:
+    """The follow-up rewriter (V2-08). ``auto`` uses the model only on a Groq lane: the
+    stand-in returns scripted text and cannot rewrite, so it gets the rule rewriter."""
+    r = settings.rewriter
+    use_llm = r.mode == "llm" or (r.mode == "auto" and lane.kind == "groq")
+    if not use_llm:
+        return RuleQueryRewriter(), "follow-up rewriting: rules (no model call)"
+    model = r.model or lane.model
+    rewriter = LLMQueryRewriter(generator, model=model, timeout_s=r.timeout_s,
+                                max_completion_tokens=r.max_completion_tokens,
+                                reasoning_effort=lane.reasoning_effort if r.model is None
+                                else None)
+    return rewriter, (f"follow-up rewriting: {model}, at most {r.max_completion_tokens} "
+                      f"tokens, {r.timeout_s:g} s timeout (then the original question)")
+
+
 async def _open_l4(settings: RelaySettings) -> tuple[EntailmentScore | None, str]:
     """Load the L4 entailment model once (in a worker thread), or report why L4 is off."""
     v = settings.verifier
@@ -313,6 +331,8 @@ async def open_runtime(settings: RelaySettings, env: Settings, *,
             collections=None if collections is None else collections.resolver,
         )
         app.state.relay.entailment, l4_note = await _open_l4(settings)
+        app.state.relay.rewriter, rewrite_note = make_rewriter(
+            settings, lane, app.state.relay.pipeline.generator)
         ask_v1: AskV1Context | None = None
         if collections is not None and store is not None:
             app.include_router(ingestion_router(collections.routes))
@@ -325,10 +345,10 @@ async def open_runtime(settings: RelaySettings, env: Settings, *,
                       request_log=sink,
                       collections=None if collections is None else collections.resolver,
                       ingest_worker=None if collections is None else collections.worker,
-                      notes=(l4_note,) if collections is None
-                      else (collections.note, l4_note),
+                      notes=(l4_note, rewrite_note) if collections is None
+                      else (collections.note, l4_note, rewrite_note),
                       ask_v1=ask_v1)
 
 
 __all__ = ["Runtime", "cache_mode", "capacity_derivation", "corpus_sha256", "guard_config",
-           "open_runtime", "standin_profile"]
+           "make_rewriter", "open_runtime", "standin_profile"]

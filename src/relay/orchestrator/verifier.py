@@ -352,16 +352,61 @@ def entailment_probability(logits: Sequence[float], index: int) -> float:
     return weights[index] / sum(weights)
 
 
+WINDOW_SENTENCES: Final = 2
+MAX_WINDOWS: Final = 64  # one batch per (sentence, passage) stays bounded
+
+
+def passage_windows(passage: str, size: int = WINDOW_SENTENCES) -> list[str]:
+    """The passage as overlapping windows of ``size`` consecutive sentences (V2-08: NLI
+    models are trained on short premises; whole passages scored ~0.05 whatever the label,
+    2-sentence windows separated the V2-07 calibration labels, AUROC 0.756 vs 0.530). A very
+    long passage gets wider windows, so at most ``MAX_WINDOWS`` still cover all of it."""
+    parts = split_sentences(passage)
+    if len(parts) <= size:
+        return [" ".join(parts) if parts else passage]
+    if len(parts) - size + 1 > MAX_WINDOWS:
+        size = math.ceil((len(parts) - 1) / MAX_WINDOWS) + 1
+    step = 1 if size == WINDOW_SENTENCES else size - 1
+    return [" ".join(parts[i:i + size])
+            for i in range(0, len(parts) - size + step, step)][:MAX_WINDOWS]
+
+
+SCORED_WINDOWS: Final = 2
+_STOPWORDS: Final = frozenset(
+    ["the", "a", "an", "of", "and", "or", "to", "in", "on", "for", "with", "by", "is", "are",
+     "was", "were", "be", "been", "this", "that", "these", "those", "it", "its", "as", "at",
+     "from", "which", "into", "than", "then", "also", "can", "not", "has", "have", "had"])
+
+
+def _content_words(text: str) -> set[str]:
+    return {w for w in re.findall(r"[a-z0-9]+", text.lower()) if len(w) > 2
+            and w not in _STOPWORDS}
+
+
+def best_windows(sentence: str, windows: Sequence[str], k: int = SCORED_WINDOWS) -> list[str]:
+    """The ``k`` windows sharing the most content words with the sentence (ties keep the
+    passage order). V2-08 measurement on the V2-07 labels: the top 2 separate as well as
+    all windows (AUROC 0.771 vs 0.768) at a quarter of the latency (178 vs 685 ms p50)."""
+    words = _content_words(sentence)
+    ranked = sorted(range(len(windows)), key=lambda i: -len(words & _content_words(windows[i])))
+    return [windows[i] for i in ranked[:k]]
+
+
 class EntailmentScorer:
     """L4: P(the passage entails the sentence) from a local ONNX NLI cross-encoder
     (owner-approved model; onnxruntime + tokenizers, already installed via fastembed).
 
-    ``model_dir`` holds ``config.json`` (its ``id2label`` gives the entailment class),
-    ``tokenizer.json`` and ``model_file``. Loading takes a few seconds: build it once at
-    start-up. ``score`` is blocking CPU work: call it from a worker thread. One ONNX session
-    is safe to share between threads."""
+    The sentence is scored against the 2-sentence windows of the passage that share the
+    most words with it (``best_windows``), in one batched ONNX call; the best window counts
+    (V2-08). ``model_dir`` holds
+    ``config.json`` (its ``id2label`` gives the entailment class), ``tokenizer.json`` and
+    ``model_file``. Loading takes a few seconds: build it once at start-up. ``score`` is
+    blocking CPU work: call it from a worker thread. One ONNX session is safe to share
+    between threads; each call uses at most ``MAX_THREADS`` ONNX threads, so concurrent
+    requests do not starve the CPU."""
 
     MAX_TOKENS: Final = 512
+    MAX_THREADS: Final = 4
 
     def __init__(self, model_dir: Path, *, model_file: str = "onnx/model.onnx",
                  threads: int = 1) -> None:
@@ -376,8 +421,14 @@ class EntailmentScorer:
         self.entailment_index = found[0]
         self._tokenizer = Tokenizer.from_file(str(model_dir / "tokenizer.json"))
         self._tokenizer.enable_truncation(max_length=self.MAX_TOKENS)
+        pad = next((t for t in ("<pad>", "[PAD]") if self._tokenizer.token_to_id(t)
+                    is not None), None)
+        if pad is None:
+            raise ValueError(f"{model_dir}: the tokenizer has no padding token")
+        self._tokenizer.enable_padding(pad_id=self._tokenizer.token_to_id(pad), pad_token=pad)
+        self.threads = max(1, min(threads, self.MAX_THREADS))
         options = onnxruntime.SessionOptions()
-        options.intra_op_num_threads = threads
+        options.intra_op_num_threads = self.threads
         self._session = onnxruntime.InferenceSession(
             str(model_dir / model_file), sess_options=options,
             providers=["CPUExecutionProvider"])
@@ -386,13 +437,17 @@ class EntailmentScorer:
     def score(self, sentence: str, passage: str) -> float:
         import numpy as np
 
-        encoding = self._tokenizer.encode(passage, sentence)  # premise, hypothesis
-        feed = {"input_ids": encoding.ids, "attention_mask": encoding.attention_mask,
-                "token_type_ids": encoding.type_ids}
-        arrays = {name: np.array([values], dtype=np.int64)
+        windows = best_windows(sentence, passage_windows(passage))
+        encodings = self._tokenizer.encode_batch(  # (premise, hypothesis) per window
+            [(window, sentence) for window in windows])
+        feed = {"input_ids": [e.ids for e in encodings],
+                "attention_mask": [e.attention_mask for e in encodings],
+                "token_type_ids": [e.type_ids for e in encodings]}
+        arrays = {name: np.array(values, dtype=np.int64)
                   for name, values in feed.items() if name in self._inputs}
-        logits = self._session.run(None, arrays)[0][0]
-        return float(entailment_probability([float(x) for x in logits], self.entailment_index))
+        logits = self._session.run(None, arrays)[0]  # one call, one row per window
+        return float(max(entailment_probability([float(x) for x in row],
+                                                self.entailment_index) for row in logits))
 
 
 def is_refusal_form(text: str) -> bool:
@@ -530,6 +585,8 @@ __all__ = [
     "TAG_PATTERN",
     "WORD_CHAR",
     "entailment_probability",
+    "best_windows",
+    "passage_windows",
     "is_refusal_form",
     "is_refusal_marker",
     "split_sentences",

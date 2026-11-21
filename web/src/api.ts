@@ -54,7 +54,25 @@ export interface Passage {
   text: string | null;
 }
 
-export type Stage = "queued" | "retrieving" | "generating" | "verifying";
+// "rewriting" (V2-08): a follow-up is being turned into a standalone question
+export type Stage = "queued" | "rewriting" | "retrieving" | "generating" | "verifying";
+
+export interface StatusData {
+  stage: Stage;
+  queue_position: number;
+  keepalive?: boolean;
+  // the second "rewriting" status of a follow-up carries the result (V2-08)
+  rewritten_question?: string;
+  original_question?: string;
+  rewritten?: boolean;
+  fallback?: string | null;
+}
+
+export interface AskBody {
+  question: string;
+  collection_id: string;
+  conversation_id?: string;
+}
 
 export interface Final {
   request_id: string;
@@ -70,13 +88,16 @@ export interface Final {
   coalesced: boolean;
   ttft_ms: number | null;
   total_ms: number;
+  conversation_id?: string | null;
+  rewritten_question?: string | null;
   // per-stage times, when the server sends them (planned in ARCHITECTURE_V2 §11)
   spans?: { queue_ms: number; retrieval_ms: number; model_ms: number; verification_ms: number };
 }
 
 export type AskEvent =
-  | { event: "accepted"; data: { request_id: string; queue_position: number; expected_wait_ms: number } }
-  | { event: "status"; data: { stage: Stage; queue_position: number; keepalive?: boolean } }
+  | { event: "accepted"; data: { request_id: string; queue_position: number; expected_wait_ms: number;
+      conversation_id?: string | null } }
+  | { event: "status"; data: StatusData }
   | { event: "sources"; data: { passages: Passage[] } }
   | { event: "sentence"; data: { text: string; citations: string[] } }
   | { event: "stopped"; data: { reason_class: string; partial: boolean } }
@@ -103,9 +124,11 @@ export interface RelayApi {
   addArxiv(collectionId: string, arxivId: string): Promise<Added>;
   getDocument(documentId: string): Promise<DocumentState>;
   health(): Promise<Health>;
+  /** A new conversation in the collection: follow-up questions are read in its context. */
+  createConversation(collectionId: string): Promise<{ id: string }>;
   /** Resolves when the stream ends; ``sawFinal`` is false if it ended early. */
   ask(
-    body: { question: string; collection_id: string },
+    body: AskBody,
     onEvent: (event: AskEvent) => void,
     signal: AbortSignal,
   ): Promise<{ sawFinal: boolean }>;
@@ -178,6 +201,9 @@ export function createHttpApi(fetchImpl: typeof fetch = (...args) => fetch(...ar
     },
     getDocument(documentId) {
       return call(`/v1/documents/${encodeURIComponent(documentId)}`);
+    },
+    createConversation(collectionId) {
+      return call("/v1/conversations", json({ collection_id: collectionId }));
     },
     async health() {
       const response = await fetchImpl("/healthz");

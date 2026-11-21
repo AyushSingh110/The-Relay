@@ -37,6 +37,9 @@ function Banner({ answer }: { answer: Answer }) {
         : "Request accepted, starting now";
       break;
     }
+    case "rewriting":
+      text = "Reading your question in context…";
+      break;
     case "retrieving":
       text = "Finding relevant passages…";
       break;
@@ -214,6 +217,9 @@ export function AnswerView({ answer, onOpenSource, onRetry, retryBlocked = false
   return (
     <article className="turn" id={id} tabIndex={-1} aria-label={`Question: ${answer.question}`}>
       <p className="question">{answer.question}</p>
+      {answer.rewrittenQuestion && (
+        <p className="interpreted">Interpreted as: {answer.rewrittenQuestion}</p>
+      )}
       <Banner answer={answer} />
       <section className="answer" aria-label="Answer" aria-live="polite">
         {answer.sentences.map((s, i) => (
