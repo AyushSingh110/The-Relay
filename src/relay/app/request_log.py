@@ -28,6 +28,7 @@ from __future__ import annotations
 
 import asyncio
 import contextlib
+import json
 import logging
 from collections.abc import Mapping
 from typing import Any, Final
@@ -66,6 +67,9 @@ def log_fields(record: Mapping[str, Any]) -> dict[str, Any]:
         "lane_name": final.get("lane_name"),
         "cost_usd": final.get("cost_usd"),
         "escalated": bool(final.get("escalated", False)),
+        # V2-11: the waterfall, verifier counts and spans, as JSON (no text)
+        "breakdown": None if record.get("breakdown") is None
+        else json.dumps(record["breakdown"], sort_keys=True, separators=(",", ":")),
     }
 
 

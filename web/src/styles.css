@@ -251,6 +251,8 @@ label { font-weight: 600; display: block; margin-bottom: 0.3rem; }
   border: 1px solid var(--rule); border-radius: var(--radius);
 }
 .access-grid { margin-bottom: 1rem; }
+.quota-detail { display: block; color: var(--muted); font-size: 0.9rem; margin-top: 0.2rem; }
+.tag-plain { font-weight: 500; }
 .status-grid caption { text-align: left; font-weight: 600; padding: 0 0 0.4rem; }
 .status-grid th, .status-grid td { text-align: left; padding: 0.45rem 0.75rem; border-top: 1px solid var(--rule); vertical-align: top; }
 .status-grid th { font-weight: 500; color: var(--muted); width: 45%; }

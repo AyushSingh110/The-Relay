@@ -59,6 +59,10 @@ def sanitize_error(exc: BaseException) -> str:
     """Summarise an exception without its message, which may contain secrets or payloads."""
     name = type(exc).__name__
     status_code = getattr(exc, "status_code", None)
+    category = getattr(exc, "category", None)  # V2-11: a sanitised transport category
+    parts = []
     if isinstance(status_code, int) and not isinstance(status_code, bool):
-        return f"{name}(status_code={status_code})"
-    return name
+        parts.append(f"status_code={status_code}")
+    if isinstance(category, str) and category.isupper():
+        parts.append(f"category={category}")
+    return f"{name}({', '.join(parts)})" if parts else name

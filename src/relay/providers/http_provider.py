@@ -5,6 +5,8 @@ from __future__ import annotations
 import asyncio
 import json
 import re
+import socket
+import ssl
 import time
 from collections.abc import AsyncIterator, Callable
 from contextlib import aclosing
@@ -43,6 +45,7 @@ from relay.providers.errors import (
     ProviderStreamIncompleteError,
     ProviderTimeoutError,
     RateLimitMetric,
+    TransportCategory,
 )
 from relay.providers.headers import (
     RateLimitSnapshot,
@@ -298,13 +301,54 @@ def _map_stream_error(payload: Any, meta: ResponseMeta) -> ProviderError:
     return ProviderServerError("in-stream error event from provider", **common)
 
 
+def _causes(exc: BaseException) -> list[BaseException]:
+    """The exception and its causes (``__cause__``/``__context__``), at most 8 deep."""
+    chain: list[BaseException] = []
+    current: BaseException | None = exc
+    while current is not None and current not in chain and len(chain) < 8:
+        chain.append(current)
+        current = current.__cause__ or current.__context__
+    return chain
+
+
+_DNS_HINTS: Final = ("getaddrinfo", "name or service not known", "nodename nor servname",
+                     "no address associated", "name resolution", "errno 11001", "errno -2",
+                     "errno -3")
+
+
+def transport_category(exc: BaseException) -> TransportCategory:
+    """The sanitised category of a transport failure (V2-11). Decided by exception types;
+    DNS is also recognised from the resolver's own error text, which is inspected here and
+    never logged."""
+    chain = _causes(exc)
+    if any(isinstance(e, ssl.SSLError) for e in chain):
+        return "TLS_ERROR"
+    if isinstance(exc, httpx.ConnectTimeout):
+        return "CONNECT_TIMEOUT"
+    if isinstance(exc, httpx.ReadTimeout):
+        return "READ_TIMEOUT"
+    if isinstance(exc, httpx.ConnectError):
+        if any(isinstance(e, socket.gaierror) for e in chain) or any(
+                hint in str(e).lower() for e in chain for hint in _DNS_HINTS):
+            return "DNS_FAILURE"
+        return "CONNECT_FAILURE"
+    if isinstance(exc, httpx.RemoteProtocolError | httpx.ReadError):
+        return "STREAM_DISCONNECT"
+    return "OTHER_TRANSPORT"
+
+
 def _map_transport_error(exc: httpx.HTTPError, meta: ResponseMeta | None = None) -> ProviderError:
     name = type(exc).__name__
+    mapped: ProviderError
     if isinstance(exc, httpx.ReadTimeout):
-        return ProviderTimeoutError("provider read timed out", phase="read", meta=meta)
-    if isinstance(exc, httpx.DecodingError):
+        mapped = ProviderTimeoutError("provider read timed out", phase="read", meta=meta)
+    elif isinstance(exc, httpx.DecodingError):
         return ProviderProtocolError("response body could not be decoded", meta=meta)
-    return ProviderConnectionError(f"provider transport failure: {name}", reason=name, meta=meta)
+    else:
+        mapped = ProviderConnectionError(f"provider transport failure: {name}", reason=name,
+                                         meta=meta)
+    mapped.category = transport_category(exc)
+    return mapped
 
 
 # --- Model catalogue ----------------------------------------------------------------

@@ -203,6 +203,7 @@ class RequestLogEntry:
     lane_name: str | None = None
     cost_usd: float | None = None  # None: some call ran on a lane without a price
     escalated: bool = False
+    breakdown: str | None = None  # V2-11 (migration 8): JSON waterfall, verifier, spans
 
 
 # --- Base ------------------------------------------------------------------------------
@@ -679,7 +680,7 @@ class IngestJobRepo(_Repo):
 
 _LOG_COLUMNS: Final = ("id, request_id, collection_id, tenant_id, question_hash, status, "
                        "ttft_ms, total_ms, tokens_in, tokens_out, cache_hit, coalesced, "
-                       "verdict, created_at, lane_name, cost_usd, escalated")
+                       "verdict, created_at, lane_name, cost_usd, escalated, breakdown")
 
 
 def _log_entry(row: tuple[Any, ...]) -> RequestLogEntry:
@@ -698,7 +699,8 @@ class RequestLogRepo(_Repo):
                      tenant_id: str | None = None, entry_id: str | None = None,
                      request_id: str | None = None, lane_name: str | None = None,
                      cost_usd: float | None = None,
-                     escalated: bool = False) -> RequestLogEntry:
+                     escalated: bool = False,
+                     breakdown: str | None = None) -> RequestLogEntry:
         """One row per completed request."""
         entry = RequestLogEntry(
             id=entry_id or self._ids(), request_id=request_id, collection_id=collection_id,
@@ -706,20 +708,27 @@ class RequestLogRepo(_Repo):
             question_hash=question_hash, status=status, ttft_ms=ttft_ms, total_ms=total_ms,
             tokens_in=tokens_in, tokens_out=tokens_out, cache_hit=cache_hit,
             coalesced=coalesced, verdict=verdict, created_at=self._now(),
-            lane_name=lane_name, cost_usd=cost_usd, escalated=escalated)
+            lane_name=lane_name, cost_usd=cost_usd, escalated=escalated,
+            breakdown=breakdown)
         await self._write(
             f"INSERT INTO request_log ({_LOG_COLUMNS}) "
-            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
             (entry.id, request_id, collection_id, tenant_id, question_hash, status, ttft_ms,
              total_ms,
              tokens_in, tokens_out, int(cache_hit), int(coalesced), verdict,
-             entry.created_at, lane_name, cost_usd, int(escalated)),
+             entry.created_at, lane_name, cost_usd, int(escalated), breakdown),
             context="insert request log entry")
         return entry
 
     async def get_by_id(self, entry_id: str) -> RequestLogEntry | None:
         row = await self._one(f"SELECT {_LOG_COLUMNS} FROM request_log WHERE id = ?",
                               (entry_id,))
+        return None if row is None else _log_entry(row)
+
+    async def get_by_request_id(self, request_id: str) -> RequestLogEntry | None:
+        """The newest row for a request id (V2-11: GET /v1/requests/{id})."""
+        row = await self._one(f"SELECT {_LOG_COLUMNS} FROM request_log WHERE request_id = ? "
+                              "ORDER BY created_at DESC, rowid DESC LIMIT 1", (request_id,))
         return None if row is None else _log_entry(row)
 
     async def list_recent(self, limit: int = 100) -> list[RequestLogEntry]:

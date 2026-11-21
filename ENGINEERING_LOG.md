@@ -1745,3 +1745,61 @@
 - **Real Groq calls:** 0 (cap 0).
 - **Owner approval status:** pending owner review.
   - Needs: the light-tenant delivery-rate floor, for a harness measurement.
+
+### Execution Entry
+
+- **Date and time:** 2026-11-21 IST
+- **Phase identifier:** `v2-11`: Observability
+- **Status:** completed, pending owner review.
+- **Files:** listed in `reports/phase-v2-11-observability.md` §3–4.
+  - New: `telemetry/metrics.py`, `telemetry/tracing.py`, `api/routes/requests.py`,
+    `docs/dashboards/starter_dashboard.json`, `tests/test_v2_11_observability.py`, and the
+    `.claude/skills/relay-verify` skill.
+  - Migration 8 adds `request_log.breakdown`.
+- **Dependencies:** `prometheus-client` 0.26.0 and `opentelemetry-sdk` 1.45.2, installed
+  and added to `[project.dependencies]` (approved in CLAUDE.md §4.1).
+- **Built:**
+  - `GET /metrics`: requests, latency by stage, tokens by lane, cache events, verifier
+    blocks by layer, and live queue-depth and quota-headroom gauges.
+  - OTel request spans:
+    - root `request`, then `pipeline.rewrite`, `queue.wait`, `pipeline.retrieve`,
+      `pipeline.generate`, `verifier.sentence` and `pipeline.verify`;
+    - v1's waiting, working and retrying totals on the root;
+    - a bounded in-memory exporter.
+  - `GET /v1/requests/{id}`: tenant-scoped (404 cross-tenant), with the waterfall computed
+    from the spans.
+  - Transport categories (DNS, connect timeout, TLS, read timeout, stream disconnect, plus
+    connect failure and other), carried in `sanitize_error`.
+  - The Status page refreshes every 5 s and shows quota per lane.
+  - A Grafana starter dashboard with 8 panels.
+- **Token-saving tooling** (owner request): the `relay-verify` skill (one-command
+  end-of-phase checks) and 3 memory notes.
+- **Rulings:**
+  - `/metrics` is unauthenticated like `/healthz`, so it must stay on a private network
+    (tenant ids are labels);
+  - L4 blocks are always 0 (L4 is advisory);
+  - verifier layers follow the V2-07 checks;
+  - the waterfall is made of span durations;
+  - 2 extra transport categories.
+- **Errors:**
+  - a test question was refused up front, so the test changed, not the metrics;
+  - test sinks were not closed;
+  - the V2-10 noisy-neighbour tests failed under full-suite load because they timed B from
+    sending, not from queueing. They now measure the queue's admission order: B is the next
+    one admitted, `ahead == 0`, for both queue sizes, which is stricter. No product change.
+- **Code review** (agent): no high-confidence bugs. 3 lower-confidence points were fixed:
+  - span no-ops after a trace has finished;
+  - an abandoned flight's tokens in the metrics;
+  - `aclosing` for the inner generator.
+
+  `/metrics` auth is documented instead.
+- **Mutation checks:** without metrics, 2 failed; with the question leaked into a span, 1;
+  without categories, 6.
+- **Final** `bash .claude/skills/relay-verify/verify.sh --ui-build`:
+  - pytest **953 passed** in 170.94 s;
+  - ruff clean;
+  - Jest **55 passed**; tsc and eslint 0;
+  - the UI build copied 3 files;
+  - `results.csv` sha256 `8dfb10dfaadb` OK; 0 evidence changes.
+- **Real Groq calls:** 0 (cap 0).
+- **Owner approval status:** pending owner review.

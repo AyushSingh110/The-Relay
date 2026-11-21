@@ -266,12 +266,30 @@ test("the pages have no detectable accessibility violations", async () => {
   }
 });
 
-test("the status page shows the health report and the quota placeholder", async () => {
+test("the status page shows the health report and each lane's live quota", async () => {
   withApi(fakeApi(), <StatusPage />);
   expect(await screen.findByText("sqlite")).toBeInTheDocument();
   const log = screen.getByRole("table", { name: "Request log" });
   expect(within(log).getByText("12")).toBeInTheDocument();
-  expect(screen.getByText(/coming in V2-11/)).toBeInTheDocument();
+  const quota = screen.getByRole("table", { name: "Quota headroom" });
+  expect(within(quota).getByText("standin")).toBeInTheDocument();
+  expect(within(quota).getByText("6,200 of 8,000 tokens this minute")).toBeInTheDocument();
+  expect(within(quota).getByText("3 requests today")).toBeInTheDocument();
+  expect(screen.queryByText(/coming in V2-11/)).not.toBeInTheDocument();
+});
+
+test("the status page refreshes itself every few seconds", async () => {
+  jest.useFakeTimers();
+  try {
+    const api = fakeApi();
+    withApi(api, <StatusPage />);
+    await act(async () => { await Promise.resolve(); });
+    expect(api.health).toHaveBeenCalledTimes(1);
+    await act(async () => { jest.advanceTimersByTime(5000); await Promise.resolve(); });
+    expect(api.health).toHaveBeenCalledTimes(2);
+  } finally {
+    jest.useRealTimers();
+  }
 });
 
 test("the collections page creates a collection from the modal", async () => {

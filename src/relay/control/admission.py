@@ -144,6 +144,7 @@ class _Waiter:
     rank: int
     seq: int
     over_rate: bool = False
+    priority: str = Priority.INTERACTIVE
 
 
 def _rank(priority: Priority, over_rate: bool) -> int:
@@ -221,6 +222,15 @@ class AdmissionQueue:
     @property
     def active(self) -> int:
         return self._active
+
+    def depth_by_class(self) -> dict[tuple[str, str], int]:
+        """Waiting requests by (priority, tenant) (V2-11: the queue-depth gauge)."""
+        counts: dict[tuple[str, str], int] = {}
+        for waiter in self._waiters:
+            if not waiter.future.done():
+                key = (str(waiter.priority), waiter.tenant or "none")
+                counts[key] = counts.get(key, 0) + 1
+        return counts
 
     # -- ordering --
 
@@ -300,7 +310,7 @@ class AdmissionQueue:
             self._admitted(tenant)
         else:
             waiter = _Waiter(asyncio.get_running_loop().create_future(), tenant, rank,
-                             next(self._seq), over_rate)
+                             next(self._seq), over_rate, str(Priority(priority)))
             full = depth_at_entry >= self.capacity
             if full and not self._worse_than(rank):  # v1's order: "full" before deadline
                 raise AdmissionRejectedError(

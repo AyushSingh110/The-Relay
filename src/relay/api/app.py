@@ -15,6 +15,7 @@ from typing import Annotated, Any, Final, Protocol
 
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse, Response
+from prometheus_client import CONTENT_TYPE_LATEST as PROMETHEUS_CONTENT_TYPE
 from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
 from relay.config import CacheMode
@@ -65,7 +66,9 @@ from relay.schemas import (
     UsageSource,
     VerificationVerdict,
 )
+from relay.telemetry.metrics import RelayMetrics
 from relay.telemetry.spans import MonotonicClock, ServerSpanTracker, SpanSummary
+from relay.telemetry.tracing import Tracing
 
 logger = logging.getLogger(__name__)
 
@@ -388,6 +391,11 @@ class RelayService:
         self.rewriter: QueryRewriter = RuleQueryRewriter()
         # V2-09: the provider router (create_app sets it); /healthz reports each lane.
         self.router: ProviderRouter | None = None
+        # V2-11: Prometheus metrics (GET /metrics) and request tracing (GET /v1/requests)
+        self.metrics = RelayMetrics()
+        self.tracing = Tracing()
+        self.metrics.watch(queue_depth=lambda: self.queue.depth_by_class(),
+                           headroom=self._headroom)
         self._run = run
         self._flight_ids = itertools.count(1)
 
@@ -421,9 +429,24 @@ class RelayService:
             self.trace_failures += 1
             logger.error("trace write failed: %s", sanitize_error(exc))
 
+    def _headroom(self) -> dict[str, int | None]:
+        if self.router is None:
+            return {}
+        return {lane.name: lane.guard.snapshot().tpm_available for lane in self.router.lanes}
+
     def _trace_request(self, ask: AskRequest, *, role: str, flight_id: str | None,
                        final: Mapping[str, Any], abandoned: bool = False,
                        source_request_id: str | None = None) -> None:
+        # V2-11: v1 POST /ask in the metrics too (its final names the v1 columns)
+        self.metrics.observe_request({
+            "status": final.get("status"), "error_code": final.get("error_code"),
+            "cache_status": final.get("cache_status"),
+            "provider_called": final.get("provider_called"),
+            "tokens_in": final.get("tokens_in"), "tokens_out": final.get("tokens_out"),
+            "total_ms": final.get("server_total_ms"),
+            "provider_first_token_ms": final.get("provider_first_token_ms"),
+            "lane_name": None if self.router is None else self.router.primary.name},
+            tenant=None)
         self._trace({
             "record": "request", "request_id": ask.request_id, "role": role,
             "collection_id": ask.collection_id,
@@ -629,6 +652,8 @@ class RelayService:
         }
         if self.router is not None and len(self.router.lanes) > 1:  # V2-09: per lane
             report["lanes"] = [_lane_health(lane) for lane in self.router.lanes]
+        if self.router is not None:  # V2-11: every lane's live quota (the Status page)
+            report["quota"] = [_lane_quota(lane) for lane in self.router.lanes]
         stats = getattr(self._run, "stats", None)  # v2 sinks report their own counters
         if callable(stats):
             report["trace_sink"] = stats()
@@ -682,6 +707,11 @@ def build_app(service: RelayService) -> FastAPI:
     async def healthz() -> dict[str, Any]:
         return service.health()
 
+    @app.get("/metrics")
+    async def metrics() -> Response:
+        """V2-11: Prometheus text format. Labels are ids and closed sets, never text."""
+        return Response(service.metrics.render(), media_type=PROMETHEUS_CONTENT_TYPE)
+
     @app.post("/ask")
     async def ask(request: Request) -> Response:
         arrived_ns = service.clock()
@@ -725,6 +755,15 @@ def _lane_health(lane: ProviderLane) -> dict[str, Any]:
             "circuit": snap.circuit, "daily_stop": snap.daily_stop,
             "requests_last_minute": snap.requests_last_minute,
             "tpm_available": snap.tpm_available, "day_requests": snap.day_requests}
+
+
+def _lane_quota(lane: ProviderLane) -> dict[str, Any]:
+    snap = lane.guard.snapshot()
+    return {"lane": lane.name, "model": lane.model, "tpm_available": snap.tpm_available,
+            "tpm_limit": snap.tpm_limit, "requests_last_minute": snap.requests_last_minute,
+            "rpm_limit": snap.rpm_limit, "day_requests": snap.day_requests,
+            "rpd_limit": snap.rpd_limit, "circuit": snap.circuit,
+            "daily_stop": snap.daily_stop is not None}
 
 
 def single_lane_router(provider: ChatProvider, guard: ProviderGuard,

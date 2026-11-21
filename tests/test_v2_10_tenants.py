@@ -308,54 +308,66 @@ async def test_a_refused_ask_does_not_spend_the_daily_limit(env: Env) -> None:
 
 
 # 4. fair admission -----------------------------------------------------------------------
-async def noisy_neighbour(env: Env, *, capacity: int) -> tuple[list[str], dict[str, Any],
+async def noisy_neighbour(env: Env, *, capacity: int) -> tuple[int, dict[str, Any],
                                                                list[dict[str, Any]], float]:
     """Tenant A sends 30 batch questions at once; tenant B then sends 1 interactive one.
-    Returns the order answers finished in, B's final, A's finals, and B's wait in s."""
+
+    Returns how many requests the queue admitted between B entering it and B itself (the
+    fairness invariant: 0, B goes next), B's final, A's finals, and B's wait in s. Measured
+    at the queue, not from when B was sent: B's request does work before it is queued (key,
+    collection, index checks), and on a loaded machine A's running answers finish then."""
     queue = AdmissionQueue(capacity=capacity, service_rate_per_s=20.0, max_active=1,
                            tenant_rate_per_s=1.0, tenant_burst=2.0)
     w = World(env, [answer(ABOUT) for _ in range(31)], delay_s=0.01, queue=queue)
     a, key_a = await w.tenant("heavy")
     b, key_b = await w.tenant("light")
     cid_a, cid_b = await w.collection(a), await w.collection(b)
-    finished: list[str] = []  # answered requests, in the order they finished (not the shed)
+    admitted: list[str | None] = []  # tenants, in the order the queue admitted them
+    entered: list[int] = []  # len(admitted) when B entered the queue
+    real_admitted, real_admit = queue._admitted, queue.admit
 
-    async def one(tag: str, key: str, cid: str, question: str, priority: str) -> Any:
-        stream = await w.ask(key, cid, question, priority=priority)
-        if stream.of("final")[0]["status"] == "ok":
-            finished.append(tag)
-        return stream
+    def track(tenant: str | None) -> None:
+        admitted.append(tenant)
+        real_admitted(tenant)
 
-    heavy = [asyncio.create_task(one(f"a{i}", key_a, cid_a, f"What is Moshi, variant {i}?",
-                                     "batch")) for i in range(30)]
+    def admit(**kwargs: Any) -> Any:
+        if kwargs.get("tenant") == b:
+            entered.append(len(admitted))
+        return real_admit(**kwargs)
+
+    queue._admitted = track  # type: ignore[method-assign]
+    queue.admit = admit  # type: ignore[method-assign]
+
+    heavy = [asyncio.create_task(w.ask(key_a, cid_a, f"What is Moshi, variant {i}?",
+                                       priority="batch")) for i in range(30)]
     await asyncio.sleep(0.15)  # A's burst is queued
     started = time.perf_counter()
-    light = await one("b", key_b, cid_b, "What is Moshi?", "interactive")
+    light = await w.ask(key_b, cid_b, "What is Moshi?", priority="interactive")
     waited = time.perf_counter() - started
     heavy_streams = await asyncio.gather(*heavy)
-    return (finished, light.of("final")[0], [s.of("final")[0] for s in heavy_streams], waited)
+    ahead = admitted[entered[0]:].index(b)
+    return (ahead, light.of("final")[0], [s.of("final")[0] for s in heavy_streams], waited)
 
 
 async def test_a_light_tenant_is_not_stuck_behind_a_noisy_ones_burst(env: Env) -> None:
-    finished, light, heavy, waited = await noisy_neighbour(env, capacity=40)
+    ahead, light, heavy, waited = await noisy_neighbour(env, capacity=40)
     assert light["status"] == "ok" and light["verdict"] == "VERIFIED"
-    ahead = finished.index("b")
-    assert ahead <= 2  # behind at most the answer already running, not 30
+    assert ahead == 0  # once queued, B is admitted next, ahead of A's whole waiting burst
     assert all(f["status"] == "ok" for f in heavy)  # the queue held A's burst: nothing lost
-    print(f"\nnoisy neighbour (queue 40): B finished after {ahead} of A's 30 answers, "
+    print(f"\nnoisy neighbour (queue 40): {ahead} of A's waiting requests admitted before B, "
           f"waited {waited:.2f} s")
 
 
 async def test_when_the_queue_is_full_a_batch_request_is_shed_for_an_interactive_one(
         env: Env) -> None:
-    finished, light, heavy, waited = await noisy_neighbour(env, capacity=8)
+    ahead, light, heavy, waited = await noisy_neighbour(env, capacity=8)
     assert light["status"] == "ok"
-    assert finished.index("b") <= 2
+    assert ahead == 0
     shed = [f for f in heavy if f["error_code"] == "queue_full"]
     assert shed  # A's excess burst was shed ...
     assert any(f.get("shed_reason") == "shed_for_priority" for f in shed)  # ... one for B
-    print(f"\nnoisy neighbour (queue 8): B finished after {finished.index('b')} of A's "
-          f"answers; {len(shed)} of A's 30 shed; B waited {waited:.2f} s")
+    print(f"\nnoisy neighbour (queue 8): {ahead} of A's waiting requests admitted before "
+          f"B; {len(shed)} of A's 30 shed; B waited {waited:.2f} s")
 
 
 async def test_two_interactive_tenants_a_light_one_is_not_stuck_behind_a_burst(

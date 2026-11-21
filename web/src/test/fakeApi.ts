@@ -47,6 +47,9 @@ export function fakeApi(over: Partial<RelayApi> = {},
       status: "ok", cache_mode: "sqlite", cache_entries: 2, in_flight: 0, queue_depth: 0,
       queue_active: 0, queue_capacity: 8, daily_stop: false, circuit: "closed",
       trace_failures: 0, trace_sink: { written: 12, failed: 1, dropped: 0, pending: 0 },
+      quota: [{ lane: "standin", model: "qwen/qwen3.8-27b", tpm_available: 6200, tpm_limit: 8000,
+        requests_last_minute: 2, rpm_limit: null, day_requests: 3, rpd_limit: null,
+        circuit: "closed", daily_stop: false }],
     })),
     ask: jest.fn(async (_body, onEvent) => {
       if (typeof script === "function") return { sawFinal: await script(onEvent) };

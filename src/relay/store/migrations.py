@@ -70,6 +70,10 @@ MIGRATIONS: Final[tuple[Migration, ...]] = (
         "ALTER TABLE api_key ADD COLUMN revoked INT DEFAULT 0;\n"
         "ALTER TABLE api_key ADD COLUMN name TEXT;\n"
         "ALTER TABLE api_key ADD COLUMN created_at TEXT;")),
+    # V2-11: each request's latency waterfall, verifier counts and spans (JSON) for
+    # GET /v1/requests/{id}; ids, hashes and numbers only, never text.
+    Migration(8, "request_log breakdown",
+              "ALTER TABLE request_log ADD COLUMN breakdown TEXT;"),
 )
 LATEST_VERSION: Final = MIGRATIONS[-1].version
 

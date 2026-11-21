@@ -14,6 +14,10 @@ RateLimitScope = Literal["minute", "daily", "unknown"]
 RateLimitMetric = Literal["RPM", "TPM", "RPD", "TPD"]
 ClassificationBasis = Literal["body", "headers_documented_unverified", "none"]
 TimeoutPhase = Literal["read", "stall", "total"]
+# V2-11 (ARCHITECTURE_V2 §11): what kind of transport failure it was, from the exception's
+# type and its causes only (never its message text, which may hold a host or a payload).
+TransportCategory = Literal["DNS_FAILURE", "CONNECT_TIMEOUT", "CONNECT_FAILURE", "TLS_ERROR",
+                            "READ_TIMEOUT", "STREAM_DISCONNECT", "OTHER_TRANSPORT"]
 
 
 class ProviderError(RelayError):
@@ -21,6 +25,7 @@ class ProviderError(RelayError):
 
     error_code: ErrorCode = "upstream_error"
     retryable: bool = False
+    category: TransportCategory | None = None  # V2-11: set for transport failures
 
     def __init__(
         self,
@@ -121,6 +126,7 @@ class ProviderStreamIncompleteError(ProviderProtocolError):
     """The stream ended before the ``[DONE]`` sentinel."""
 
     retryable = True
+    category: TransportCategory | None = "STREAM_DISCONNECT"
 
 
 class RealCallBudgetExceededError(RelayError):
@@ -132,6 +138,7 @@ class ScriptExhaustedError(RelayError):
 
 
 __all__ = [
+    "TransportCategory",
     "ProviderAuthError",
     "ProviderBadRequestError",
     "ProviderConnectionError",

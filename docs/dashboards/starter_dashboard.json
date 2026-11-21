@@ -1,0 +1,115 @@
+{
+  "title": "The Relay — starter dashboard",
+  "description": "V2-11 starter: overload at a glance (queue depth, shed rate, quota headroom, first-sentence latency), plus delivery, latency and verifier panels. Import into Grafana and pick the Prometheus data source that scrapes GET /metrics.",
+  "uid": "the-relay-starter",
+  "schemaVersion": 39,
+  "version": 1,
+  "editable": true,
+  "time": { "from": "now-1h", "to": "now" },
+  "refresh": "10s",
+  "tags": ["the-relay"],
+  "templating": {
+    "list": [
+      {
+        "name": "datasource",
+        "label": "Prometheus",
+        "type": "datasource",
+        "query": "prometheus"
+      }
+    ]
+  },
+  "panels": [
+    {
+      "id": 1,
+      "title": "Requests per second (QPS), by status",
+      "type": "timeseries",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 },
+      "fieldConfig": { "defaults": { "unit": "reqps" } },
+      "targets": [
+        { "refId": "A", "expr": "sum by (status) (rate(relay_requests_total[1m]))", "legendFormat": "{{status}}" }
+      ]
+    },
+    {
+      "id": 2,
+      "title": "Delivery rate (%) and shed rate (%)",
+      "type": "timeseries",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 },
+      "fieldConfig": { "defaults": { "unit": "percent", "min": 0, "max": 100 } },
+      "targets": [
+        { "refId": "A", "expr": "100 * sum(rate(relay_requests_total{status=\"ok\"}[5m])) / clamp_min(sum(rate(relay_requests_total[5m])), 1e-9)", "legendFormat": "delivered (status ok)" },
+        { "refId": "B", "expr": "100 * sum(rate(relay_requests_total{error_code=~\"queue_full|predicted_wait_exceeds_deadline\"}[5m])) / clamp_min(sum(rate(relay_requests_total[5m])), 1e-9)", "legendFormat": "shed by admission" }
+      ]
+    },
+    {
+      "id": 3,
+      "title": "Queue depth by priority",
+      "type": "timeseries",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 8 },
+      "fieldConfig": { "defaults": { "unit": "short", "min": 0 } },
+      "targets": [
+        { "refId": "A", "expr": "sum by (priority) (relay_queue_depth)", "legendFormat": "{{priority}}" }
+      ]
+    },
+    {
+      "id": 4,
+      "title": "Rate-limit quota headroom per lane (tokens this minute)",
+      "type": "timeseries",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 8 },
+      "fieldConfig": { "defaults": { "unit": "short", "min": 0 } },
+      "targets": [
+        { "refId": "A", "expr": "relay_quota_headroom_tokens", "legendFormat": "{{lane}}" }
+      ]
+    },
+    {
+      "id": 5,
+      "title": "First-sentence latency p50 / p95",
+      "type": "timeseries",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 16 },
+      "fieldConfig": { "defaults": { "unit": "s", "min": 0 } },
+      "targets": [
+        { "refId": "A", "expr": "histogram_quantile(0.5, sum by (le) (rate(relay_request_latency_seconds_bucket{stage=\"first_sentence\"}[5m])))", "legendFormat": "p50" },
+        { "refId": "B", "expr": "histogram_quantile(0.95, sum by (le) (rate(relay_request_latency_seconds_bucket{stage=\"first_sentence\"}[5m])))", "legendFormat": "p95" }
+      ]
+    },
+    {
+      "id": 6,
+      "title": "Total latency p50 / p95",
+      "type": "timeseries",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 16 },
+      "fieldConfig": { "defaults": { "unit": "s", "min": 0 } },
+      "targets": [
+        { "refId": "A", "expr": "histogram_quantile(0.5, sum by (le) (rate(relay_request_latency_seconds_bucket{stage=\"total\"}[5m])))", "legendFormat": "p50" },
+        { "refId": "B", "expr": "histogram_quantile(0.95, sum by (le) (rate(relay_request_latency_seconds_bucket{stage=\"total\"}[5m])))", "legendFormat": "p95" }
+      ]
+    },
+    {
+      "id": 7,
+      "title": "Verifier rejections per minute, by layer (L4 is advisory: always 0)",
+      "type": "timeseries",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 24 },
+      "fieldConfig": { "defaults": { "unit": "short", "min": 0 } },
+      "targets": [
+        { "refId": "A", "expr": "sum by (layer) (rate(relay_verifier_blocks_total[5m])) * 60", "legendFormat": "{{layer}}" }
+      ]
+    },
+    {
+      "id": 8,
+      "title": "Tokens per second by lane and direction; cache hit / coalesced share",
+      "type": "timeseries",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 24 },
+      "fieldConfig": { "defaults": { "unit": "short", "min": 0 } },
+      "targets": [
+        { "refId": "A", "expr": "sum by (lane, direction) (rate(relay_tokens_total[1m]))", "legendFormat": "{{lane}} {{direction}}" },
+        { "refId": "B", "expr": "sum by (event) (rate(relay_cache_events_total[5m]))", "legendFormat": "cache {{event}}" }
+      ]
+    }
+  ]
+}

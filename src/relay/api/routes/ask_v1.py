@@ -42,6 +42,7 @@ API keys are stubbed as for the other /v1 routes: any Bearer key is the dev tena
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import json
 import logging
 import math
@@ -84,7 +85,9 @@ from relay.retrieval.hybrid_index import RetrievedPassage
 from relay.retrieval.registry import CollectionNotReadyError
 from relay.store import Store
 from relay.store.repositories import Turn
+from relay.telemetry.metrics import layer_of
 from relay.telemetry.spans import ServerSpanTracker
+from relay.telemetry.tracing import RequestTrace, Span
 
 logger = logging.getLogger(__name__)
 
@@ -199,10 +202,14 @@ class AskV1Context:
     def forget(self, collection_id: str) -> None:
         self.deleted.add(collection_id)
 
-    def record(self, record: dict[str, Any]) -> None:
-        """A request trace, unless its collection has been deleted."""
-        if record.get("collection_id") not in self.deleted:
-            self.service.record_trace(record)
+    def record(self, record: dict[str, Any], *, final: dict[str, Any] | None = None,
+               tenant: str | None = None) -> None:
+        """A request trace (and, V2-11, its metrics), unless its collection is deleted."""
+        if record.get("collection_id") in self.deleted:
+            return
+        self.service.record_trace(record)
+        if final is not None:
+            self.service.metrics.observe_request(final, tenant=tenant)
 
     async def aclose(self) -> None:
         """Shutdown: cancel every live flight (its generation and queue slot) and wait."""
@@ -271,34 +278,60 @@ def _stop_reason(outcome: PipelineOutcome, stop: StoppedEvent | None,
 # --- The flight (leader work) ------------------------------------------------------------
 
 
+def _checked(trace: RequestTrace | None, parent: Span | None, index: int | None, *,
+             layer: str | None = None, l4: float | None = None) -> None:
+    """One ``verifier.sentence`` span (V2-11): which layers it passed, its L4 score."""
+    if trace is None:
+        return
+    order = ("L1", "L2", "L3")
+    failed = order.index(layer) if layer in order else None
+    passes: dict[str, bool | None] = {
+        f"{name.lower()}_pass": None if failed is not None and i > failed
+        else failed is None or i < failed
+        for i, name in enumerate(order)}
+    trace.instant("verifier.sentence", parent=parent, sentence_idx=index, l4_score=l4,
+                  blocked_layer=layer, **passes)
+
+
 async def _relay_stream(channel: ReplayChannel, stream: SentenceStream,
-                        live: dict[str, Any]) -> tuple[StoppedEvent | None, bool]:
+                        live: dict[str, Any], trace: RequestTrace | None = None,
+                        parent: Span | None = None) -> tuple[StoppedEvent | None, bool]:
     """Publish a sentence stream's verified sentences; (its stop, whether it refused)."""
     stop: StoppedEvent | None = None
     refused = False
     async for event in stream:
         if isinstance(event, VerifiedSentence):
             live.setdefault("l4", []).append(event.confidence)
+            live["checked"] = live.get("checked", 0) + 1
+            live["passed"] = live.get("passed", 0) + 1
+            _checked(trace, parent, event.index, l4=event.confidence)
             channel.publish("sentence", {"text": event.text,
                                          "citations": [f"P{c.tag}" for c in event.citations],
                                          "confidence": event.confidence})
         elif isinstance(event, StoppedEvent):
             stop = event
+            layer = layer_of(event.reason_class, [f.code for f in event.failures])
+            if event.sentence_index is not None and layer is not None:
+                live["checked"] = live.get("checked", 0) + 1
+                _checked(trace, parent, event.sentence_index, layer=layer)
         elif isinstance(event, StreamRefusal):
             refused = True
+    live["stop"] = stop
     return stop, refused
 
 
 async def _streamed(ctx: AskV1Context, channel: ReplayChannel, plan: StreamPlan,
                     spans: ServerSpanTracker, live: dict[str, Any],
                     deadline_ns: int | None,
-                    scorer: EntailmentScore | None) -> tuple[PipelineOutcome, int]:
+                    scorer: EntailmentScore | None,
+                    trace: RequestTrace | None = None) -> tuple[PipelineOutcome, int]:
     pipeline = ctx.service.pipeline
     channel.status("generating")
+    generate = None if trace is None else trace.start("pipeline.generate", mode="streaming")
     tokens = pipeline.run_streaming(plan, spans, deadline_ns=deadline_ns)
     live["tokens"], live["chat"] = tokens, plan.chat  # for the cancel record's spend
     stream = SentenceStream(tokens, plan.passages, plan.streaming_verifier, scorer=scorer)
-    stop, refused = await _relay_stream(channel, stream, live)
+    stop, refused = await _relay_stream(channel, stream, live, trace, generate)
     # V2-09: a truncated or empty answer is retried once on the escalation lane, but only
     # when nothing was delivered yet (the client never sees two different answers).
     if not stream.sentences and not refused and (stop is None
@@ -310,11 +343,16 @@ async def _streamed(ctx: AskV1Context, channel: ReplayChannel, plan: StreamPlan,
             tokens = live["tokens"] = retry
             stream = SentenceStream(tokens, plan.passages, plan.streaming_verifier,
                                     scorer=scorer)
-            stop, refused = await _relay_stream(channel, stream, live)
+            stop, refused = await _relay_stream(channel, stream, live, trace, generate)
+    if trace is not None:
+        trace.end(generate, **_generation_attributes(tokens.result))
     if stop is None:
         channel.status("verifying")  # the whole-answer pass
+    verify = None if trace is None else trace.start("pipeline.verify", mode="streaming")
     outcome = await pipeline.complete_streaming(plan, tokens, stream, stop=stop,
                                                 refused=refused)
+    if trace is not None:
+        trace.end(verify, verdict=outcome.verification_verdict)
     reason = _stop_reason(outcome, stop, len(stream.sentences))
     if reason is not None:
         channel.publish("stopped", {"reason_class": reason[0], "partial": reason[1]})
@@ -324,22 +362,71 @@ async def _streamed(ctx: AskV1Context, channel: ReplayChannel, plan: StreamPlan,
 async def _buffered(ctx: AskV1Context, channel: ReplayChannel, plan: StreamPlan,
                     spans: ServerSpanTracker, live: dict[str, Any],
                     deadline_ns: int | None,
-                    scorer: EntailmentScore | None) -> tuple[PipelineOutcome, int]:
+                    scorer: EntailmentScore | None,
+                    trace: RequestTrace | None = None) -> tuple[PipelineOutcome, int]:
     channel.status("generating")
+    # buffered: the model call and the whole-answer check are one pipeline step
+    generate = None if trace is None else trace.start("pipeline.generate", mode="buffered")
     outcome = await ctx.service.pipeline.complete_buffered(plan, spans,
                                                            deadline_ns=deadline_ns)
+    if trace is not None:
+        trace.end(generate, **_outcome_attributes(outcome))
     live["outcome"] = outcome  # its usage is known: a cancel during L4 scoring records it
     channel.status("verifying")
+    verify = None if trace is None else trace.start("pipeline.verify", mode="buffered")
     released = 0
+    verification = outcome.trace.verification
+    live["checked"] = 0 if verification is None else verification.sentences
     if outcome.kind == "answer" and outcome.delivered_text is not None:
-        for sentence in split_sentences(outcome.delivered_text):
+        for index, sentence in enumerate(split_sentences(outcome.delivered_text), start=1):
             confidence = (None if scorer is None
                           else await score_sentence(scorer, sentence, plan.passages))
             live.setdefault("l4", []).append(confidence)
+            _checked(trace, verify, index, l4=confidence)
             channel.publish("sentence", {"text": sentence, "citations": tags_in(sentence),
                                          "confidence": confidence})
             released += 1
+    elif verification is not None and verification.verdict == "BLOCKED" and verification.failures:
+        failure = verification.failures[0]
+        _checked(trace, verify, failure.sentence, layer=layer_of(None, [failure.code]))
+    live["passed"] = released
+    if trace is not None:
+        trace.end(verify, verdict=outcome.verification_verdict)
     return outcome, released
+
+
+def _generation_attributes(result: Any) -> dict[str, Any]:
+    """The ``pipeline.generate`` span's lane, model and tokens (from the routed result)."""
+    route = None if result is None else result.route
+    tokens = None if result is None else result.tokens
+    return {key: value for key, value in {
+        "lane": None if route is None else route.lane,
+        "model": None if route is None else route.model,
+        "escalated": None if route is None else route.escalated,
+        "fallback": None if route is None else route.fallback,
+        "tokens_in": None if tokens is None else tokens.tokens_in,
+        "tokens_out": None if tokens is None else tokens.tokens_out,
+        "cancelled": result is None}.items() if value is not None}
+
+
+def _outcome_attributes(outcome: PipelineOutcome) -> dict[str, Any]:
+    route = outcome.route
+    return {key: value for key, value in {
+        "lane": None if route is None else route.lane,
+        "model": outcome.model_id, "tokens_in": outcome.tokens_in,
+        "tokens_out": outcome.tokens_out,
+        "escalated": None if route is None else route.escalated}.items() if value is not None}
+
+
+def _block_layer(outcome: PipelineOutcome, live: dict[str, Any]) -> str | None:
+    """The verifier layer that blocked this answer (V2-11 metrics), or None."""
+    stop = live.get("stop")
+    if isinstance(stop, StoppedEvent):
+        return layer_of(stop.reason_class, [f.code for f in stop.failures])
+    verification = outcome.trace.verification
+    if verification is not None and verification.verdict == "BLOCKED":
+        return layer_of(None, [f.code for f in verification.failures])
+    return None
 
 
 def _summary(outcome: PipelineOutcome, *, released: int, buffered: bool,
@@ -356,6 +443,11 @@ def _summary(outcome: PipelineOutcome, *, released: int, buffered: bool,
         "provider_first_token_ms": spans.snapshot().provider_first_token_ms,
         **_route_fields(outcome),
     }
+
+
+def _verifier_counts(live: dict[str, Any]) -> dict[str, int]:
+    return {"sentences_checked": int(live.get("checked", 0)),
+            "sentences_passed": int(live.get("passed", 0))}
 
 
 def _route_fields(outcome: PipelineOutcome | None) -> dict[str, Any]:
@@ -402,7 +494,8 @@ async def _lead(ctx: AskV1Context, flight: Flight, target: AskTarget, *, request
                 collection_id: str, buffered: bool, go: asyncio.Event,
                 deadline_ns: int | None = None,
                 scorer: EntailmentScore | None = None, tenant: str | None = None,
-                priority: str = Priority.INTERACTIVE) -> None:
+                priority: str = Priority.INTERACTIVE,
+                trace: RequestTrace | None = None) -> None:
     channel, service = flight.channel, ctx.service
     ask = target.ask
     setting = ask.retrieval_setting or ""
@@ -411,31 +504,47 @@ async def _lead(ctx: AskV1Context, flight: Flight, target: AskTarget, *, request
     live: dict[str, Any] = {}
     try:
         await go.wait()  # no work before "accepted" has been sent
+        queued = None if trace is None else trace.start(
+            "queue.wait", priority=str(priority), queue_position=service.queue.depth)
         try:
             async with service.queue.admit(deadline_ns=deadline_ns,
                                            is_connected=lambda: channel.subscribers > 0,
                                            on_queued=channel.queued, tenant=tenant,
                                            priority=priority) as ticket:
                 depth = ticket.queue_depth_at_entry
+                if trace is not None:
+                    trace.end(queued, over_rate=ticket.over_rate)
                 channel.status("retrieving")
+                retrieve = None if trace is None else trace.start("pipeline.retrieve",
+                                                                  preset=setting)
                 plan = await service.pipeline.prepare_streaming(PipelineRequest(
                     request_id=request_id, question=ask.question, retrieval_setting=setting,
                     collection_id=collection_id), spans)
+                if trace is not None:
+                    trace.end(retrieve, chunks_found=len(plan.passages),
+                              early=plan.early is not None)
                 channel.publish("sources", sources_payload(plan.passages))
                 if plan.early is not None:
                     outcome, released = plan.early, 0
                 elif buffered:
                     outcome, released = await _buffered(ctx, channel, plan, spans, live,
-                                                        deadline_ns, scorer)
+                                                        deadline_ns, scorer, trace)
                 else:
                     outcome, released = await _streamed(ctx, channel, plan, spans, live,
-                                                        deadline_ns, scorer)
+                                                        deadline_ns, scorer, trace)
         except AdmissionRejectedError as shed:
+            if trace is not None:
+                trace.end(queued, shed=True, error_code=shed.error_code)
             summary = _shed_summary(shed.error_code, setting=setting, buffered=buffered,
                                     depth=shed.queue_depth_at_entry)
             summary["shed_reason"] = shed.reason  # V2-10: e.g. shed_for_priority
             channel.publish(_SUMMARY, summary)
             return
+        service.metrics.observe_block(_block_layer(outcome, live))  # V2-11
+        if trace is not None:  # v1's span kinds, on the root
+            span_totals = spans.snapshot()
+            trace.set(waiting_ms=span_totals.waiting_ms, working_ms=span_totals.working_ms,
+                      retrying_ms=span_totals.retrying_ms)
         if outcome.provider_called and outcome.usage_source == "provider":
             # V2-10: the queue's capacity follows the measured tokens per answer (EWMA)
             service.queue.observe_tokens(outcome.tokens_in + outcome.tokens_out)
@@ -466,12 +575,16 @@ async def _lead(ctx: AskV1Context, flight: Flight, target: AskTarget, *, request
                               "usage_source": outcome.usage_source,
                               "l4_confidences": live.get("l4", []),  # V2-07, advisory
                               "pipeline": outcome.trace.model_dump(mode="json")})
-        channel.publish(_SUMMARY, _summary(outcome, released=released, buffered=buffered,
-                                           spans=spans, depth=depth))
+        channel.publish(_SUMMARY, {**_summary(outcome, released=released, buffered=buffered,
+                                              spans=spans, depth=depth),
+                                   "verifier": _verifier_counts(live)})
     except asyncio.CancelledError:
+        spent = _cancelled_spend(live)
         service.record_trace({"record": "flight", "endpoint": "/v1/ask",
-                              "leader_request_id": request_id, "end": "cancelled",
-                              **_cancelled_spend(live)})
+                              "leader_request_id": request_id, "end": "cancelled", **spent})
+        # V2-11: an abandoned answer's tokens were spent all the same
+        service.metrics.observe_spend(spent.get("lane_name"), spent.get("tokens_in", 0),
+                                      spent.get("tokens_out", 0))
         raise
     except Exception as exc:  # the stream must still end with a final event
         logger.error("/v1/ask request %s failed unexpectedly: %s", request_id,
@@ -563,7 +676,8 @@ async def _cached(ctx: AskV1Context, hit: CachedAnswer, *, request_id: str,
                   setting: str, accepted_sent: bool = False,
                   conversation: ConversationLog | None = None,
                   rewrite: Rewrite | None = None,
-                  tenant: str | None = None) -> AsyncIterator[bytes]:
+                  tenant: str | None = None, trace: RequestTrace | None = None,
+                  question: str | None = None) -> AsyncIterator[bytes]:
     clock = ctx.service.clock
     if not accepted_sent:
         yield sse("accepted", {"request_id": request_id, "queue_position": 0,
@@ -599,10 +713,27 @@ async def _cached(ctx: AskV1Context, hit: CachedAnswer, *, request_id: str,
              "rewritten_question": None if rewrite is None else rewrite.question,
              **_route_fields(None)}
     _charge(final, rewrite)
-    ctx.record(_request_record(request_id, hit_question=None, final=final,
-                               collection_id=collection_id, role="cache_hit", tenant=tenant))
+    record = _request_record(request_id, hit_question=question, final=final,
+                             collection_id=collection_id, role="cache_hit", tenant=tenant)
+    record["breakdown"] = _breakdown(trace, final, {"sentences_checked": 0,
+                                                    "sentences_passed": len(sentences)})
+    ctx.record(record, final=final, tenant=tenant)
     await _record_turn(ctx, conversation, final, sentences, request_id)
     yield sse("final", final)
+
+
+def _breakdown(trace: RequestTrace | None, final: dict[str, Any],
+               verifier: dict[str, int]) -> dict[str, Any] | None:
+    """End the request's trace and return what GET /v1/requests/{id} shows (V2-11)."""
+    if trace is None:
+        return None
+    done = trace.finish(status=final.get("status"), error_code=final.get("error_code"),
+                        cache_status=final.get("cache_status"), lane=final.get("lane_name"),
+                        cost_usd=final.get("cost_usd"), escalated=final.get("escalated"),
+                        coalesced=final.get("coalesced"), verdict=final.get("verdict"))
+    return {**done, "verifier": {**verifier, "partial": bool(final.get("partial"))},
+            "cache_status": final.get("cache_status"),
+            "coalesced": bool(final.get("coalesced"))}
 
 
 def _request_record(request_id: str, *, hit_question: str | None, final: dict[str, Any],
@@ -628,9 +759,31 @@ async def _respond(ctx: AskV1Context, target: AskTarget, *, request_id: str, arr
                    accepted_sent: bool = False,
                    conversation: ConversationLog | None = None,
                    rewrite: Rewrite | None = None, tenant: str | None = None,
-                   priority: str = Priority.INTERACTIVE) -> AsyncIterator[bytes]:
+                   priority: str = Priority.INTERACTIVE,
+                   trace: RequestTrace | None = None) -> AsyncIterator[bytes]:
     """One request. ``target.ask.question`` is the standalone question (a follow-up arrives
     here already rewritten, with ``accepted`` already sent)."""
+    try:
+        # aclosing: when the client leaves, the inner generator's own finally (go.set,
+        # channel.leave) runs at once, not whenever it is garbage-collected
+        async with contextlib.aclosing(_answer(
+                ctx, target, request_id=request_id, arrived_ns=arrived_ns,
+                collection_id=collection_id, buffered=buffered, deadline_ns=deadline_ns,
+                scorer=scorer, accepted_sent=accepted_sent, conversation=conversation,
+                rewrite=rewrite, tenant=tenant, priority=priority, trace=trace)) as answers:
+            async for chunk in answers:
+                yield chunk
+    finally:
+        if trace is not None:
+            trace.close()  # the client left, or the service stopped: end the spans
+
+
+async def _answer(ctx: AskV1Context, target: AskTarget, *, request_id: str, arrived_ns: int,
+                  collection_id: str, buffered: bool, deadline_ns: int | None,
+                  scorer: EntailmentScore | None, accepted_sent: bool,
+                  conversation: ConversationLog | None, rewrite: Rewrite | None,
+                  tenant: str | None, priority: str,
+                  trace: RequestTrace | None) -> AsyncIterator[bytes]:
     service, ask = ctx.service, target.ask
     clock = service.clock
     setting = ask.retrieval_setting or ""
@@ -644,7 +797,7 @@ async def _respond(ctx: AskV1Context, target: AskTarget, *, request_id: str, arr
                                        collection_id=collection_id, buffered=buffered,
                                        setting=setting, accepted_sent=accepted_sent,
                                        conversation=conversation, rewrite=rewrite,
-                                       tenant=tenant):
+                                       tenant=tenant, trace=trace, question=ask.question):
                 yield chunk
             return
     key: Hashable = (normalise_question(ask.question), target.cache_setting, buffered)
@@ -661,7 +814,7 @@ async def _respond(ctx: AskV1Context, target: AskTarget, *, request_id: str, arr
         channel.task = asyncio.create_task(_lead(
             ctx, flight, target, request_id=request_id, collection_id=collection_id,
             buffered=buffered, go=go, deadline_ns=deadline_ns, scorer=scorer,
-            tenant=tenant, priority=priority),
+            tenant=tenant, priority=priority, trace=trace),
             name=f"v1-ask-{request_id}")
         channel.task.add_done_callback(lambda _: _forget(ctx, flight))
     try:
@@ -720,11 +873,15 @@ async def _respond(ctx: AskV1Context, target: AskTarget, *, request_id: str, arr
                                   "provider_called": False, "queue_depth_at_entry": None,
                                   # its row must not count the leader's lane or escalation
                                   **_route_fields(None)})
+                verifier = final.pop("verifier", None) or {"sentences_checked": 0,
+                                                           "sentences_passed": 0}
                 _charge(final, rewrite)
-                ctx.record(_request_record(
+                record = _request_record(
                     request_id, hit_question=ask.question, final=final,
                     collection_id=collection_id, role="follower" if follower else "leader",
-                    tenant=tenant))
+                    tenant=tenant)
+                record["breakdown"] = _breakdown(trace, final, verifier)
+                ctx.record(record, final=final, tenant=tenant)
                 await _record_turn(ctx, conversation, final, sentences, request_id)
                 yield sse("final", final)
                 return
@@ -748,12 +905,18 @@ async def _follow_up(ctx: AskV1Context, target: AskTarget, turns: list[Turn],
     yield sse("accepted", {**_accepted(ctx, None, request_id, follower=False),
                            "conversation_id": conversation_id})
     yield sse("status", {"stage": "rewriting", "queue_position": 0})
+    trace: RequestTrace | None = respond.get("trace")
+    span = None if trace is None else trace.start("pipeline.rewrite", turns=len(turns))
     try:
         rewrite = await ctx.service.rewriter.resolve(original, turns)
     except Exception as exc:  # never let a rewrite fail the question
         logger.warning("/v1/ask request %s: rewrite failed, original kept: %s", request_id,
                        sanitize_error(exc))
         rewrite = Rewrite(original, original, False, "error", fallback=type(exc).__name__)
+    if trace is not None:
+        trace.end(span, method=rewrite.method, rewritten=rewrite.rewritten,
+                  fallback=rewrite.fallback, tokens=rewrite.tokens,
+                  standalone_hash=question_hash(rewrite.question))
     yield sse("status", {"stage": "rewriting", "queue_position": 0,
                          "rewritten_question": rewrite.question, "original_question": original,
                          "rewritten": rewrite.rewritten, "method": rewrite.method,
@@ -843,7 +1006,12 @@ def ask_v1_router(ctx: AskV1Context) -> APIRouter:
             "scorer": service.entailment if collection.l4_enabled else None,
             "deadline_ns": None if body.deadline_ms is None
             else arrived_ns + body.deadline_ms * _NS_PER_MS,
-            "tenant": tenant, "priority": body.priority}
+            "tenant": tenant, "priority": body.priority,
+            # V2-11: the request's trace (ids and hashes only, never the question text)
+            "trace": service.tracing.request(
+                request_id=request_id, tenant_id=tenant, collection_id=collection_id,
+                question_hash=question_hash(body.question), priority=body.priority,
+                follow_up=bool(turns))}
         if turns and body.conversation_id is not None:  # a follow-up: rewrite first
             stream = _follow_up(ctx, target, turns, body.conversation_id, **respond)
         else:  # a first question: no rewrite (no model call, no latency)

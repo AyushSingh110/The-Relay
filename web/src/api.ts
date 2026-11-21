@@ -120,6 +120,20 @@ export interface Health {
   circuit: string | null;
   trace_failures: number;
   trace_sink?: { written: number; failed: number; dropped: number; pending: number };
+  quota?: QuotaLane[]; // V2-11: every provider lane's live quota
+}
+
+export interface QuotaLane {
+  lane: string;
+  model: string;
+  tpm_available: number | null;
+  tpm_limit: number | null;
+  requests_last_minute: number;
+  rpm_limit: number | null;
+  day_requests: number;
+  rpd_limit: number | null;
+  circuit: string;
+  daily_stop: boolean;
 }
 
 /** GET /v1/whoami (V2-10): the tenant and key the UI is using (never the key itself). */
