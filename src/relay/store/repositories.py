@@ -414,7 +414,8 @@ class CollectionRepo(_Repo):
 
     async def delete_cascade(self, collection_id: str) -> DeletedCollection:
         """Delete the collection and everything that belongs to it, in ONE transaction:
-        conversations and messages, evaluation sets, documents, chunks, ingest jobs and its
+        conversations and messages, evaluation sets (with their runs, answers and grades),
+        documents, chunks, ingest jobs and its
         request-log rows (V2-10; ARCHITECTURE_V2 §12). Refused with ``CollectionBusyError``
         while a document is being parsed, embedded or indexed (the worker holds it)."""
         sub_docs = "SELECT id FROM document WHERE collection_id = ?"
@@ -422,11 +423,19 @@ class CollectionRepo(_Repo):
             ("message", "DELETE FROM message WHERE conversation_id IN "
                         "(SELECT id FROM conversation WHERE collection_id = ?)"),
             ("conversation", "DELETE FROM conversation WHERE collection_id = ?"),
+            # V2-12 (migration 9): eval runs and answers reference the sets and questions
+            ("eval_answer", "DELETE FROM eval_answer WHERE run_id IN (SELECT r.id FROM "
+                            "eval_run r JOIN eval_set s ON r.eval_set_id = s.id "
+                            "WHERE s.collection_id = ?)"),
+            ("grade_by_run", "DELETE FROM grade WHERE run_id IN (SELECT r.id FROM eval_run r "
+                             "JOIN eval_set s ON r.eval_set_id = s.id WHERE s.collection_id = ?)"),
             ("grade", "DELETE FROM grade WHERE eval_question_id IN (SELECT q.id FROM "
                       "eval_question q JOIN eval_set s ON q.eval_set_id = s.id "
                       "WHERE s.collection_id = ?)"),
             ("eval_question", "DELETE FROM eval_question WHERE eval_set_id IN "
                               "(SELECT id FROM eval_set WHERE collection_id = ?)"),
+            ("eval_run", "DELETE FROM eval_run WHERE eval_set_id IN "
+                         "(SELECT id FROM eval_set WHERE collection_id = ?)"),
             ("eval_set", "DELETE FROM eval_set WHERE collection_id = ?"),
             ("chunk", f"DELETE FROM chunk WHERE document_id IN ({sub_docs})"),
             ("ingest_job", f"DELETE FROM ingest_job WHERE document_id IN ({sub_docs})"),

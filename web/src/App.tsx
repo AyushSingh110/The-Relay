@@ -2,6 +2,7 @@ import { useEffect, useRef } from "react";
 
 import { ChatPage } from "./pages/ChatPage";
 import { CollectionsPage } from "./pages/CollectionsPage";
+import { EvalReviewPage } from "./pages/EvalReviewPage";
 import { StatusPage } from "./pages/StatusPage";
 import { UploadPage } from "./pages/UploadPage";
 import { Link, match, usePath } from "./router";
@@ -25,6 +26,9 @@ export function App() {
           <Link to="/" aria-current={route.page === "collections" ? "page" : undefined}>
             Collections
           </Link>
+          <Link to="/eval" aria-current={route.page === "eval" ? "page" : undefined}>
+            Evaluation
+          </Link>
           <Link to="/status" aria-current={route.page === "status" ? "page" : undefined}>
             Status
           </Link>
@@ -35,6 +39,7 @@ export function App() {
         {route.page === "upload" && <UploadPage collectionId={route.collectionId} />}
         {route.page === "chat" && <ChatPage key={route.collectionId} collectionId={route.collectionId} />}
         {route.page === "status" && <StatusPage />}
+        {route.page === "eval" && <EvalReviewPage />}
         {route.page === "missing" && (
           <section className="page">
             <h1>Page not found</h1>

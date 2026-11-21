@@ -8,6 +8,7 @@
   relay keys list --tenant T           key ids, names, roles, hash prefixes (never the key)
   relay keys revoke --id K
   relay tenants create --name N | relay tenants list
+  relay eval import-v1 | run [--replay] | report --run R | gate --baseline B --candidate C
 
 Settings: ``relay.toml`` if present, else built-in defaults (see ``relay.example.toml``),
 then ``RELAY_<SECTION>__<KEY>`` environment overrides. Secrets (``GROQ_API_KEY``,
@@ -449,6 +450,9 @@ def parse_args(argv: Sequence[str] | None) -> argparse.Namespace:
     tenants_sub = tenants.add_subparsers(dest="tenants_command", required=True)
     tenants_sub.add_parser("create", help="add a tenant").add_argument("--name", required=True)
     tenants_sub.add_parser("list", help="list the tenants")
+    from relay.eval.commands import add_parser as add_eval_parser
+
+    add_eval_parser(sub)  # V2-12: relay eval import-v1 | run | report | gate
     return parser.parse_args(argv)
 
 
@@ -458,6 +462,15 @@ def main(argv: Sequence[str] | None = None) -> int:
         return ingest()
     if args.command == "ui":
         return ui_build(args.web_dir)
+    if args.command == "eval":
+        from relay.eval.commands import COMMANDS
+
+        try:
+            settings = load_relay_settings(args.config)
+            return asyncio.run(COMMANDS[args.eval_command](settings, args, print))
+        except (ConfigurationError, RelayError) as exc:
+            print(f"relay eval: {sanitize_error(exc)}", file=sys.stderr)
+            return EXIT_FAILED
     if args.command in ("keys", "tenants"):
         try:
             settings = load_relay_settings(args.config)

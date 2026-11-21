@@ -27,12 +27,14 @@ export type Route =
   | { page: "upload"; collectionId: string }
   | { page: "chat"; collectionId: string }
   | { page: "status" }
+  | { page: "eval" }
   | { page: "missing" };
 
 export function match(path: string): Route {
   const trimmed = path.replace(/\/+$/, "") || "/";
   if (trimmed === "/") return { page: "collections" };
   if (trimmed === "/status") return { page: "status" };
+  if (trimmed === "/eval") return { page: "eval" };
   const found = /^\/collections\/([^/]+)\/(upload|chat)$/.exec(trimmed);
   if (found) {
     let collectionId: string;

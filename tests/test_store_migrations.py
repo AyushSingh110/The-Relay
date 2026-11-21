@@ -19,7 +19,8 @@ from relay.store.migrations import (
 )
 
 TABLES = {"tenant", "api_key", "collection", "document", "chunk", "ingest_job",
-          "conversation", "message", "request_log", "eval_set", "eval_question", "grade"}
+          "conversation", "message", "request_log", "eval_set", "eval_question", "grade",
+          "eval_run", "eval_answer"}  # V2-12 (migration 9)
 
 
 @pytest.fixture

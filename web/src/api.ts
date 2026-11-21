@@ -147,6 +147,75 @@ export interface WhoAmI {
   daily_limit: number | null;
 }
 
+// --- evaluation (V2-12) ---------------------------------------------------------------
+
+export type HumanVerdict = "CORRECT" | "PARTIAL" | "INCORRECT" | "UNANSWERABLE_CORRECT";
+
+export interface EvalSet {
+  id: string;
+  name: string;
+  collection_id: string;
+  collection_name: string;
+  questions: number;
+  created_at: string;
+}
+
+export interface EvalRunInfo {
+  id: string;
+  eval_set_id: string;
+  kind: string;
+  lane: string | null;
+  model_id: string | null;
+  retrieval_setting: string | null;
+  status: string;
+  created_at: string;
+  source: string | null;
+}
+
+export interface EvalGrade {
+  verdict: string | null;
+  score: number | null;
+  notes: string | null;
+}
+
+export interface EvalPassage {
+  paper_id: string;
+  short_name: string | null;
+  page_start: number;
+  page_end: number;
+  section: string | null;
+  text: string;
+}
+
+export interface EvalAnswer {
+  id: string;
+  source_id: string | null;
+  question: string | null;
+  answerable: boolean;
+  answer_text: string;
+  refused: boolean;
+  verdict: string | null;
+  citations: unknown[];
+  passages: EvalPassage[];
+  grades: { rubric: EvalGrade | null; entailment: EvalGrade | null; human: EvalGrade | null };
+}
+
+export interface EvalRunDetail {
+  run: EvalRunInfo;
+  answers: EvalAnswer[];
+}
+
+export interface EvalSummary {
+  answers: number;
+  rubric: { correct: number; answerable: number; refused_correctly: number; unanswerable: number;
+    correctness: number | null; refusal_precision: number | null; grounded: number;
+    grounded_rate: number | null };
+  entailment: { scored: number; mean: number | null };
+  human: { graded: number; verdicts: Record<string, number>; correct_share: number | null };
+  rubric_vs_human: { both: number; agree: number };
+  l4_calibration: string | { threshold: number; precision: number | null; recall: number | null }[];
+}
+
 export interface RelayApi {
   listCollections(): Promise<Collection[]>;
   createCollection(input: { name: string; retrieval_preset: Preset }): Promise<{ id: string }>;
@@ -155,6 +224,12 @@ export interface RelayApi {
   getDocument(documentId: string): Promise<DocumentState>;
   health(): Promise<Health>;
   whoami(): Promise<WhoAmI>;
+  evalSets(): Promise<EvalSet[]>;
+  evalRuns(setId: string): Promise<EvalRunInfo[]>;
+  evalRun(runId: string): Promise<EvalRunDetail>;
+  evalSummary(runId: string): Promise<EvalSummary>;
+  gradeAnswer(input: { answer_id: string; verdict: HumanVerdict; notes: string | null }):
+    Promise<{ id: string; answer_id: string; verdict: string; score: number }>;
   /** A new conversation in the collection: follow-up questions are read in its context. */
   createConversation(collectionId: string): Promise<{ id: string }>;
   /** Resolves when the stream ends; ``sawFinal`` is false if it ended early. */
@@ -239,6 +314,22 @@ export function createHttpApi(fetchImpl: typeof fetch = (...args) => fetch(...ar
     },
     whoami() {
       return call("/v1/whoami");
+    },
+    async evalSets() {
+      return (await call<{ sets: EvalSet[] }>("/v1/eval/sets")).sets;
+    },
+    async evalRuns(setId) {
+      return (await call<{ runs: EvalRunInfo[] }>(
+        `/v1/eval/sets/${encodeURIComponent(setId)}/runs`)).runs;
+    },
+    evalRun(runId) {
+      return call(`/v1/eval/runs/${encodeURIComponent(runId)}`);
+    },
+    evalSummary(runId) {
+      return call(`/v1/eval/runs/${encodeURIComponent(runId)}/summary`);
+    },
+    gradeAnswer(input) {
+      return call("/v1/eval/grades", json(input));
     },
     async health() {
       const response = await fetchImpl("/healthz");

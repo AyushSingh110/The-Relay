@@ -1,0 +1,47 @@
+{
+  "gate": {
+    "answerable": 15,
+    "correctness": 0.0,
+    "grounded_rate": 0.7333,
+    "refusal_precision": 0.1667,
+    "run": "61cd18ef1399490db16c2773a5a67352",
+    "unanswerable": 6
+  },
+  "summary": {
+    "answers": 21,
+    "entailment": {
+      "mean": null,
+      "scored": 0
+    },
+    "human": {
+      "correct_share": null,
+      "graded": 0,
+      "verdicts": {}
+    },
+    "l4_calibration": "needs owner grades (the human grader) on scored answers",
+    "rubric": {
+      "answerable": 15,
+      "correct": 0,
+      "correctness": 0.0,
+      "grounded": 11,
+      "grounded_rate": 0.7333,
+      "refusal_precision": 0.1667,
+      "refused_correctly": 1,
+      "unanswerable": 6
+    },
+    "rubric_vs_human": {
+      "agree": 0,
+      "both": 0
+    },
+    "run": {
+      "created_at": "2026-11-21T06:36:31.314+00:00",
+      "id": "61cd18ef1399490db16c2773a5a67352",
+      "kind": "replay",
+      "lane": "standin",
+      "model_id": "qwen/qwen3.8-27b",
+      "retrieval_setting": "small_fast",
+      "source": "exp-20261113T064542Z-c482696",
+      "status": "complete"
+    }
+  }
+}

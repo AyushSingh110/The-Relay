@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import copy
 import math
 from collections.abc import AsyncIterator, Callable, Mapping
 from dataclasses import dataclass, field
@@ -622,6 +623,12 @@ class Pipeline:
         self._budget = budget
         self._collections = collections
         self._v1_safety = CorpusSafety.for_cues(V1_CUE_SET)
+
+    def with_generator(self, generator: AnswerGenerator) -> Pipeline:
+        """The same pipeline on another generator (V2-12: an eval run pinned to one lane)."""
+        twin = copy.copy(self)
+        twin._generator = generator
+        return twin
 
     @property
     def generator(self) -> AnswerGenerator:

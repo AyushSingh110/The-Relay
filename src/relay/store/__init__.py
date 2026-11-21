@@ -20,6 +20,13 @@ from pathlib import Path
 import aiosqlite
 
 from relay.errors import ConfigurationError, sanitize_error
+from relay.store.eval_repos import (  # noqa: E402  (after repositories: it builds on them)
+    EvalAnswerRepo,
+    EvalQuestionRepo,
+    EvalRunRepo,
+    EvalSetRepo,
+    GradeRepo,
+)
 from relay.store.migrations import (
     MEMORY,
     MigrationResult,
@@ -60,6 +67,11 @@ class Store:
     request_log: RequestLogRepo
     conversations: ConversationRepo
     api_keys: ApiKeyRepo  # V2-10
+    eval_sets: EvalSetRepo  # V2-12
+    eval_questions: EvalQuestionRepo
+    eval_runs: EvalRunRepo
+    eval_answers: EvalAnswerRepo
+    grades: GradeRepo
 
     @property
     def schema_version(self) -> int:
@@ -105,7 +117,9 @@ async def open_store(path: str | Path) -> AsyncGenerator[Store]:
                     tenants=TenantRepo(conn), collections=CollectionRepo(conn),
                     documents=DocumentRepo(conn), ingest_jobs=IngestJobRepo(conn),
                     request_log=RequestLogRepo(conn), conversations=ConversationRepo(conn),
-                    api_keys=ApiKeyRepo(conn))
+                    api_keys=ApiKeyRepo(conn), eval_sets=EvalSetRepo(conn),
+                    eval_questions=EvalQuestionRepo(conn), eval_runs=EvalRunRepo(conn),
+                    eval_answers=EvalAnswerRepo(conn), grades=GradeRepo(conn))
     finally:
         try:
             await conn.close()

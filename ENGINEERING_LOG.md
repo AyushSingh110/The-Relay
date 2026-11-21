@@ -1803,3 +1803,57 @@
   - `results.csv` sha256 `8dfb10dfaadb` OK; 0 evidence changes.
 - **Real Groq calls:** 0 (cap 0).
 - **Owner approval status:** pending owner review.
+
+### Execution Entry
+
+- **Date and time:** 2026-11-21 IST
+- **Phase identifier:** `v2-12`: Evaluation system and CI gate
+- **Status:** completed, pending owner review.
+- **Files:** listed in `reports/phase-v2-12-eval-ci-gate.md` §3–4.
+  - Migration 9 adds `eval_run`, `eval_answer`, `eval_question.source_id/spec` and
+    `grade.eval_answer_id/verdict`.
+- **Built:**
+  - eval repositories;
+  - `relay eval import-v1`: 21 owner questions verbatim, 80 v1 answers with their
+    passages, 80 rubric grades, as 6 runs; idempotent;
+  - rubric, entailment and human graders;
+  - stand-in replay runs, offline and deterministic (0.5 s for 21 questions);
+  - the side-by-side summary with an L4 calibration sweep;
+  - the gate: correctness and grounded rate each within 2 points, plus the refusal floor;
+  - `relay eval run|report|gate`, with real lanes requiring `--real-calls`;
+  - tenant-scoped `/v1/eval` API (admin writes, background runs, real lanes refused);
+  - the `/eval` review screen;
+  - `.github/workflows/ci.yml` and a committed stand-in baseline.
+- **CI gate check:** a corrupted prompt ("Ignore sources and answer freely.", passages
+  dropped) took the grounded rate from 73.3% to 0.0%; `relay eval gate` exited 1. A clean
+  rerun passes with exit 0.
+- **Rulings:**
+  - the grounded rate is gated too (the stand-in's rubric correctness is 0%);
+  - the refusal floor is the baseline's own value when the baseline is under 100%;
+  - the corrupted prompt also drops the passages;
+  - no blocking L4 threshold;
+  - the rubric reads other collections' questions without v1's paper list;
+  - no real runs.
+- **Errors:**
+  - heredoc `\n` in migration 9;
+  - strict models needed JSON mode;
+  - trace record kind is `eval_request`;
+  - the calibrated TPM limit throttled the replay;
+  - CLI `main()` called inside an event loop;
+  - a relative profile path;
+  - timing flakes.
+
+  All fixed. V2-10's fairness tests now measure the queue's admission order.
+- **Code review** (agent): 1 high-confidence finding. `delete_cascade` missed migration 9's
+  eval rows, so a collection with runs could not be deleted. Fixed with a test that failed
+  first. A non-atomic v1 import is noted.
+- **Final:**
+  - `pytest -q` **972 passed** in 89.72 s. One earlier full run had 1 timing flake:
+    `test_v2_07_l4.py::test_scoring_does_not_block_the_event_loop`, 81 ms against 50 ms; it
+    passed 5 of 5 alone and is unchanged in this phase.
+  - ruff clean; Jest **60 passed**; tsc and eslint 0; the UI build OK.
+  - `results.csv` sha256 `8dfb10dfaadb`; 0 evidence changes.
+- **Real Groq calls:** 0 (cap 60, not approved).
+- **Owner approval status:** pending owner review.
+  - Owner actions: review the 80 v1 answers in `/eval`; write the 100 reviewed questions;
+    optionally approve a real run.

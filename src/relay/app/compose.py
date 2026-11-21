@@ -29,6 +29,7 @@ from fastapi import FastAPI
 from relay.api.app import MeteredProvider, RelayService, create_app
 from relay.api.auth import DEV_KEY, Authenticator
 from relay.api.routes.ask_v1 import AskV1Context, ask_v1_router
+from relay.api.routes.eval import EvalContext, eval_router
 from relay.api.routes.requests import requests_router
 from relay.app.bootstrap import V1_PRESET, ensure_dev_tenant, register_v1_papers
 from relay.app.collections import LazyEmbedder, LazyReranker, StoreCollectionResolver
@@ -414,6 +415,11 @@ async def open_runtime(settings: RelaySettings, env: Settings, *,
             app.include_router(ingestion_router(replace(collections.routes, auth=auth,
                                                         on_deleted=forget)))
             app.include_router(requests_router(store, auth))  # V2-11: GET /v1/requests/{id}
+            # V2-12: /v1/eval (sets, runs, summary, the owner's grades); real runs stay off
+            evaluation = EvalContext(store=store, service=service, auth=auth,
+                                     scorer=service.entailment)
+            app.include_router(eval_router(evaluation))
+            stack.push_async_callback(evaluation.aclose)
             auth_note = ("auth: API keys (relay keys create); development key "
                          + ("accepted (loopback only)" if dev and settings.auth.dev_key_enabled
                             is None else "accepted" if dev else "NOT accepted"))

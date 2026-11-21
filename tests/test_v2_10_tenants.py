@@ -324,6 +324,7 @@ async def noisy_neighbour(env: Env, *, capacity: int) -> tuple[int, dict[str, An
     cid_a, cid_b = await w.collection(a), await w.collection(b)
     admitted: list[str | None] = []  # tenants, in the order the queue admitted them
     entered: list[int] = []  # len(admitted) when B entered the queue
+    full_at_b: list[bool] = []  # whether the queue was full then (B had to evict someone)
     real_admitted, real_admit = queue._admitted, queue.admit
 
     def track(tenant: str | None) -> None:
@@ -333,6 +334,7 @@ async def noisy_neighbour(env: Env, *, capacity: int) -> tuple[int, dict[str, An
     def admit(**kwargs: Any) -> Any:
         if kwargs.get("tenant") == b:
             entered.append(len(admitted))
+            full_at_b.append(queue.depth >= queue.capacity)
         return real_admit(**kwargs)
 
     queue._admitted = track  # type: ignore[method-assign]
@@ -346,6 +348,7 @@ async def noisy_neighbour(env: Env, *, capacity: int) -> tuple[int, dict[str, An
     waited = time.perf_counter() - started
     heavy_streams = await asyncio.gather(*heavy)
     ahead = admitted[entered[0]:].index(b)
+    noisy_neighbour.full_at_b = full_at_b[0]  # type: ignore[attr-defined]
     return (ahead, light.of("final")[0], [s.of("final")[0] for s in heavy_streams], waited)
 
 
@@ -365,7 +368,11 @@ async def test_when_the_queue_is_full_a_batch_request_is_shed_for_an_interactive
     assert ahead == 0
     shed = [f for f in heavy if f["error_code"] == "queue_full"]
     assert shed  # A's excess burst was shed ...
-    assert any(f.get("shed_reason") == "shed_for_priority" for f in shed)  # ... one for B
+    # ... and when the queue was still full as B arrived, one was shed to make room for B
+    # (on a loaded machine A's answers may have drained it first; eviction itself is the
+    # deterministic test_a_full_queue_sheds_its_worst_waiter_for_a_better_arrival)
+    if noisy_neighbour.full_at_b:  # type: ignore[attr-defined]
+        assert any(f.get("shed_reason") == "shed_for_priority" for f in shed)
     print(f"\nnoisy neighbour (queue 8): {ahead} of A's waiting requests admitted before "
           f"B; {len(shed)} of A's 30 shed; B waited {waited:.2f} s")
 
@@ -373,23 +380,37 @@ async def test_when_the_queue_is_full_a_batch_request_is_shed_for_an_interactive
 async def test_two_interactive_tenants_a_light_one_is_not_stuck_behind_a_burst(
         env: Env) -> None:
     """Both tenants interactive: A's requests past its burst are over rate and wait behind
-    B's (v1's FIFO order, with no tenants, is in test_v2_10_admission)."""
+    B's (v1's FIFO order, with no tenants, is in test_v2_10_admission). Measured at the
+    queue: once B is queued, only A's in-burst requests (in rate, arrived first) may go
+    before it, never A's over-rate ones."""
     queue = AdmissionQueue(capacity=40, service_rate_per_s=20.0, max_active=1,
                            tenant_rate_per_s=1.0, tenant_burst=2.0)
     w = World(env, [answer(ABOUT) for _ in range(13)], delay_s=0.01, queue=queue)
     a, key_a = await w.tenant("heavy")
     b, key_b = await w.tenant("light")
     cid_a, cid_b = await w.collection(a), await w.collection(b)
-    finished: list[str] = []
+    admitted: list[str | None] = []
+    entered: list[int] = []
+    real_admitted, real_admit = queue._admitted, queue.admit
 
-    async def one(tag: str, key: str, cid: str, question: str) -> None:
-        await w.ask(key, cid, question)
-        finished.append(tag)
+    def track(tenant: str | None) -> None:
+        admitted.append(tenant)
+        real_admitted(tenant)
 
-    heavy = [asyncio.create_task(one(f"a{i}", key_a, cid_a, f"What is Moshi, take {i}?"))
+    def admit(**kwargs: Any) -> Any:
+        if kwargs.get("tenant") == b:
+            entered.append(len(admitted))
+        return real_admit(**kwargs)
+
+    queue._admitted = track  # type: ignore[method-assign]
+    queue.admit = admit  # type: ignore[method-assign]
+    heavy = [asyncio.create_task(w.ask(key_a, cid_a, f"What is Moshi, take {i}?"))
              for i in range(12)]
     await asyncio.sleep(0.1)
-    await one("b", key_b, cid_b, "What is Moshi?")
+    await w.ask(key_b, cid_b, "What is Moshi?")
     await asyncio.gather(*heavy)
-    print(f"\ntwo interactive tenants: B finished after {finished.index('b')} of A's 12")
-    assert finished.index("b") <= 3  # after A's in-burst requests at most, not all 12
+    ahead = admitted[entered[0]:].index(b)
+    in_burst_left = max(0, 2 - sum(1 for t in admitted[:entered[0]] if t == a))
+    print(f"\ntwo interactive tenants: {ahead} of A's requests admitted before B "
+          f"(A's in-burst requests still waiting: {in_burst_left})")
+    assert ahead <= in_burst_left  # at most A's in-burst ones; none of its over-rate ones

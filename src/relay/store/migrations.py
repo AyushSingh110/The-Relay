@@ -74,6 +74,26 @@ MIGRATIONS: Final[tuple[Migration, ...]] = (
     # GET /v1/requests/{id}; ids, hashes and numbers only, never text.
     Migration(8, "request_log breakdown",
               "ALTER TABLE request_log ADD COLUMN breakdown TEXT;"),
+    # V2-12: evaluation runs and answers; a question's owner id and full spec; a grade's
+    # answer and label (rubric/entailment/human verdict).
+    Migration(9, "eval runs, answers and grades", (
+        "ALTER TABLE eval_question ADD COLUMN source_id TEXT;\n"
+        "ALTER TABLE eval_question ADD COLUMN spec TEXT;\n"
+        "ALTER TABLE grade ADD COLUMN eval_answer_id TEXT;\n"
+        "ALTER TABLE grade ADD COLUMN verdict TEXT;\n"
+        "CREATE TABLE eval_run (id TEXT PRIMARY KEY NOT NULL, "
+        "eval_set_id TEXT NOT NULL REFERENCES eval_set(id), collection_id TEXT, "
+        "kind TEXT NOT NULL, lane TEXT, model_id TEXT, retrieval_setting TEXT, "
+        "prompt_version TEXT, source TEXT, status TEXT NOT NULL, created_at TEXT NOT NULL, "
+        "notes TEXT);\n"
+        "CREATE TABLE eval_answer (id TEXT PRIMARY KEY NOT NULL, "
+        "run_id TEXT NOT NULL REFERENCES eval_run(id), "
+        "eval_question_id TEXT NOT NULL REFERENCES eval_question(id), request_id TEXT, "
+        "answer_text TEXT NOT NULL, refused INT NOT NULL DEFAULT 0, verdict TEXT, "
+        "citations TEXT, passages TEXT, created_at TEXT NOT NULL);\n"
+        "CREATE INDEX idx_eval_run_set ON eval_run(eval_set_id);\n"
+        "CREATE INDEX idx_eval_answer_run ON eval_answer(run_id);\n"
+        "CREATE INDEX idx_grade_run ON grade(run_id);")),
 )
 LATEST_VERSION: Final = MIGRATIONS[-1].version
 

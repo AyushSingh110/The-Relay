@@ -1,0 +1,59 @@
+# The Relay CI (plan V2-12 task 4): unit tests, lint, the web UI checks, and the stand-in
+# evaluation compared against the accepted baseline. No secrets and no real model calls:
+# the evaluation answers with the in-process stand-in from v1's recorded passages (tracked in
+# evidence/), so it needs no index, no embedding model and no network beyond installing.
+name: ci
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -e ".[dev]"
+      - run: ruff check .
+      - run: pytest -q
+
+  web:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: web
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - run: npm ci
+      - run: npx tsc -p tsconfig.json --noEmit
+      - run: npx eslint .
+      - run: npx jest
+
+  eval-gate:
+    runs-on: ubuntu-latest
+    env:
+      RELAY_PATHS__STORE_PATH: ${{ runner.temp }}/eval.sqlite3
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -e ".[dev]"
+      - name: Stand-in evaluation (v1 questions, v1's recorded small_fast passages)
+        run: relay eval run --replay --preset small_fast --summary-out "${{ runner.temp }}/candidate.json"
+      - name: Regression gate against the accepted baseline
+        run: >-
+          relay eval gate
+          --baseline eval/baselines/standin-replay-small_fast.json
+          --candidate "${{ runner.temp }}/candidate.json"

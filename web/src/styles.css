@@ -266,3 +266,24 @@ label { font-weight: 600; display: block; margin-bottom: 0.3rem; }
   .inline { flex-direction: column; }
   .page-head.with-action > button { width: 100%; }
 }
+
+/* Evaluation review (V2-12) */
+.eval-pickers { display: flex; flex-wrap: wrap; gap: 1rem; margin: 0 0 1rem; }
+.eval-pickers label { display: flex; flex-direction: column; gap: 0.25rem; font-weight: 500; }
+.eval-summary { margin: 0 0 1.25rem; border-collapse: collapse; }
+.eval-summary caption { text-align: left; font-weight: 600; padding-bottom: 0.4rem; }
+.eval-summary th, .eval-summary td { text-align: left; padding: 0.35rem 0.75rem; border-top: 1px solid var(--rule); }
+.eval-summary th { font-weight: 500; color: var(--muted); }
+.eval-answers { display: grid; gap: 1rem; }
+.eval-card { border: 1px solid var(--rule); border-radius: var(--radius); padding: 1rem; background: var(--surface); }
+.eval-card header { display: flex; gap: 0.5rem; align-items: center; margin-bottom: 0.4rem; }
+.eval-id { font-weight: 700; }
+.eval-answer { margin: 0 0 0.6rem; overflow-wrap: anywhere; }
+.eval-answer.muted { color: var(--muted); }
+.eval-passage { margin: 0 0 0.75rem; padding: 0.5rem 0.75rem; border-left: 3px solid var(--rule); overflow-wrap: anywhere; }
+.eval-grades { display: flex; flex-wrap: wrap; gap: 1.5rem; margin: 0.75rem 0 0.25rem; }
+.eval-grades dt { color: var(--muted); font-size: 0.85rem; }
+.eval-grades dd { margin: 0; font-weight: 600; }
+.eval-actions { display: grid; gap: 0.5rem; margin-top: 0.5rem; }
+.eval-actions textarea { width: 100%; }
+.visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
