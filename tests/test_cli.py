@@ -11,11 +11,24 @@ from pydantic import SecretStr
 from relay import cli
 from relay.app.settings import RelaySettings
 from relay.config import Settings
+from relay.retrieval.hybrid_index import INDEX_MANIFEST, RETRIEVAL_SETTINGS
 from tests.factories import FAKE_KEY
 
 
 def env(**overrides: Any) -> Settings:
     return Settings(_env_file=None, **overrides)  # type: ignore[call-arg]
+
+
+def ready_paths(root: Path) -> dict[str, Path]:
+    """An installed-looking ``index_dir`` and ``models_dir`` (what doctor checks: one index
+    manifest per preset, one cached model). The real ones are gitignored build outputs, so a
+    fresh checkout (CI) has neither; the corpus manifest is the repository's own."""
+    index_dir, models_dir = root / "indexes", root / "models"
+    for preset in RETRIEVAL_SETTINGS:
+        (index_dir / preset).mkdir(parents=True)
+        (index_dir / preset / INDEX_MANIFEST).write_text("{}", encoding="utf-8")
+    (models_dir / "models--test--embedder").mkdir(parents=True)
+    return {"index_dir": index_dir, "models_dir": models_dir}
 
 
 def run_doctor(settings: RelaySettings, environment: Settings) -> tuple[int, str]:
@@ -24,8 +37,9 @@ def run_doctor(settings: RelaySettings, environment: Settings) -> tuple[int, str
     return code, "\n".join(lines)
 
 
-def test_doctor_passes_on_the_repository_defaults_and_needs_no_key() -> None:
-    code, text = run_doctor(RelaySettings(), env())
+def test_doctor_passes_on_the_repository_defaults_and_needs_no_key(tmp_path: Path) -> None:
+    settings = RelaySettings(paths=ready_paths(tmp_path))  # type: ignore[arg-type]
+    code, text = run_doctor(settings, env())
     assert code == cli.EXIT_OK, text
     assert "[  OK] corpus manifest" in text and "(3 papers)" in text
     assert "[  OK] index directory" in text and "(3/3 presets)" in text
@@ -54,9 +68,11 @@ def test_doctor_reports_a_partial_index(tmp_path: Path) -> None:
         in text
 
 
-def test_doctor_checks_the_key_and_call_cap_for_a_groq_lane_without_printing_the_key() -> None:
+def test_doctor_checks_the_key_and_call_cap_for_a_groq_lane_without_printing_the_key(
+        tmp_path: Path) -> None:
     groq = RelaySettings(lanes=({"name": "g", "kind": "groq",  # type: ignore[arg-type]
-                                 "model": "qwen/qwen3.8-27b"},))
+                                 "model": "qwen/qwen3.8-27b"},),
+                         paths=ready_paths(tmp_path))  # type: ignore[arg-type]
     code, text = run_doctor(groq, env())
     assert code == cli.EXIT_FAILED and "[FAIL] GROQ_API_KEY: not set" in text
     code, text = run_doctor(groq, env(groq_api_key=SecretStr(FAKE_KEY), max_real_calls=5))
@@ -90,7 +106,10 @@ def test_main_doctor_reads_settings_and_reports_config_errors(
         capsys: pytest.CaptureFixture[str]) -> None:
     monkeypatch.delenv("GROQ_API_KEY", raising=False)
     good = tmp_path / "relay.toml"
-    good.write_text("[cache]\nmode = 'off'\n", encoding="utf-8")
+    paths = ready_paths(tmp_path)
+    good.write_text("[cache]\nmode = 'off'\n[paths]\n"
+                    f"index_dir = '{paths['index_dir'].as_posix()}'\n"
+                    f"models_dir = '{paths['models_dir'].as_posix()}'\n", encoding="utf-8")
     code = cli.main(["doctor", "--config", str(good), "--env-file", str(tmp_path / "none")])
     out = capsys.readouterr().out
     assert code == cli.EXIT_OK and f"config: {good}" in out

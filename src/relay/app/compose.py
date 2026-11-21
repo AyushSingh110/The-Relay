@@ -23,6 +23,7 @@ from contextlib import AsyncExitStack, asynccontextmanager
 from dataclasses import dataclass, replace
 from pathlib import Path
 from typing import Final
+from urllib.parse import urlsplit
 
 from fastapi import FastAPI
 
@@ -36,7 +37,7 @@ from relay.app.collections import LazyEmbedder, LazyReranker, StoreCollectionRes
 from relay.app.request_log import RequestLogSink
 from relay.app.routes.ingestion import IngestionContext, fetch_arxiv_pdf, ingestion_router
 from relay.app.routes.ui import mount_ui
-from relay.app.settings import LaneGuardSettings, LaneSettings, RelaySettings
+from relay.app.settings import LaneGuardSettings, LaneSettings, RelaySettings, StateSettings
 from relay.config import Settings
 from relay.control.admission import (
     AdmissionQueue,
@@ -48,6 +49,7 @@ from relay.control.cache import corpus_digest
 from relay.control.pricing import LanePricing
 from relay.control.provider_guard import GuardConfig, ProviderGuard
 from relay.control.router import ProviderLane, ProviderRouter, RoutedGenerator
+from relay.control.state import RedisStateStore, SharedQuota, StateStore
 from relay.errors import ConfigurationError, sanitize_error
 from relay.ingestion.arxiv_fetcher import load_corpus_manifest
 from relay.ingestion.worker import FileLocator, IngestWorker
@@ -186,6 +188,41 @@ def cache_mode(settings: RelaySettings) -> str:
         raise ConfigurationError(f"cache mode {mode!r} is not available yet: the SQLite "
                                  "store arrives in V2-02; use 'memory' or 'off'")
     return CACHE_MODES[mode]
+
+
+def redis_location(url: str) -> str:
+    """Where Redis is, for start-up notes: host, port and database, never credentials."""
+    parts = urlsplit(url)
+    return f"{parts.hostname or '?'}:{parts.port or 6379}{parts.path or '/0'}"
+
+
+async def open_state(settings: StateSettings, stack: AsyncExitStack) -> StateStore | None:
+    """V2-13: the shared state store, or None for the in-process default (no Redis
+    needed). A Redis that cannot be reached fails start-up, before any model is loaded."""
+    if settings.backend == "memory":
+        return None
+    store = RedisStateStore.from_url(settings.redis_url, prefix=settings.key_prefix,
+                                     log_ttl_s=settings.flight_lock_ttl_s * 10,
+                                     socket_timeout_s=settings.socket_timeout_s)
+    stack.push_async_callback(store.aclose)
+    try:
+        await store.ping()
+    except Exception as exc:
+        raise ConfigurationError(f"[state] backend redis: cannot reach "
+                                 f"{redis_location(settings.redis_url)} "
+                                 f"({type(exc).__name__})") from exc
+    return store
+
+
+def share_state(state: StateStore, settings: StateSettings, service: RelayService,
+                router: ProviderRouter) -> str:
+    """Point the cache and every lane's guard at the shared store; the start-up note."""
+    if service.cache is not None:
+        service.cache.share(state, ttl_s=settings.cache_ttl_s)
+    for lane in router.lanes:
+        lane.guard.share(SharedQuota(state, lane.name))
+    return (f"state: redis at {redis_location(settings.redis_url)} (shared answer cache, "
+            "coalescing across workers, quota counters per lane)")
 
 
 def standin_profile(lane: LaneSettings) -> StandinProfile:
@@ -392,6 +429,12 @@ async def open_runtime(settings: RelaySettings, env: Settings, *,
             cache_mode=mode, vocabulary=vocabulary, run=sink,  # type: ignore[arg-type]
             collections=None if collections is None else collections.resolver,
         )
+        state = await open_state(settings.state, stack)
+        state_note = ("state: memory (one process; no Redis)" if state is None
+                      else share_state(state, settings.state, app.state.relay, router))
+        if state is not None:  # settlements still in flight land before Redis closes
+            for each in router.lanes:
+                stack.push_async_callback(each.guard.drain_shared)
         app.state.relay.entailment, l4_note = await _open_l4(settings)
         app.state.relay.rewriter, rewrite_note = make_rewriter(
             settings, lane, rewrite_generator(settings, router))
@@ -403,13 +446,18 @@ async def open_runtime(settings: RelaySettings, env: Settings, *,
             service: RelayService = app.state.relay
             resolver = collections.resolver
 
-            ask_v1 = AskV1Context(service=service, store=store, auth=auth)
+            ask_v1 = AskV1Context(service=service, store=store, auth=auth, state=state,
+                                  flight_ttl_s=settings.state.flight_lock_ttl_s,
+                                  lease_poll_s=settings.state.lease_poll_s)
             context = ask_v1
 
             def forget(collection_id: str) -> None:  # a deleted collection
                 context.forget(collection_id)  # in-flight answers: no cache, no log
                 if service.cache is not None:
                     service.cache.purge_collection(collection_id)
+                    if state is not None:  # V2-13: and every worker's shared answers
+                        context.spawn(_purge_shared(state, collection_id),
+                                      f"purge-{collection_id}")
                 resolver.forget(collection_id)
 
             app.include_router(ingestion_router(replace(collections.routes, auth=auth,
@@ -431,9 +479,17 @@ async def open_runtime(settings: RelaySettings, env: Settings, *,
                       request_log=sink,
                       collections=None if collections is None else collections.resolver,
                       ingest_worker=None if collections is None else collections.worker,
-                      notes=(l4_note, rewrite_note) if collections is None
-                      else (collections.note, l4_note, rewrite_note, auth_note),
+                      notes=(l4_note, rewrite_note, state_note) if collections is None
+                      else (collections.note, l4_note, rewrite_note, auth_note, state_note),
                       ask_v1=ask_v1, fallback_lanes=tuple(settings.lanes[1:]))
+
+
+async def _purge_shared(state: StateStore, collection_id: str) -> None:
+    try:
+        await state.purge_cached(collection_id)
+    except Exception as exc:  # the answers stay unreachable: their key has the version
+        logger.warning("shared answers of collection %s not purged: %s", collection_id,
+                       sanitize_error(exc))
 
 
 async def _open_provider(lane: LaneSettings, env: Settings, stack: AsyncExitStack,
@@ -458,4 +514,5 @@ async def _open_provider(lane: LaneSettings, env: Settings, stack: AsyncExitStac
 
 __all__ = ["Runtime", "admission_queue", "cache_mode", "capacity_derivation", "corpus_sha256",
            "dev_key_enabled", "guard_config", "lane_pricing", "make_rewriter", "open_runtime",
+           "open_state", "redis_location", "share_state",
            "rewrite_generator", "standin_profile"]

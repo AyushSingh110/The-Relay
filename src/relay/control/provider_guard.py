@@ -14,6 +14,7 @@ from typing import Annotated, Any, Final, Literal
 from pydantic import BaseModel, ConfigDict, Field
 
 from relay.control.retry import RetryPolicy
+from relay.control.state import QuotaLimits, SharedQuota, StateUnavailableError
 from relay.orchestrator.pipeline import (
     ContentSink,
     GenerationResult,
@@ -88,6 +89,13 @@ class RequestExceedsTokenLimitError(GuardError):
     error_code: ErrorCode = "payload_too_large"
 
 
+class SharedQuotaUnavailableError(GuardError):
+    """V2-13: the shared quota counters could not be reached. The guard fails closed: with
+    several workers, the provider's limits cannot be kept without them."""
+
+    error_code: ErrorCode = "internal_error"
+
+
 @dataclass
 class _TokenEntry:
     at_ns: int
@@ -114,6 +122,7 @@ class Permit:
     estimate: int
     prompt_chars: int
     day: date
+    shared: str | None = None  # V2-13: the reservation in the shared window, if any
 
 
 class Settlement(BaseModel):
@@ -180,6 +189,25 @@ class ProviderGuard:
         self._failures = 0
         self._open_until_ns = 0
         self._trial_in_flight = False
+        self._shared: SharedQuota | None = None
+
+    def share(self, quota: SharedQuota) -> None:
+        """V2-13: also reserve every call in ``quota``, the minute window and daily counters
+        that all workers share. This guard's own windows still apply (they see only this
+        worker's calls). ``predict`` stays local: the router's forecast is this worker's."""
+        self._shared = quota
+
+    async def drain_shared(self) -> None:
+        """Shutdown: wait for the shared settlements still in flight."""
+        if self._shared is not None:
+            await self._shared.drain()
+
+    def _shared_limits(self) -> QuotaLimits:
+        fraction = self.config.daily_safety_fraction
+        rpd, tpd = self.rpd_limit, self.config.tpd_limit
+        return QuotaLimits(rpm=self.config.rpm_limit, tpm=self.tpm_limit,
+                           rpd_stop=None if rpd is None else fraction * rpd,
+                           tpd_stop=None if tpd is None else fraction * tpd)
 
     # -- limits and windows --
 
@@ -304,6 +332,8 @@ class ProviderGuard:
                       spans: ServerSpanTracker | None = None) -> Permit:
         """Wait for a slot and quota, then reserve. Raises ``GuardError`` to refuse."""
         await self._wait(self._semaphore.acquire(), spans)
+        shared: str | None = None
+        shared_day = self._day
         try:
             while True:
                 now = self._clock()
@@ -322,6 +352,10 @@ class ProviderGuard:
                         f"request needs ~{estimate} tokens; the per-minute limit is {limit}"
                     )
                 wait_ns = self._quota_wait_ns(now, estimate)
+                if wait_ns <= 0 and self._shared is not None:
+                    shared_day = self._day
+                    wait_ns, shared = await self._reserve_shared(estimate, spans)
+                    now = self._clock()
                 if wait_ns <= 0:
                     break
                 if deadline_ns is not None and now + wait_ns >= deadline_ns:
@@ -332,6 +366,8 @@ class ProviderGuard:
             self._check_circuit()
         except BaseException:
             self._semaphore.release()
+            if shared is not None and self._shared is not None:  # no call: give it back
+                self._shared.cancel(shared, estimate, shared_day)
             raise
         entry = _TokenEntry(now, estimate)
         self._requests.append(now)
@@ -341,7 +377,25 @@ class ProviderGuard:
         if self._tpm_header is not None:
             self._reserved_since_header += estimate
         return Permit(entry=entry, estimate=estimate, prompt_chars=request.prompt_chars,
-                      day=self._day)
+                      day=self._day if shared is None else shared_day, shared=shared)
+
+    async def _reserve_shared(self, estimate: int,
+                              spans: ServerSpanTracker | None) -> tuple[int, str | None]:
+        """(wait ns, None) or (0, reservation) from the shared window."""
+        if self._shared is None:
+            return 0, None
+        try:
+            decision = await self._shared.reserve(estimate, self._shared_limits(), self._day)
+        except StateUnavailableError as exc:
+            raise SharedQuotaUnavailableError(str(exc)) from exc
+        if decision.refusal == "daily_budget_exhausted":
+            raise DailyBudgetExhaustedError("daily safety stop: shared daily counters")
+        if decision.refusal == "payload_too_large":
+            raise RequestExceedsTokenLimitError(
+                f"request needs ~{estimate} tokens; over the shared per-minute limit")
+        if decision.reservation is None:
+            return decision.wait_ms * 1_000_000, None
+        return 0, decision.reservation
 
     async def _wait(self, awaitable: Awaitable[Any], spans: ServerSpanTracker | None) -> None:
         """Time spent waiting for a slot or quota is ``waiting``, not ``working``."""
@@ -383,6 +437,8 @@ class ProviderGuard:
             charged = 0
             result = (0, 0, "none")
         delta = charged - permit.estimate
+        if permit.shared is not None and self._shared is not None:
+            self._shared.settle(permit.shared, permit.estimate, charged, permit.day)
         permit.entry.tokens = charged
         if permit.day == self._day:
             self._day_tokens += delta
@@ -565,4 +621,5 @@ __all__ = [
     "QuotaWaitExceedsDeadlineError",
     "RequestExceedsTokenLimitError",
     "Settlement",
+    "SharedQuotaUnavailableError",
 ]

@@ -1857,3 +1857,90 @@
 - **Owner approval status:** pending owner review.
   - Owner actions: review the 80 v1 answers in `/eval`; write the 100 reviewed questions;
     optionally approve a real run.
+
+### Execution Entry
+
+- **Date and time:** 2026-11-21 IST
+- **Phase identifier:** `v2-13`: Shared state and multi-worker
+- **Status:** completed, pending owner review.
+- **Files:**
+  - created `src/relay/control/state.py`, `tests/test_multi_worker.py` (35 tests) and
+    `reports/phase-v2-13-shared-state-multi-worker.md`;
+  - modified `control/cache.py`, `control/provider_guard.py`, `api/routes/ask_v1.py`,
+    `app/settings.py`, `app/compose.py`, `relay.example.toml` and `pyproject.toml` (the
+    `redis` extra; dev dependencies `redis` and `fakeredis[lua]`).
+- **Built:**
+  - the `StateStore` protocol, with `InMemoryStateStore` and `RedisStateStore` (Lua
+    scripts for the sliding window, settle, cancel, lock refresh and release, and publish);
+  - `ExactCache.share/lookup/admit`;
+  - `ProviderGuard.share`: shared RPM/TPM/daily reservation and correction;
+  - distributed `/v1/ask` SingleFlight: a TTL lock renewed by a heartbeat, a per-flight
+    event log with Pub/Sub wake-ups, and remote followers that end with `leader_lost`
+    when the lock expires;
+  - `[state]` settings (default `memory`) and the composition wiring.
+- **Rulings:**
+  - Redis is treated as approved by the phase prompt; CLAUDE.md §4.1 should be updated;
+  - the memory backend keeps today's objects unchanged;
+  - Pub/Sub plus a log (Pub/Sub alone loses early events);
+  - the lock returns a lease and the quota returns a decision, not bools;
+  - no leader takeover;
+  - the cache and coalescing fail open, the quota fails closed (`internal_error`);
+  - `predict` stays local;
+  - v1 `/ask` stays in-memory.
+- **Commands:**
+  - pip installed redis 8.1.0, fakeredis 2.40.0 and lupa 2.8;
+  - the related existing tests: 102 passed;
+  - the multi-worker tests;
+  - a mutation check: each disabled mechanism failed its tests (shared flights 6,
+    guard sharing 6, shared cache 2, leader-lost detection 2);
+  - `verify.sh`, twice.
+- **Review** (fresh-context agent), 5 important findings, all fixed:
+  - a queued leader whose own client left was shed as `client_gave_up` despite
+    followers on other workers (RED, then GREEN);
+  - a reservation made while its caller was cancelled was not given back (RED, then
+    GREEN);
+  - an aborted reservation kept its RPM slot and daily count; now `cancel_reservation`
+    (RED, then GREEN);
+  - no Redis socket timeouts (now `socket_timeout_s`, default 5 s);
+  - settlements were not drained at shutdown.
+
+  Also fixed: batched `HDEL`, and the day used for a reservation.
+- **Errors:** a heredoc quoting failure (no change applied); a strict `ChatMessage` in a
+  test helper; the fakeredis subscribe confirmation returned as None.
+- **Final:**
+  - `pytest -q` **1007 passed** in 105.07 s; ruff clean;
+  - Jest **60 passed**; tsc and eslint 0;
+  - `results.csv` sha256 `8dfb10dfaadb`; 0 evidence changes.
+- **Real Groq calls:** 0 (cap 0).
+- **Remaining:**
+  - no real Redis or multi-process run (fakeredis in one process);
+  - tenant buckets and key limits stay per worker;
+  - the edge races listed in the report §11.
+- **Owner approval status:** pending owner review.
+
+### Execution Entry
+
+- **Date and time:** 2026-11-21 IST
+- **Phase identifier:** fix: CI workflow (after commit 88296df)
+- **Status:** completed, pending owner review.
+- **Cause:** GitHub rejected the workflow file before any job ran (run 44904000059, 0 s).
+  `ci.yml` used `${{ runner.temp }}` in the eval-gate job-level `env`, where the `runner`
+  context is not allowed; actionlint reports `ci.yml:46:36`.
+  - Fix: the variable moved into its step; actionlint now exits 0.
+- **Second issue,** found with a clean-clone simulation: 4 `relay doctor` tests assumed
+  the gitignored `data/indexes` and `data/models`, giving 4 failed, 992 passed, 11 skipped.
+  - Fix: they now use an installed-looking index and model directory under `tmp_path`;
+    doctor itself is unchanged.
+- **Files modified:** `.github/workflows/ci.yml`, `tests/test_cli.py`,
+  `tests/test_store_integration.py`. Report: `reports/fix-ci-workflow.md`.
+- **Clean clone** (HEAD plus working-tree changes):
+  - backend: ruff clean; pytest 996 passed, 11 skipped (need real data, skip by design);
+  - eval-gate: `gate: PASS`;
+  - web: `npm ci` 0, tsc 0, eslint 0, Jest 60 passed.
+- **Working tree:**
+  - `verify.sh` gave 1006 passed and 1 failed: the known L4 50 ms timing flake, which
+    passed 5 of 5 alone and is unchanged;
+  - a full rerun gave **1007 passed**;
+  - ruff clean, Jest 60, tsc and eslint 0; `results.csv` `8dfb10dfaadb`; 0 evidence changes.
+- **Not verified:** a real GitHub (Linux) run; this was simulated on Windows.
+- **Owner approval status:** pending owner review; nothing committed.

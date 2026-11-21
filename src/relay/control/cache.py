@@ -4,17 +4,23 @@ from __future__ import annotations
 
 import asyncio
 import hashlib
+import logging
 import re
 import unicodedata
 from collections import OrderedDict
 from collections.abc import Awaitable, Callable, Hashable, Iterable
 from dataclasses import dataclass
-from typing import Annotated, Final, Generic, Literal, TypeVar
+from typing import TYPE_CHECKING, Annotated, Final, Generic, Literal, TypeVar
 
 from pydantic import BaseModel, ConfigDict, Field
 
 from relay.orchestrator.verifier import CitedPassage
 from relay.schemas import VerificationVerdict
+
+if TYPE_CHECKING:
+    from relay.control.state import StateStore
+
+logger = logging.getLogger(__name__)
 
 DEFAULT_MAX_ENTRIES: Final = 1024
 CACHEABLE_VERDICTS: Final[frozenset[str]] = frozenset({"VERIFIED", "REFUSAL_VERIFIED"})
@@ -99,6 +105,19 @@ class ExactCache:
         self.hits = 0
         self.misses = 0
         self.rejected = 0
+        # V2-13: with a shared store, every worker reads and writes the same answers
+        self.shared: StateStore | None = None
+        self.shared_ttl_s = 0.0
+
+    def share(self, store: StateStore, *, ttl_s: float) -> None:
+        """Keep answers in ``store`` (Redis) instead of this process's memory."""
+        if ttl_s <= 0:
+            raise ValueError("ttl_s must be positive")
+        self.shared, self.shared_ttl_s = store, ttl_s
+
+    @staticmethod
+    def key_text(key: CacheKey) -> str:
+        return "|".join(key)
 
     def __len__(self) -> int:
         return len(self._entries)
@@ -128,6 +147,36 @@ class ExactCache:
         self._entries.move_to_end(key)
         while len(self._entries) > self.max_entries:
             self._entries.popitem(last=False)  # least recently used
+        return True
+
+    async def lookup(self, question: str, retrieval_setting: str) -> CachedAnswer | None:
+        """``get``, from the shared store when there is one. A store failure is a miss:
+        the answer is generated again, never lost."""
+        if self.shared is None:
+            return self.get(question, retrieval_setting)
+        try:
+            entry = await self.shared.get_cached_answer(
+                self.key_text(self.key(question, retrieval_setting)))
+        except Exception as exc:
+            logger.warning("shared cache read failed (%s): treated as a miss",
+                           type(exc).__name__)
+            entry = None
+        if entry is None:
+            self.misses += 1
+        else:
+            self.hits += 1
+        return entry
+
+    async def admit(self, question: str, retrieval_setting: str, answer: CachedAnswer, *,
+                    degraded: bool) -> bool:
+        """``put``, into the shared store when there is one (same admission rule)."""
+        if self.shared is None:
+            return self.put(question, retrieval_setting, answer, degraded=degraded)
+        if degraded or answer.verification_verdict not in CACHEABLE_VERDICTS:
+            self.rejected += 1
+            return False
+        await self.shared.set_cached_answer(
+            self.key_text(self.key(question, retrieval_setting)), answer, self.shared_ttl_s)
         return True
 
     def purge_collection(self, collection_id: str) -> int:

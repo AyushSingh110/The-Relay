@@ -32,6 +32,11 @@ How the rules are kept:
   receives every event so far, then the live ones. Each request gets its own ``accepted``
   and ``final``. When the last listener disconnects, the flight (and generation) is
   cancelled and its queue slot freed.
+- Several workers (V2-13, ``[state] backend = "redis"``): the first worker to claim a
+  question's flight lock leads it and mirrors every event to the shared store; a request
+  on another worker follows that flight over Pub/Sub instead of calling the model. The
+  lock has a TTL that the leader keeps renewing; when a leader dies, its lock expires and
+  its remote followers end with an explicit error (``shed_reason: leader_lost``).
 - A collection with ``buffered = true`` uses the buffered path (one model call, the
   whole-answer verifier, then every sentence at once), with the same event sequence.
 
@@ -43,10 +48,12 @@ from __future__ import annotations
 
 import asyncio
 import contextlib
+import hashlib
 import json
 import logging
 import math
 import re
+import time
 import uuid
 from collections.abc import AsyncIterator, Callable, Hashable
 from dataclasses import dataclass, field
@@ -63,6 +70,7 @@ from relay.app.routes.rejected import Rejected
 from relay.control.admission import AdmissionRejectedError, Priority
 from relay.control.cache import CachedAnswer, CachedSource, normalise_question, question_hash
 from relay.control.pricing import total_cost
+from relay.control.state import DEFAULT_FLIGHT_TTL_S, StateStore
 from relay.errors import sanitize_error
 from relay.ingestion.registry import CollectionNotFoundError
 from relay.orchestrator.pipeline import (
@@ -92,6 +100,7 @@ from relay.telemetry.tracing import RequestTrace, Span
 logger = logging.getLogger(__name__)
 
 DEFAULT_KEEPALIVE_S: Final = 4.0  # under the 5 s silence limit, with margin
+DEFAULT_LEASE_POLL_S: Final = 1.0  # V2-13: how often a silent remote flight's lease is checked
 EXCERPT_CHARS: Final = 240
 _NS_PER_MS: Final = 1_000_000
 _NS_PER_S: Final = 1_000_000_000
@@ -130,6 +139,11 @@ class ReplayChannel:
         self.task: asyncio.Task[None] | None = None
         self._position: Callable[[], int] = lambda: 0
         self._signal = asyncio.Event()
+        # V2-13: a leader shared across workers mirrors its events, and is not cancelled
+        # while followers on other workers still listen
+        self.mirror: Callable[[str, dict[str, Any]], None] | None = None
+        self.on_abandoned: Callable[[], None] | None = None
+        self.remote_followers = False  # set when the leader is kept for other workers
 
     def _wake(self) -> None:
         signal, self._signal = self._signal, asyncio.Event()
@@ -139,6 +153,8 @@ class ReplayChannel:
         if name == "status":
             self.stage = data["stage"]
         self.events.append((name, data))
+        if self.mirror is not None:
+            self.mirror(name, data)
         self._wake()
 
     def status(self, stage: str) -> None:
@@ -161,6 +177,9 @@ class ReplayChannel:
     def leave(self) -> None:
         self.subscribers -= 1
         if self.subscribers == 0 and not self.closed and self.task is not None:
+            if self.on_abandoned is not None:  # V2-13: ask the other workers first
+                self.on_abandoned()
+                return
             self.close()  # at once: a request arriving now must start a new flight
             self.task.cancel()  # nobody is listening: stop the work (v1 semantics)
 
@@ -194,6 +213,11 @@ class AskV1Context:
     # V2-10: collections deleted while this process runs. An answer still in flight for
     # one is delivered, but neither cached nor logged (its logs were deleted with it).
     deleted: set[str] = field(default_factory=set)
+    # V2-13: the store shared by several workers (None: this process coalesces alone)
+    state: StateStore | None = None
+    flight_ttl_s: float = DEFAULT_FLIGHT_TTL_S
+    lease_poll_s: float = DEFAULT_LEASE_POLL_S
+    background: set[asyncio.Task[None]] = field(default_factory=set)
 
     def __post_init__(self) -> None:
         if self.auth is None and self.store is not None:
@@ -221,6 +245,17 @@ class AskV1Context:
             task.cancel()
         await asyncio.gather(*tasks, return_exceptions=True)
         self.flights.clear()
+        if self.background:  # V2-13: last events, lock releases and lease checks
+            _, pending = await asyncio.wait(list(self.background), timeout=2.0)
+            for task in pending:
+                task.cancel()
+            await asyncio.gather(*pending, return_exceptions=True)
+
+    def spawn(self, work: Any, name: str) -> asyncio.Task[None]:
+        task: asyncio.Task[None] = asyncio.get_running_loop().create_task(work, name=name)
+        self.background.add(task)
+        task.add_done_callback(self.background.discard)
+        return task
 
 
 # --- Payloads ----------------------------------------------------------------------------
@@ -508,7 +543,8 @@ async def _lead(ctx: AskV1Context, flight: Flight, target: AskTarget, *, request
             "queue.wait", priority=str(priority), queue_position=service.queue.depth)
         try:
             async with service.queue.admit(deadline_ns=deadline_ns,
-                                           is_connected=lambda: channel.subscribers > 0,
+                                           is_connected=lambda: channel.subscribers > 0
+                                           or channel.remote_followers,
                                            on_queued=channel.queued, tenant=tenant,
                                            priority=priority) as ticket:
                 depth = ticket.queue_depth_at_entry
@@ -555,7 +591,7 @@ async def _lead(ctx: AskV1Context, flight: Flight, target: AskTarget, *, request
                 and (outcome.kind, outcome.verification_verdict) in (
                     ("answer", "VERIFIED"), ("llm_refusal", "REFUSAL_VERIFIED"))):
             try:
-                service.cache.put(ask.question, target.cache_setting, CachedAnswer(
+                await service.cache.admit(ask.question, target.cache_setting, CachedAnswer(
                     delivered_text=outcome.delivered_text, refused=outcome.refused,
                     citations=outcome.citations,
                     verification_verdict=outcome.verification_verdict,
@@ -599,6 +635,184 @@ async def _lead(ctx: AskV1Context, flight: Flight, target: AskTarget, *, request
         channel.close()
         if ctx.flights.get(flight.key) is flight:
             del ctx.flights[flight.key]
+
+
+# --- Flights shared across workers (V2-13) ---------------------------------------------
+
+
+def flight_key_text(key: Hashable) -> str:
+    """The shared store's name for a flight: a hash of (question, setting, buffered)."""
+    return hashlib.sha256(json.dumps(key, default=str).encode("utf-8")).hexdigest()
+
+
+class _Mirror:
+    """A leading flight's events, sent to the shared store in order. The flight lock is
+    renewed while the flight runs and released after its last event."""
+
+    def __init__(self, ctx: AskV1Context, flight_key: str, token: str) -> None:
+        self._ctx, self._key, self._token = ctx, flight_key, token
+        self._queue: asyncio.Queue[Event | None] = asyncio.Queue()
+        ctx.spawn(self._pump(), f"v1-ask-mirror-{flight_key[:12]}")
+
+    def push(self, name: str, data: dict[str, Any]) -> None:
+        self._queue.put_nowait((name, data))
+
+    def finish(self) -> None:
+        self._queue.put_nowait(None)
+
+    async def _pump(self) -> None:
+        state = self._ctx.state
+        if state is None:
+            return
+        ttl_ms = int(self._ctx.flight_ttl_s * 1000)
+        beat_s = self._ctx.flight_ttl_s / 3
+        renewed = time.monotonic()
+        seq = 0
+        try:
+            while True:
+                idle = False
+                item: Event | None = None
+                try:
+                    item = await asyncio.wait_for(self._queue.get(), beat_s)
+                except TimeoutError:
+                    idle = True  # nothing to send: only renew the lock
+                if time.monotonic() - renewed >= beat_s:
+                    if not await state.refresh_flight_lock(self._key, self._token, ttl_ms):
+                        logger.warning("flight %s: lock lost while leading", self._key[:12])
+                    renewed = time.monotonic()
+                if idle:
+                    continue
+                name, data = item if item is not None else ("", {})
+                await state.publish_flight_event(self._key, self._token,
+                                                 {"seq": seq, "name": name, "data": data})
+                seq += 1
+                if item is None:
+                    return
+        except Exception as exc:  # followers elsewhere notice the lease expire
+            logger.warning("flight %s: events not shared any more: %s", self._key[:12],
+                           sanitize_error(exc))
+        finally:
+            try:
+                await state.release_flight_lock(self._key, self._token)
+            except Exception as exc:  # the lock expires by its TTL
+                logger.warning("flight %s: lock not released (%s); it expires in %.0f s",
+                               self._key[:12], type(exc).__name__, self._ctx.flight_ttl_s)
+
+
+def _abandon(ctx: AskV1Context, flight: Flight, flight_key: str, token: str) -> None:
+    """The leader's last local listener left: cancel the work only when no follower on
+    another worker listens either (otherwise it finishes, and its answer is cached)."""
+    state = ctx.state
+
+    async def check() -> None:
+        try:
+            followers = 0 if state is None else await state.flight_followers(flight_key, token)
+        except Exception as exc:
+            logger.warning("flight %s: followers unknown (%s)", flight_key[:12],
+                           type(exc).__name__)
+            followers = 0
+        channel = flight.channel
+        channel.remote_followers = followers > 0  # V2-13: the queue must keep it, too
+        if (channel.subscribers == 0 and not channel.closed and channel.task is not None
+                and followers == 0):
+            channel.close()
+            channel.task.cancel()
+
+    ctx.spawn(check(), f"v1-ask-abandon-{flight_key[:12]}")
+
+
+def _end_remote(channel: ReplayChannel, error_code: str, reason: str, *, sentences: bool,
+                setting: str, buffered: bool) -> None:
+    """End a followed flight with an explicit result (never silently)."""
+    if sentences:
+        channel.publish("stopped", {"reason_class": reason, "partial": True})
+    summary = _shed_summary(error_code, setting=setting, buffered=buffered, depth=None)
+    summary.update({"partial": sentences, "shed_reason": reason, "_remote": True})
+    channel.publish(_SUMMARY, summary)
+
+
+async def _follow_remote(ctx: AskV1Context, flight: Flight, flight_key: str, token: str, *,
+                         setting: str, buffered: bool, deadline_ns: int | None) -> None:
+    """Relay another worker's flight into this worker's channel."""
+    state, channel, clock = ctx.state, flight.channel, ctx.service.clock
+    sentences = suspect = False
+    end: dict[str, Any] = {"setting": setting, "buffered": buffered}
+    if state is None:
+        raise RuntimeError("a remote flight needs a shared state store")
+    try:
+        async with contextlib.aclosing(state.subscribe_flight(
+                flight_key, token, poll_s=ctx.lease_poll_s)) as events:
+            async for event in events:
+                if event is None:  # silence: is the leader still alive?
+                    if deadline_ns is not None and clock() >= deadline_ns:
+                        _end_remote(channel, "deadline_expired", "deadline_expired",
+                                    sentences=sentences, **end)
+                        return
+                    if await state.flight_holder(flight_key) == token:
+                        suspect = False
+                        continue
+                    # Gone twice in a row with nothing more in its log: a leader that
+                    # finished would have logged its result before it released the lock.
+                    if suspect:
+                        _end_remote(channel, "internal_error", "leader_lost",
+                                    sentences=sentences, **end)
+                        return
+                    suspect = True
+                    continue
+                name, data = str(event["name"]), dict(event["data"])
+                if name == "":  # the leader stopped without a result (cancel, shutdown)
+                    _end_remote(channel, "internal_error", "leader_stopped",
+                                sentences=sentences, **end)
+                    return
+                sentences = sentences or name == "sentence"
+                if name == _SUMMARY:
+                    data["_remote"] = True
+                channel.publish(name, data)
+                if name == _SUMMARY:
+                    return
+    except Exception as exc:
+        logger.warning("flight %s: following failed: %s", flight_key[:12], sanitize_error(exc))
+        _end_remote(channel, "internal_error", "shared_state_unavailable",
+                    sentences=sentences, **end)
+    finally:
+        channel.close()
+
+
+async def _run_shared_flight(ctx: AskV1Context, flight: Flight, target: AskTarget,
+                             **lead: Any) -> None:
+    """Claim the flight across workers, then lead it here or follow it there. When the
+    shared store cannot be reached, this worker leads alone (coalescing fails open; the
+    shared quota still fails closed)."""
+    go: asyncio.Event = lead["go"]
+    await go.wait()
+    state = ctx.state
+    claimed: tuple[str, str] | None = None
+    if state is not None:
+        flight_key = flight_key_text(flight.key)
+        try:
+            lease = await state.acquire_flight_lock(flight_key, int(ctx.flight_ttl_s * 1000))
+        except Exception as exc:
+            logger.warning("flight %s: not shared (%s); led on this worker only",
+                           flight_key[:12], type(exc).__name__)
+        else:
+            if not lease.owned:
+                await _follow_remote(ctx, flight, flight_key, lease.token,
+                                     setting=target.ask.retrieval_setting or "",
+                                     buffered=lead["buffered"],
+                                     deadline_ns=lead.get("deadline_ns"))
+                return
+            claimed = (flight_key, lease.token)
+    mirror: _Mirror | None = None
+    if claimed is not None:
+        mirror = _Mirror(ctx, *claimed)
+        flight.channel.mirror = mirror.push
+        key, token = claimed
+        flight.channel.on_abandoned = lambda: _abandon(ctx, flight, key, token)
+    try:
+        await _lead(ctx, flight, target, **lead)
+    finally:
+        if mirror is not None:
+            mirror.finish()
 
 
 # --- One request (one SSE response) ------------------------------------------------------
@@ -788,7 +1002,7 @@ async def _answer(ctx: AskV1Context, target: AskTarget, *, request_id: str, arri
     clock = service.clock
     setting = ask.retrieval_setting or ""
     if service.cache is not None:
-        hit = service.cache.get(ask.question, target.cache_setting)
+        hit = await service.cache.lookup(ask.question, target.cache_setting)
         # A verified answer is replayed as sentences; a verified refusal as a message only.
         if hit is not None and (
                 (hit.verification_verdict == "VERIFIED" and not hit.refused)
@@ -811,7 +1025,9 @@ async def _answer(ctx: AskV1Context, target: AskTarget, *, request_id: str, arri
     channel.join()
     go = asyncio.Event()
     if not follower:  # created now (so a disconnect can cancel it), started after accepted
-        channel.task = asyncio.create_task(_lead(
+        # V2-13: with a shared store, the flight is first claimed across workers
+        lead = _lead if ctx.state is None or service.cache is None else _run_shared_flight
+        channel.task = asyncio.create_task(lead(
             ctx, flight, target, request_id=request_id, collection_id=collection_id,
             buffered=buffered, go=go, deadline_ns=deadline_ns, scorer=scorer,
             tenant=tenant, priority=priority, trace=trace),
@@ -860,15 +1076,18 @@ async def _answer(ctx: AskV1Context, target: AskTarget, *, request_id: str, arri
                 name = _SUMMARY
             if name == _SUMMARY:
                 total = (clock() - arrived_ns) / _NS_PER_MS
-                final = {**data, "request_id": request_id, "collection_id": collection_id,
-                         "cache_status": ("coalesced" if follower else
+                # V2-13: a flight led on another worker counts as coalesced here
+                coalesced = follower or bool(data.get("_remote"))
+                final = {**{k: v for k, v in data.items() if k != "_remote"},
+                         "request_id": request_id, "collection_id": collection_id,
+                         "cache_status": ("coalesced" if coalesced else
                                           "off" if service.cache is None else "miss"),
-                         "coalesced": follower, "ttft_ms": first,
+                         "coalesced": coalesced, "ttft_ms": first,
                          "total_ms": round(total, 3),
                          "conversation_id": None if conversation is None
                          else conversation.conversation_id,
                          "rewritten_question": None if rewrite is None else rewrite.question}
-                if follower:  # the leader paid for it
+                if coalesced:  # the leader paid for it
                     final.update({"tokens_in": 0, "tokens_out": 0, "usage_source": "none",
                                   "provider_called": False, "queue_depth_at_entry": None,
                                   # its row must not count the leader's lane or escalation
@@ -878,7 +1097,7 @@ async def _answer(ctx: AskV1Context, target: AskTarget, *, request_id: str, arri
                 _charge(final, rewrite)
                 record = _request_record(
                     request_id, hit_question=ask.question, final=final,
-                    collection_id=collection_id, role="follower" if follower else "leader",
+                    collection_id=collection_id, role="follower" if coalesced else "leader",
                     tenant=tenant)
                 record["breakdown"] = _breakdown(trace, final, verifier)
                 ctx.record(record, final=final, tenant=tenant)
@@ -1058,6 +1277,6 @@ def ask_v1_router(ctx: AskV1Context) -> APIRouter:
     return router
 
 
-__all__ = ["DEFAULT_KEEPALIVE_S", "EXCERPT_CHARS",
+__all__ = ["DEFAULT_KEEPALIVE_S", "DEFAULT_LEASE_POLL_S", "EXCERPT_CHARS",
            "AskV1Body", "AskV1Context", "Flight", "ReplayChannel",
-           "ask_v1_router", "sources_payload", "sse"]
+           "ask_v1_router", "flight_key_text", "sources_payload", "sse"]

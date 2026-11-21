@@ -91,6 +91,19 @@ collections_dir = "data/collections" # per-collection indexes (V2-03)
 mode = "memory"                  # "off", "memory", or "sqlite" (store + collections, V2-03)
 
 # Collections and ingestion (V2-03); active only with cache.mode = "sqlite".
+# Shared state (V2-13). "memory" (the default) needs no Redis: one process. "redis" lets
+# several workers share the answer cache, SingleFlight coalescing (ten identical questions
+# across workers make one model call) and each lane's quota counters. Needs the extra:
+#   pip install -e ".[redis]"
+# Put a URL with a password in the environment instead: RELAY_STATE__REDIS_URL=...
+[state]
+backend = "memory"               # "memory" or "redis"
+redis_url = "redis://localhost:6379/0"
+# key_prefix = "relay"
+# flight_lock_ttl_s = 30         # a dead leader's lock expires after this
+# lease_poll_s = 1.0             # how often a silent follower checks its leader is alive
+# cache_ttl_s = 604800           # cached answers expire after a week in Redis
+
 [ingestion]
 max_upload_mb = 50.0
 max_pages = 500

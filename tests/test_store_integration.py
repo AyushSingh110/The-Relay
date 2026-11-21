@@ -20,6 +20,7 @@ from relay.app.settings import LaneSettings, RelaySettings
 from relay.config import Settings
 from relay.store import StoreOpenError, open_store
 from relay.store.migrations import LATEST_VERSION
+from tests.test_cli import ready_paths
 from tests.test_pipeline_and_verifier import PASSAGES, StubRetriever
 from tests.test_standin import MODEL, profile
 
@@ -154,19 +155,25 @@ async def test_an_invalid_store_path_fails_before_the_app_starts(
 # --- doctor ----------------------------------------------------------------------------
 
 
-def doctor_text(settings: RelaySettings) -> tuple[int, str]:
+def doctor_text(settings: RelaySettings, root: Path) -> tuple[int, str]:
+    """doctor with an installed-looking index and model directory under ``root`` (the real
+    ones are gitignored build outputs, absent from a fresh checkout such as CI)."""
+    ready = root / "ready"
+    paths = ready_paths(ready) if not ready.exists() else {
+        "index_dir": ready / "indexes", "models_dir": ready / "models"}
+    installed = settings.model_copy(update={"paths": settings.paths.model_copy(update=paths)})
     lines: list[str] = []
-    return cli.doctor(settings, env(), "test", out=lines.append), "\n".join(lines)
+    return cli.doctor(installed, env(), "test", out=lines.append), "\n".join(lines)
 
 
 def test_doctor_reports_the_store_in_each_mode(tmp_path: Path) -> None:
-    code, text = doctor_text(settings_for(tmp_path, mode="memory"))
+    code, text = doctor_text(settings_for(tmp_path, mode="memory"), tmp_path)
     assert code == cli.EXIT_OK and "[INFO] store: not used (cache mode memory)" in text
-    code, text = doctor_text(settings_for(tmp_path, mode="sqlite"))
+    code, text = doctor_text(settings_for(tmp_path, mode="sqlite"), tmp_path)
     assert code == cli.EXIT_OK
     assert f"[  OK] store: :memory: opened, migrations applied (schema v{LATEST_VERSION}" in text
     bad = settings_for(tmp_path, mode="sqlite",
                        store_path=str(tmp_path / "missing" / "relay.sqlite3"))
-    code, text = doctor_text(bad)
+    code, text = doctor_text(bad, tmp_path)
     assert code == cli.EXIT_FAILED and "[FAIL] store: cannot open store" in text
     assert "does not exist" in text

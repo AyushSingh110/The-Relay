@@ -184,6 +184,29 @@ class CacheSettings(BaseModel):
     mode: CacheMode = "memory"  # "sqlite" arrives with the metadata store (V2-02)
 
 
+class StateSettings(BaseModel):
+    """V2-13: where state shared by several workers lives. ``memory`` (the default) needs
+    no Redis and is one process's own state; ``redis`` shares the answer cache, SingleFlight
+    coalescing and the provider quota counters across workers. A URL with a password
+    belongs in the environment (``RELAY_STATE__REDIS_URL``), not in the file."""
+
+    model_config = _MODEL
+
+    backend: Literal["memory", "redis"] = "memory"
+    redis_url: Annotated[str, Field(min_length=1)] = "redis://localhost:6379/0"
+    key_prefix: Slug = "relay"
+    flight_lock_ttl_s: Annotated[float, Field(gt=0.0, le=600.0)] = 30.0
+    lease_poll_s: Annotated[float, Field(gt=0.0, le=30.0)] = 1.0
+    cache_ttl_s: Annotated[float, Field(gt=0.0)] = 7 * 24 * 3600.0
+    socket_timeout_s: Annotated[float, Field(gt=0.0, le=60.0)] = 5.0  # bounds every call
+
+    @model_validator(mode="after")
+    def _poll_under_ttl(self) -> StateSettings:
+        if self.lease_poll_s >= self.flight_lock_ttl_s:
+            raise ValueError("lease_poll_s must be shorter than flight_lock_ttl_s")
+        return self
+
+
 class RetrievalConfig(BaseModel):
     model_config = _MODEL
 
@@ -263,6 +286,7 @@ class RelaySettings(BaseModel):
     verifier: VerifierSettings = VerifierSettings()
     rewriter: RewriterSettings = RewriterSettings()
     auth: AuthSettings = AuthSettings()
+    state: StateSettings = StateSettings()
 
     @model_validator(mode="before")
     @classmethod
