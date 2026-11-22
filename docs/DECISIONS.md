@@ -67,3 +67,20 @@ Owner decisions for v2 work, newest last. Each entry records what was decided, b
   V2-14 remains as recorded: overload and halved-TPM deliver less than v1, with the cause
   explained in `reports/phase-v2-14-load-revalidation.md`. The owner-review items of V2-12
   (the 80 v1 answers; 100 owner-authored questions) remain the owner's.
+- **F-01 (owner, 2026-11-22):** the stand-in splits passages with the Relay's own
+  `split_sentences`, and the CI baseline `eval/baselines/standin-replay-small_fast.json` was
+  regenerated (grounded 0.8, refusal precision 0.0; the old 0.1667 came from the bug).
+- **F-02c (owner, 2026-11-22): L4 runs off the critical path.**
+  - `[verifier] l4_mode = "async" | "sync" | "disabled"`, default `"async"`: a sentence is sent
+    as soon as it passes L1–L3 and carries `confidence: null`.
+  - Its score arrives in `final.confidences` (in sentence order) and the request log.
+  - Scores are collected after the queue slot is released, one model call at a time per
+    process.
+  - This changes the V2-07 `sentence` event contract (`confidence` is now set only in
+    `"sync"`). The web UI does not read it.
+- **F-02c (owner, 2026-11-22): admission is work-conserving within a tenant.**
+  - Being over rate ranks a request lower only while another tenant is waiting. It then
+    covers the tenant's backlog at that priority from its first over-rate request on.
+  - A request never evicts or overtakes a waiting request of its own tenant and priority; a
+    lone tenant gets a plain FIFO queue.
+  - Priority and the cross-tenant protection of V2-10 are unchanged.

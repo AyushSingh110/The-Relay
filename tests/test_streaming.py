@@ -6,12 +6,16 @@ Property tests use a seeded generator (owner decision 2026-11-19: no new depende
 
 from __future__ import annotations
 
+import asyncio
 import json
 import random
+import threading
+import time
 from collections.abc import AsyncIterator, Sequence
 from pathlib import Path
 
 from relay.orchestrator.streaming import (
+    BackgroundScores,
     IncrementalSentenceSplitter,
     SentenceStream,
     StoppedEvent,
@@ -180,3 +184,66 @@ async def test_property_no_failed_sentence_is_ever_yielded() -> None:
         assert all(bad not in t for t in texts)
         assert isinstance(events[-1], StoppedEvent)
         assert events[-1].partial == (bad_at > 0)
+
+
+# --- F-02c: L4 in the background (l4_mode "async") -----------------------------------------
+
+
+class _SlowScorer:
+    """Blocks until released; records how many calls ran at once."""
+
+    def __init__(self) -> None:
+        self.release = threading.Event()
+        self.active = 0
+        self.peak = 0
+        self._lock = threading.Lock()
+
+    def score(self, sentence: str, passage: str) -> float:
+        with self._lock:
+            self.active += 1
+            self.peak = max(self.peak, self.active)
+        try:
+            self.release.wait(5.0)
+            return 0.25 if "heads" in sentence else 0.75
+        finally:
+            with self._lock:
+                self.active -= 1
+
+
+async def test_background_scores_never_delay_the_caller_and_keep_sentence_order() -> None:
+    scorer = _SlowScorer()
+    scores = BackgroundScores(scorer, PASSAGES, asyncio.Semaphore(1))
+    started = time.perf_counter()
+    scores.submit("The encoder has six layers [P1].")
+    scores.submit("It uses eight heads [P2].")
+    scores.submit("No tag in this one.")
+    assert time.perf_counter() - started < 0.05  # submitting never waits for the model
+    await asyncio.sleep(0.05)
+    assert scorer.peak == 1  # the gate lets one model call run at a time
+    scorer.release.set()
+    assert await scores.collect() == [0.75, 0.25, None]  # sentence order; no tag: None
+    assert scorer.peak == 1
+
+
+async def test_background_scores_are_cancelled_cleanly() -> None:
+    scorer = _SlowScorer()
+    scores = BackgroundScores(scorer, PASSAGES, asyncio.Semaphore(1))
+    scores.submit("The encoder has six layers [P1].")
+    scores.cancel()
+    scorer.release.set()
+    await asyncio.sleep(0.05)
+    assert scores.pending == 0
+
+
+async def test_collecting_background_scores_is_bounded_and_unfinished_ones_are_none() -> None:
+    """Review F-02c: advisory work must never hold the final event indefinitely."""
+    scorer = _SlowScorer()  # never released
+    scores = BackgroundScores(scorer, PASSAGES, asyncio.Semaphore(1))
+    scores.submit("The encoder has six layers [P1].")
+    scores.submit("It uses eight heads [P2].")
+    started = time.perf_counter()
+    assert await scores.collect(timeout_s=0.1) == [None, None]
+    assert time.perf_counter() - started < 1.0
+    await asyncio.sleep(0.05)
+    assert scores.pending == 0  # the unfinished ones were cancelled
+    scorer.release.set()

@@ -10,11 +10,15 @@ Events, in order, on one SSE connection:
     sources   passages: [{id, chunk_id, paper_id, short_name, page_range, section,
                           text_excerpt, text}]   (text: the whole passage, V2-06)
     sentence  text, citations: ["P1", ...], confidence   (only sentences that passed the
-              verifier; confidence: the advisory L4 entailment score, 0-1, or null when
-              the collection has L4 off or no model is installed; V2-07)
+              verifier; confidence: the advisory L4 entailment score, 0-1, with
+              l4_mode "sync"; null with "async" (the default, F-02c: the sentence is
+              never held back for L4), with "disabled", when the collection has L4 off or
+              no model is installed; V2-07)
     stopped   reason_class, partial           (the answer stopped; no unverified text)
     final     status, verdict, tokens_in, tokens_out, ttft_ms, total_ms, cache_status,
-              coalesced, partial, refused, message, ...   (always the last event)
+              coalesced, partial, refused, message, confidences (F-02c: the sent
+              sentences' L4 scores in order, null where none or not ready within 1 s; empty
+              when the answer was shed or ended in an error), ...   (always the last event)
 
 How the rules are kept:
 
@@ -81,6 +85,7 @@ from relay.orchestrator.pipeline import (
 )
 from relay.orchestrator.rewriter import HISTORY_TURNS, Rewrite
 from relay.orchestrator.streaming import (
+    BackgroundScores,
     SentenceStream,
     StoppedEvent,
     StreamRefusal,
@@ -106,6 +111,9 @@ _NS_PER_MS: Final = 1_000_000
 _NS_PER_S: Final = 1_000_000_000
 _NUMBER = re.compile(r"\d+")
 _SUMMARY: Final = "_summary"  # internal: the flight's result, turned into each final
+# F-02c review: the longest the final event waits for background L4 scores (advisory; a
+# score not ready by then is reported as null)
+L4_COLLECT_MAX_S: Final = 1.0
 Event = tuple[str, dict[str, Any]]
 
 
@@ -330,12 +338,18 @@ def _checked(trace: RequestTrace | None, parent: Span | None, index: int | None,
 
 async def _relay_stream(channel: ReplayChannel, stream: SentenceStream,
                         live: dict[str, Any], trace: RequestTrace | None = None,
-                        parent: Span | None = None) -> tuple[StoppedEvent | None, bool]:
-    """Publish a sentence stream's verified sentences; (its stop, whether it refused)."""
+                        parent: Span | None = None,
+                        background: BackgroundScores | None = None,
+                        ) -> tuple[StoppedEvent | None, bool]:
+    """Publish a sentence stream's verified sentences; (its stop, whether it refused).
+    With ``background`` (l4_mode "async"), each sentence is published at once and its L4
+    score is computed in the background."""
     stop: StoppedEvent | None = None
     refused = False
     async for event in stream:
         if isinstance(event, VerifiedSentence):
+            if background is not None:
+                background.submit(event.text)
             live.setdefault("l4", []).append(event.confidence)
             live["checked"] = live.get("checked", 0) + 1
             live["passed"] = live.get("passed", 0) + 1
@@ -355,6 +369,22 @@ async def _relay_stream(channel: ReplayChannel, stream: SentenceStream,
     return stop, refused
 
 
+def _l4_plan(ctx: AskV1Context, scorer: EntailmentScore | None, plan: StreamPlan,
+             live: dict[str, Any]) -> tuple[EntailmentScore | None, BackgroundScores | None]:
+    """F-02c: (the scorer to run before each sentence is sent, the background scorer). With
+    l4_mode "sync" the first; with "async" the second; with "disabled" (or no scorer) none."""
+    mode = ctx.service.l4_mode
+    if scorer is None or mode == "disabled":
+        return None, None
+    if mode == "sync":
+        return scorer, None
+    background = live.get("l4_background")
+    if background is None:
+        background = live["l4_background"] = BackgroundScores(scorer, plan.passages,
+                                                              ctx.service.l4_gate)
+    return None, background
+
+
 async def _streamed(ctx: AskV1Context, channel: ReplayChannel, plan: StreamPlan,
                     spans: ServerSpanTracker, live: dict[str, Any],
                     deadline_ns: int | None,
@@ -365,8 +395,9 @@ async def _streamed(ctx: AskV1Context, channel: ReplayChannel, plan: StreamPlan,
     generate = None if trace is None else trace.start("pipeline.generate", mode="streaming")
     tokens = pipeline.run_streaming(plan, spans, deadline_ns=deadline_ns)
     live["tokens"], live["chat"] = tokens, plan.chat  # for the cancel record's spend
-    stream = SentenceStream(tokens, plan.passages, plan.streaming_verifier, scorer=scorer)
-    stop, refused = await _relay_stream(channel, stream, live, trace, generate)
+    inline, background = _l4_plan(ctx, scorer, plan, live)
+    stream = SentenceStream(tokens, plan.passages, plan.streaming_verifier, scorer=inline)
+    stop, refused = await _relay_stream(channel, stream, live, trace, generate, background)
     # V2-09: a truncated or empty answer is retried once on the escalation lane, but only
     # when nothing was delivered yet (the client never sees two different answers).
     if not stream.sentences and not refused and (stop is None
@@ -377,8 +408,9 @@ async def _streamed(ctx: AskV1Context, channel: ReplayChannel, plan: StreamPlan,
                                        "escalated": True, "reason": retry.reason})
             tokens = live["tokens"] = retry
             stream = SentenceStream(tokens, plan.passages, plan.streaming_verifier,
-                                    scorer=scorer)
-            stop, refused = await _relay_stream(channel, stream, live, trace, generate)
+                                    scorer=inline)
+            stop, refused = await _relay_stream(channel, stream, live, trace, generate,
+                                                background)
     if trace is not None:
         trace.end(generate, **_generation_attributes(tokens.result))
     if stop is None:
@@ -413,9 +445,12 @@ async def _buffered(ctx: AskV1Context, channel: ReplayChannel, plan: StreamPlan,
     verification = outcome.trace.verification
     live["checked"] = 0 if verification is None else verification.sentences
     if outcome.kind == "answer" and outcome.delivered_text is not None:
+        inline, background = _l4_plan(ctx, scorer, plan, live)
         for index, sentence in enumerate(split_sentences(outcome.delivered_text), start=1):
-            confidence = (None if scorer is None
-                          else await score_sentence(scorer, sentence, plan.passages))
+            confidence = (None if inline is None
+                          else await score_sentence(inline, sentence, plan.passages))
+            if background is not None:
+                background.submit(sentence)
             live.setdefault("l4", []).append(confidence)
             _checked(trace, verify, index, l4=confidence)
             channel.publish("sentence", {"text": sentence, "citations": tags_in(sentence),
@@ -522,7 +557,7 @@ def _shed_summary(error_code: str, *, setting: str, buffered: bool,
             "message": UNAVAILABLE_MESSAGES.get(error_code), "tokens_in": 0, "tokens_out": 0,
             "usage_source": "none", "provider_called": False, "model_id": None,
             "retrieval_setting": setting, "buffered": buffered, "queue_depth_at_entry": depth,
-            "provider_first_token_ms": None, **_route_fields(None)}
+            "provider_first_token_ms": None, "confidences": [], **_route_fields(None)}
 
 
 async def _lead(ctx: AskV1Context, flight: Flight, target: AskTarget, *, request_id: str,
@@ -576,6 +611,15 @@ async def _lead(ctx: AskV1Context, flight: Flight, target: AskTarget, *, request
             summary["shed_reason"] = shed.reason  # V2-10: e.g. shed_for_priority
             channel.publish(_SUMMARY, summary)
             return
+        background = live.get("l4_background")
+        if background is not None:  # F-02c: the queue slot is already released here
+            # bounded: at most L4_COLLECT_MAX_S, and never past the request's deadline
+            limit = L4_COLLECT_MAX_S if deadline_ns is None else min(
+                L4_COLLECT_MAX_S, (deadline_ns - service.clock()) / _NS_PER_S)
+            live["l4"] = await background.collect(timeout_s=limit)
+            if trace is not None:
+                for index, score in enumerate(live["l4"], start=1):
+                    trace.instant("verifier.l4", sentence_idx=index, l4_score=score)
         service.metrics.observe_block(_block_layer(outcome, live))  # V2-11
         if trace is not None:  # v1's span kinds, on the root
             span_totals = spans.snapshot()
@@ -613,6 +657,7 @@ async def _lead(ctx: AskV1Context, flight: Flight, target: AskTarget, *, request
                               "pipeline": outcome.trace.model_dump(mode="json")})
         channel.publish(_SUMMARY, {**_summary(outcome, released=released, buffered=buffered,
                                               spans=spans, depth=depth),
+                                   "confidences": list(live.get("l4", [])),  # F-02c
                                    "verifier": _verifier_counts(live)})
     except asyncio.CancelledError:
         spent = _cancelled_spend(live)
@@ -632,6 +677,9 @@ async def _lead(ctx: AskV1Context, flight: Flight, target: AskTarget, *, request
             summary["partial"] = True
         channel.publish(_SUMMARY, summary)
     finally:
+        background = live.get("l4_background")
+        if background is not None:  # an answer that ended early: drop unfinished scores
+            background.cancel()
         channel.close()
         if ctx.flights.get(flight.key) is flight:
             del ctx.flights[flight.key]
@@ -922,6 +970,7 @@ async def _cached(ctx: AskV1Context, hit: CachedAnswer, *, request_id: str,
              "retrieval_setting": setting, "collection_id": collection_id,
              "buffered": buffered, "queue_depth_at_entry": None,
              "cache_status": "exact_hit", "coalesced": False,
+             "confidences": [None] * len(sentences),  # not re-scored on a cache hit
              "ttft_ms": first, "total_ms": round(total, 3),
              "conversation_id": None if conversation is None else conversation.conversation_id,
              "rewritten_question": None if rewrite is None else rewrite.question,

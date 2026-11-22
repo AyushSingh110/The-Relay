@@ -344,6 +344,8 @@ def make_rewriter(settings: RelaySettings, lane: LaneSettings,
 
 async def _open_l4(settings: RelaySettings) -> tuple[EntailmentScore | None, str]:
     """Load the L4 entailment model once (in a worker thread), or report why L4 is off."""
+    if settings.verifier.l4_mode == "disabled":
+        return None, "L4 entailment: off (l4_mode = disabled)"
     v = settings.verifier
     if not (v.l4_model_dir / "config.json").is_file() \
             or not (v.l4_model_dir / v.l4_model_file).is_file():
@@ -355,8 +357,8 @@ async def _open_l4(settings: RelaySettings) -> tuple[EntailmentScore | None, str
     except Exception as exc:  # advisory: onnxruntime/tokenizers raise their own error types
         logger.warning("L4 entailment model could not be loaded: %s", sanitize_error(exc))
         return None, f"L4 entailment: off (the model could not be loaded: {type(exc).__name__})"
-    return scorer, (f"L4 entailment: on, advisory ({v.l4_model_dir.name}/{v.l4_model_file}, "
-                    f"{v.l4_threads} thread(s) per call)")
+    return scorer, (f"L4 entailment: on, advisory, {v.l4_mode} ({v.l4_model_dir.name}/"
+                    f"{v.l4_model_file}, {v.l4_threads} thread(s) per call)")
 
 
 @asynccontextmanager
@@ -436,6 +438,7 @@ async def open_runtime(settings: RelaySettings, env: Settings, *,
             for each in router.lanes:
                 stack.push_async_callback(each.guard.drain_shared)
         app.state.relay.entailment, l4_note = await _open_l4(settings)
+        app.state.relay.l4_mode = settings.verifier.l4_mode
         app.state.relay.rewriter, rewrite_note = make_rewriter(
             settings, lane, rewrite_generator(settings, router))
         ask_v1: AskV1Context | None = None

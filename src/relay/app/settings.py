@@ -43,6 +43,7 @@ _MODEL = ConfigDict(frozen=True, extra="forbid")
 Slug = Annotated[str, Field(pattern=r"^[a-z0-9][a-z0-9_\-]*$", max_length=64)]
 PositiveInt = Annotated[int, Field(ge=1)]
 CacheMode = Literal["off", "memory", "sqlite"]
+L4Mode = Literal["async", "sync", "disabled"]
 
 
 class ServerSettings(BaseModel):
@@ -236,6 +237,10 @@ class VerifierSettings(BaseModel):
     # concurrent requests do not starve the CPU (the scorer enforces the cap).
     l4_model_file: str = "onnx/model_quint8_avx2.onnx"
     l4_threads: PositiveInt = 4  # ONNX threads per scoring call (at most 4)
+    # F-02c (owner 2026-11-22): "async" sends each verified sentence at once and scores it in
+    # the background (the scores arrive in final.confidences); "sync" scores each sentence
+    # before it is sent (V2-07's behaviour); "disabled" never loads the model.
+    l4_mode: L4Mode = "async"
 
 
 class RewriterSettings(BaseModel):

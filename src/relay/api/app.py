@@ -386,6 +386,11 @@ class RelayService:
         # V2-07 L4 (advisory): the entailment scorer, set at start-up when the model is
         # installed (compose.py); None means no confidence is computed.
         self.entailment: EntailmentScore | None = None
+        # F-02c: how L4 runs ("async": in the background, never delaying a sentence; "sync":
+        # before each sentence is sent; "disabled"), and the gate that lets one background
+        # model call run at a time in this process (each call already uses up to 4 threads).
+        self.l4_mode: str = "async"
+        self.l4_gate = asyncio.Semaphore(1)
         # V2-08: standalone-question rewriting for follow-ups on POST /v1/ask (compose.py
         # sets the LLM rewriter for a Groq lane; the rule rewriter is the safe default).
         self.rewriter: QueryRewriter = RuleQueryRewriter()

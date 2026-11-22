@@ -1,0 +1,833 @@
+{
+  "root": "runs\\f02c-overload-20261122T164234Z",
+  "runs_per_path": 5,
+  "per_run": {
+    "v1_ask": [
+      {
+        "run": "run-1",
+        "drained": true,
+        "delivered": 57,
+        "delivered_pct": 66.3,
+        "refused": 21,
+        "refused_pct": 24.4,
+        "dropped": 8,
+        "dropped_pct": 9.3,
+        "gave_up": 8,
+        "shed_upfront": 21,
+        "queue_full": 11,
+        "predicted_wait_exceeds_deadline": 10,
+        "deadline_expired": 0,
+        "provider_calls": 55,
+        "cancelled_streams": 0,
+        "completed_streams": 55,
+        "provider_429s": 0,
+        "stopped_mid_stream": 0,
+        "partial_answers": 0,
+        "verified": 55,
+        "blocked": 0,
+        "early_refusal": 2,
+        "prompt_tokens": 25421,
+        "completion_tokens": 6116,
+        "total_ms_p50": 1043.1,
+        "total_ms_p95": 24082.0,
+        "first_sentence_ms_p50": 1041.0,
+        "first_sentence_ms_p95": 24078.9,
+        "error_codes": {
+          "client_gave_up": 8,
+          "predicted_wait_exceeds_deadline": 10,
+          "queue_full": 11
+        }
+      },
+      {
+        "run": "run-2",
+        "drained": true,
+        "delivered": 57,
+        "delivered_pct": 66.3,
+        "refused": 20,
+        "refused_pct": 23.3,
+        "dropped": 9,
+        "dropped_pct": 10.5,
+        "gave_up": 9,
+        "shed_upfront": 20,
+        "queue_full": 11,
+        "predicted_wait_exceeds_deadline": 9,
+        "deadline_expired": 0,
+        "provider_calls": 55,
+        "cancelled_streams": 0,
+        "completed_streams": 55,
+        "provider_429s": 0,
+        "stopped_mid_stream": 0,
+        "partial_answers": 0,
+        "verified": 55,
+        "blocked": 0,
+        "early_refusal": 2,
+        "prompt_tokens": 25560,
+        "completion_tokens": 6193,
+        "total_ms_p50": 1032.4,
+        "total_ms_p95": 24121.9,
+        "first_sentence_ms_p50": 1029.4,
+        "first_sentence_ms_p95": 24121.1,
+        "error_codes": {
+          "client_gave_up": 9,
+          "predicted_wait_exceeds_deadline": 9,
+          "queue_full": 11
+        }
+      },
+      {
+        "run": "run-3",
+        "drained": true,
+        "delivered": 57,
+        "delivered_pct": 66.3,
+        "refused": 21,
+        "refused_pct": 24.4,
+        "dropped": 8,
+        "dropped_pct": 9.3,
+        "gave_up": 8,
+        "shed_upfront": 21,
+        "queue_full": 11,
+        "predicted_wait_exceeds_deadline": 10,
+        "deadline_expired": 0,
+        "provider_calls": 55,
+        "cancelled_streams": 0,
+        "completed_streams": 55,
+        "provider_429s": 0,
+        "stopped_mid_stream": 0,
+        "partial_answers": 0,
+        "verified": 55,
+        "blocked": 0,
+        "early_refusal": 2,
+        "prompt_tokens": 25290,
+        "completion_tokens": 6196,
+        "total_ms_p50": 1052.7,
+        "total_ms_p95": 24139.5,
+        "first_sentence_ms_p50": 1049.8,
+        "first_sentence_ms_p95": 24134.7,
+        "error_codes": {
+          "client_gave_up": 8,
+          "predicted_wait_exceeds_deadline": 10,
+          "queue_full": 11
+        }
+      },
+      {
+        "run": "run-4",
+        "drained": true,
+        "delivered": 58,
+        "delivered_pct": 67.4,
+        "refused": 19,
+        "refused_pct": 22.1,
+        "dropped": 9,
+        "dropped_pct": 10.5,
+        "gave_up": 9,
+        "shed_upfront": 19,
+        "queue_full": 11,
+        "predicted_wait_exceeds_deadline": 8,
+        "deadline_expired": 0,
+        "provider_calls": 56,
+        "cancelled_streams": 0,
+        "completed_streams": 56,
+        "provider_429s": 0,
+        "stopped_mid_stream": 0,
+        "partial_answers": 0,
+        "verified": 56,
+        "blocked": 0,
+        "early_refusal": 2,
+        "prompt_tokens": 25469,
+        "completion_tokens": 6233,
+        "total_ms_p50": 806.5,
+        "total_ms_p95": 24726.4,
+        "first_sentence_ms_p50": 804.6,
+        "first_sentence_ms_p95": 24722.6,
+        "error_codes": {
+          "client_gave_up": 9,
+          "predicted_wait_exceeds_deadline": 8,
+          "queue_full": 11
+        }
+      },
+      {
+        "run": "run-5",
+        "drained": true,
+        "delivered": 57,
+        "delivered_pct": 66.3,
+        "refused": 21,
+        "refused_pct": 24.4,
+        "dropped": 8,
+        "dropped_pct": 9.3,
+        "gave_up": 8,
+        "shed_upfront": 21,
+        "queue_full": 11,
+        "predicted_wait_exceeds_deadline": 10,
+        "deadline_expired": 0,
+        "provider_calls": 55,
+        "cancelled_streams": 0,
+        "completed_streams": 55,
+        "provider_429s": 0,
+        "stopped_mid_stream": 0,
+        "partial_answers": 0,
+        "verified": 55,
+        "blocked": 0,
+        "early_refusal": 2,
+        "prompt_tokens": 25290,
+        "completion_tokens": 6196,
+        "total_ms_p50": 1006.2,
+        "total_ms_p95": 24102.8,
+        "first_sentence_ms_p50": 1004.9,
+        "first_sentence_ms_p95": 24101.6,
+        "error_codes": {
+          "client_gave_up": 8,
+          "predicted_wait_exceeds_deadline": 10,
+          "queue_full": 11
+        }
+      }
+    ],
+    "v2_stream": [
+      {
+        "run": "run-1",
+        "drained": true,
+        "delivered": 58,
+        "delivered_pct": 67.4,
+        "refused": 19,
+        "refused_pct": 22.1,
+        "dropped": 9,
+        "dropped_pct": 10.5,
+        "gave_up": 9,
+        "shed_upfront": 19,
+        "queue_full": 11,
+        "predicted_wait_exceeds_deadline": 8,
+        "deadline_expired": 0,
+        "provider_calls": 56,
+        "cancelled_streams": 0,
+        "completed_streams": 56,
+        "provider_429s": 0,
+        "stopped_mid_stream": 0,
+        "partial_answers": 0,
+        "verified": 56,
+        "blocked": 0,
+        "early_refusal": 2,
+        "prompt_tokens": 25348,
+        "completion_tokens": 6279,
+        "total_ms_p50": 1167.9,
+        "total_ms_p95": 24362.8,
+        "first_sentence_ms_p50": 666.1,
+        "first_sentence_ms_p95": 23741.5,
+        "error_codes": {
+          "client_gave_up": 9,
+          "predicted_wait_exceeds_deadline": 8,
+          "queue_full": 11
+        }
+      },
+      {
+        "run": "run-2",
+        "drained": true,
+        "delivered": 56,
+        "delivered_pct": 65.1,
+        "refused": 22,
+        "refused_pct": 25.6,
+        "dropped": 8,
+        "dropped_pct": 9.3,
+        "gave_up": 8,
+        "shed_upfront": 22,
+        "queue_full": 11,
+        "predicted_wait_exceeds_deadline": 11,
+        "deadline_expired": 0,
+        "provider_calls": 54,
+        "cancelled_streams": 0,
+        "completed_streams": 54,
+        "provider_429s": 0,
+        "stopped_mid_stream": 0,
+        "partial_answers": 0,
+        "verified": 54,
+        "blocked": 0,
+        "early_refusal": 2,
+        "prompt_tokens": 25491,
+        "completion_tokens": 6070,
+        "total_ms_p50": 1260.4,
+        "total_ms_p95": 25940.2,
+        "first_sentence_ms_p50": 986.1,
+        "first_sentence_ms_p95": 25153.2,
+        "error_codes": {
+          "client_gave_up": 8,
+          "predicted_wait_exceeds_deadline": 11,
+          "queue_full": 11
+        }
+      },
+      {
+        "run": "run-3",
+        "drained": true,
+        "delivered": 56,
+        "delivered_pct": 65.1,
+        "refused": 21,
+        "refused_pct": 24.4,
+        "dropped": 9,
+        "dropped_pct": 10.5,
+        "gave_up": 9,
+        "shed_upfront": 21,
+        "queue_full": 11,
+        "predicted_wait_exceeds_deadline": 10,
+        "deadline_expired": 0,
+        "provider_calls": 55,
+        "cancelled_streams": 0,
+        "completed_streams": 55,
+        "provider_429s": 0,
+        "stopped_mid_stream": 0,
+        "partial_answers": 0,
+        "verified": 54,
+        "blocked": 0,
+        "early_refusal": 2,
+        "prompt_tokens": 25357,
+        "completion_tokens": 6210,
+        "total_ms_p50": 1185.6,
+        "total_ms_p95": 24541.1,
+        "first_sentence_ms_p50": 926.5,
+        "first_sentence_ms_p95": 23918.5,
+        "error_codes": {
+          "client_gave_up": 9,
+          "predicted_wait_exceeds_deadline": 10,
+          "queue_full": 11
+        }
+      },
+      {
+        "run": "run-4",
+        "drained": true,
+        "delivered": 58,
+        "delivered_pct": 67.4,
+        "refused": 19,
+        "refused_pct": 22.1,
+        "dropped": 9,
+        "dropped_pct": 10.5,
+        "gave_up": 9,
+        "shed_upfront": 19,
+        "queue_full": 11,
+        "predicted_wait_exceeds_deadline": 8,
+        "deadline_expired": 0,
+        "provider_calls": 56,
+        "cancelled_streams": 0,
+        "completed_streams": 56,
+        "provider_429s": 0,
+        "stopped_mid_stream": 0,
+        "partial_answers": 0,
+        "verified": 56,
+        "blocked": 0,
+        "early_refusal": 2,
+        "prompt_tokens": 25328,
+        "completion_tokens": 6238,
+        "total_ms_p50": 1106.8,
+        "total_ms_p95": 24479.3,
+        "first_sentence_ms_p50": 627.1,
+        "first_sentence_ms_p95": 23788.6,
+        "error_codes": {
+          "client_gave_up": 9,
+          "predicted_wait_exceeds_deadline": 8,
+          "queue_full": 11
+        }
+      },
+      {
+        "run": "run-5",
+        "drained": true,
+        "delivered": 57,
+        "delivered_pct": 66.3,
+        "refused": 20,
+        "refused_pct": 23.3,
+        "dropped": 9,
+        "dropped_pct": 10.5,
+        "gave_up": 9,
+        "shed_upfront": 20,
+        "queue_full": 11,
+        "predicted_wait_exceeds_deadline": 9,
+        "deadline_expired": 0,
+        "provider_calls": 55,
+        "cancelled_streams": 0,
+        "completed_streams": 55,
+        "provider_429s": 0,
+        "stopped_mid_stream": 0,
+        "partial_answers": 0,
+        "verified": 55,
+        "blocked": 0,
+        "early_refusal": 2,
+        "prompt_tokens": 25388,
+        "completion_tokens": 6124,
+        "total_ms_p50": 1079.1,
+        "total_ms_p95": 24611.6,
+        "first_sentence_ms_p50": 916.7,
+        "first_sentence_ms_p95": 24287.4,
+        "error_codes": {
+          "client_gave_up": 9,
+          "predicted_wait_exceeds_deadline": 9,
+          "queue_full": 11
+        }
+      }
+    ]
+  },
+  "stats": {
+    "v1_ask": {
+      "delivered": {
+        "mean": 57.2,
+        "std": 0.4,
+        "min": 57,
+        "max": 58,
+        "n": 5
+      },
+      "delivered_pct": {
+        "mean": 66.5,
+        "std": 0.5,
+        "min": 66.3,
+        "max": 67.4,
+        "n": 5
+      },
+      "refused": {
+        "mean": 20.4,
+        "std": 0.9,
+        "min": 19,
+        "max": 21,
+        "n": 5
+      },
+      "refused_pct": {
+        "mean": 23.7,
+        "std": 1.0,
+        "min": 22.1,
+        "max": 24.4,
+        "n": 5
+      },
+      "dropped": {
+        "mean": 8.4,
+        "std": 0.5,
+        "min": 8,
+        "max": 9,
+        "n": 5
+      },
+      "dropped_pct": {
+        "mean": 9.8,
+        "std": 0.7,
+        "min": 9.3,
+        "max": 10.5,
+        "n": 5
+      },
+      "gave_up": {
+        "mean": 8.4,
+        "std": 0.5,
+        "min": 8,
+        "max": 9,
+        "n": 5
+      },
+      "shed_upfront": {
+        "mean": 20.4,
+        "std": 0.9,
+        "min": 19,
+        "max": 21,
+        "n": 5
+      },
+      "queue_full": {
+        "mean": 11.0,
+        "std": 0.0,
+        "min": 11,
+        "max": 11,
+        "n": 5
+      },
+      "predicted_wait_exceeds_deadline": {
+        "mean": 9.4,
+        "std": 0.9,
+        "min": 8,
+        "max": 10,
+        "n": 5
+      },
+      "deadline_expired": {
+        "mean": 0.0,
+        "std": 0.0,
+        "min": 0,
+        "max": 0,
+        "n": 5
+      },
+      "provider_calls": {
+        "mean": 55.2,
+        "std": 0.4,
+        "min": 55,
+        "max": 56,
+        "n": 5
+      },
+      "cancelled_streams": {
+        "mean": 0.0,
+        "std": 0.0,
+        "min": 0,
+        "max": 0,
+        "n": 5
+      },
+      "completed_streams": {
+        "mean": 55.2,
+        "std": 0.4,
+        "min": 55,
+        "max": 56,
+        "n": 5
+      },
+      "provider_429s": {
+        "mean": 0.0,
+        "std": 0.0,
+        "min": 0,
+        "max": 0,
+        "n": 5
+      },
+      "stopped_mid_stream": {
+        "mean": 0.0,
+        "std": 0.0,
+        "min": 0,
+        "max": 0,
+        "n": 5
+      },
+      "partial_answers": {
+        "mean": 0.0,
+        "std": 0.0,
+        "min": 0,
+        "max": 0,
+        "n": 5
+      },
+      "verified": {
+        "mean": 55.2,
+        "std": 0.4,
+        "min": 55,
+        "max": 56,
+        "n": 5
+      },
+      "blocked": {
+        "mean": 0.0,
+        "std": 0.0,
+        "min": 0,
+        "max": 0,
+        "n": 5
+      },
+      "early_refusal": {
+        "mean": 2.0,
+        "std": 0.0,
+        "min": 2,
+        "max": 2,
+        "n": 5
+      },
+      "prompt_tokens": {
+        "mean": 25406.0,
+        "std": 117.1,
+        "min": 25290,
+        "max": 25560,
+        "n": 5
+      },
+      "completion_tokens": {
+        "mean": 6186.8,
+        "std": 42.9,
+        "min": 6116,
+        "max": 6233,
+        "n": 5
+      },
+      "total_ms_p50": {
+        "mean": 988.2,
+        "std": 103.0,
+        "min": 806.5,
+        "max": 1052.7,
+        "n": 5
+      },
+      "total_ms_p95": {
+        "mean": 24234.5,
+        "std": 275.8,
+        "min": 24082.0,
+        "max": 24726.4,
+        "n": 5
+      },
+      "first_sentence_ms_p50": {
+        "mean": 985.9,
+        "std": 102.8,
+        "min": 804.6,
+        "max": 1049.8,
+        "n": 5
+      },
+      "first_sentence_ms_p95": {
+        "mean": 24231.8,
+        "std": 275.2,
+        "min": 24078.9,
+        "max": 24722.6,
+        "n": 5
+      }
+    },
+    "v2_stream": {
+      "delivered": {
+        "mean": 57.0,
+        "std": 1.0,
+        "min": 56,
+        "max": 58,
+        "n": 5
+      },
+      "delivered_pct": {
+        "mean": 66.3,
+        "std": 1.2,
+        "min": 65.1,
+        "max": 67.4,
+        "n": 5
+      },
+      "refused": {
+        "mean": 20.2,
+        "std": 1.3,
+        "min": 19,
+        "max": 22,
+        "n": 5
+      },
+      "refused_pct": {
+        "mean": 23.5,
+        "std": 1.5,
+        "min": 22.1,
+        "max": 25.6,
+        "n": 5
+      },
+      "dropped": {
+        "mean": 8.8,
+        "std": 0.4,
+        "min": 8,
+        "max": 9,
+        "n": 5
+      },
+      "dropped_pct": {
+        "mean": 10.3,
+        "std": 0.5,
+        "min": 9.3,
+        "max": 10.5,
+        "n": 5
+      },
+      "gave_up": {
+        "mean": 8.8,
+        "std": 0.4,
+        "min": 8,
+        "max": 9,
+        "n": 5
+      },
+      "shed_upfront": {
+        "mean": 20.2,
+        "std": 1.3,
+        "min": 19,
+        "max": 22,
+        "n": 5
+      },
+      "queue_full": {
+        "mean": 11.0,
+        "std": 0.0,
+        "min": 11,
+        "max": 11,
+        "n": 5
+      },
+      "predicted_wait_exceeds_deadline": {
+        "mean": 9.2,
+        "std": 1.3,
+        "min": 8,
+        "max": 11,
+        "n": 5
+      },
+      "deadline_expired": {
+        "mean": 0.0,
+        "std": 0.0,
+        "min": 0,
+        "max": 0,
+        "n": 5
+      },
+      "provider_calls": {
+        "mean": 55.2,
+        "std": 0.8,
+        "min": 54,
+        "max": 56,
+        "n": 5
+      },
+      "cancelled_streams": {
+        "mean": 0.0,
+        "std": 0.0,
+        "min": 0,
+        "max": 0,
+        "n": 5
+      },
+      "completed_streams": {
+        "mean": 55.2,
+        "std": 0.8,
+        "min": 54,
+        "max": 56,
+        "n": 5
+      },
+      "provider_429s": {
+        "mean": 0.0,
+        "std": 0.0,
+        "min": 0,
+        "max": 0,
+        "n": 5
+      },
+      "stopped_mid_stream": {
+        "mean": 0.0,
+        "std": 0.0,
+        "min": 0,
+        "max": 0,
+        "n": 5
+      },
+      "partial_answers": {
+        "mean": 0.0,
+        "std": 0.0,
+        "min": 0,
+        "max": 0,
+        "n": 5
+      },
+      "verified": {
+        "mean": 55.0,
+        "std": 1.0,
+        "min": 54,
+        "max": 56,
+        "n": 5
+      },
+      "blocked": {
+        "mean": 0.0,
+        "std": 0.0,
+        "min": 0,
+        "max": 0,
+        "n": 5
+      },
+      "early_refusal": {
+        "mean": 2.0,
+        "std": 0.0,
+        "min": 2,
+        "max": 2,
+        "n": 5
+      },
+      "prompt_tokens": {
+        "mean": 25382.4,
+        "std": 64.4,
+        "min": 25328,
+        "max": 25491,
+        "n": 5
+      },
+      "completion_tokens": {
+        "mean": 6184.2,
+        "std": 85.5,
+        "min": 6070,
+        "max": 6279,
+        "n": 5
+      },
+      "total_ms_p50": {
+        "mean": 1160.0,
+        "std": 71.0,
+        "min": 1079.1,
+        "max": 1260.4,
+        "n": 5
+      },
+      "total_ms_p95": {
+        "mean": 24787.0,
+        "std": 651.1,
+        "min": 24362.8,
+        "max": 25940.2,
+        "n": 5
+      },
+      "first_sentence_ms_p50": {
+        "mean": 824.5,
+        "std": 165.1,
+        "min": 627.1,
+        "max": 986.1,
+        "n": 5
+      },
+      "first_sentence_ms_p95": {
+        "mean": 24177.8,
+        "std": 585.8,
+        "min": 23741.5,
+        "max": 25153.2,
+        "n": 5
+      }
+    }
+  },
+  "old": {
+    "v1_old": {
+      "delivered": 58,
+      "delivered_pct": 67.4,
+      "refused": 19,
+      "refused_pct": 22.1,
+      "dropped": 9,
+      "dropped_pct": 10.5,
+      "gave_up": 9,
+      "shed_upfront": 19,
+      "queue_full": 11,
+      "predicted_wait_exceeds_deadline": 8,
+      "deadline_expired": 0,
+      "provider_calls": 56,
+      "cancelled_streams": 0,
+      "completed_streams": 56,
+      "provider_429s": 0,
+      "stopped_mid_stream": 0,
+      "partial_answers": 0,
+      "verified": 48,
+      "blocked": 8,
+      "early_refusal": 2,
+      "prompt_tokens": 25114,
+      "completion_tokens": 6389,
+      "total_ms_p50": 811.4,
+      "total_ms_p95": 24080.5,
+      "first_sentence_ms_p50": 807.7,
+      "first_sentence_ms_p95": 24079.3,
+      "error_codes": {
+        "citation_verification_failed": 8,
+        "client_gave_up": 9,
+        "predicted_wait_exceeds_deadline": 8,
+        "queue_full": 11
+      }
+    },
+    "v2_old": {
+      "delivered": 54,
+      "delivered_pct": 62.8,
+      "refused": 24,
+      "refused_pct": 27.9,
+      "dropped": 8,
+      "dropped_pct": 9.3,
+      "gave_up": 8,
+      "shed_upfront": 24,
+      "queue_full": 11,
+      "predicted_wait_exceeds_deadline": 13,
+      "deadline_expired": 0,
+      "provider_calls": 53,
+      "cancelled_streams": 7,
+      "completed_streams": 46,
+      "provider_429s": 0,
+      "stopped_mid_stream": 7,
+      "partial_answers": 3,
+      "verified": 45,
+      "blocked": 7,
+      "early_refusal": 2,
+      "prompt_tokens": 20970,
+      "completion_tokens": 5250,
+      "total_ms_p50": 826.4,
+      "total_ms_p95": 24008.5,
+      "first_sentence_ms_p50": 2620.0,
+      "first_sentence_ms_p95": 23745.9,
+      "error_codes": {
+        "citation_verification_failed": 7,
+        "client_gave_up": 8,
+        "predicted_wait_exceeds_deadline": 13,
+        "queue_full": 11
+      }
+    }
+  },
+  "per_arrival_differences": [
+    {
+      "arrival": 27,
+      "question_id": "q11",
+      "v1_delivered_runs": 4,
+      "v2_delivered_runs": 5
+    },
+    {
+      "arrival": 30,
+      "question_id": "q07",
+      "v1_delivered_runs": 4,
+      "v2_delivered_runs": 2
+    },
+    {
+      "arrival": 34,
+      "question_id": "q06",
+      "v1_delivered_runs": 2,
+      "v2_delivered_runs": 4
+    },
+    {
+      "arrival": 35,
+      "question_id": "q12",
+      "v1_delivered_runs": 5,
+      "v2_delivered_runs": 4
+    },
+    {
+      "arrival": 60,
+      "question_id": "q06",
+      "v1_delivered_runs": 3,
+      "v2_delivered_runs": 2
+    }
+  ],
+  "all_drained": true
+}

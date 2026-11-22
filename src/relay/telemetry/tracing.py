@@ -9,8 +9,10 @@ the "current span" context would not follow it reliably):
       queue.wait            priority, queue_position
       pipeline.retrieve     chunks_found, preset
       pipeline.generate     lane, model, tokens_in, tokens_out (escalated, fallback)
-        verifier.sentence   sentence_idx, l1_pass, l2_pass, l3_pass, l4_score
-      pipeline.verify       the whole-answer pass (and buffered L4 scoring)
+        verifier.sentence   sentence_idx, l1_pass, l2_pass, l3_pass, l4_score (sync)
+      pipeline.verify       the whole-answer pass (and buffered L4 scoring, sync)
+      verifier.l4           sentence_idx, l4_score (l4_mode "async": after the queue slot
+                            was released, one per sent sentence; F-02c)
 
 The v1 span kinds map onto them: ``queue.wait`` is v1's *waiting*, the pipeline spans are
 its *working*, and the root span carries v1's waiting/working/retrying totals.

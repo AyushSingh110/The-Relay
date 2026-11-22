@@ -1,0 +1,188 @@
+{
+  "drained": true,
+  "first_status_ms_p50": null,
+  "first_status_ms_p95": null,
+  "metrics": {
+    "cache_hits": 0,
+    "coalesced": 0,
+    "delivered": 57,
+    "delivered_pct": 66.3,
+    "dropped": 9,
+    "dropped_pct": 10.5,
+    "error_codes": {
+      "client_gave_up": 9,
+      "predicted_wait_exceeds_deadline": 9,
+      "queue_full": 11
+    },
+    "first_sentence_ms_p50": 1029.4,
+    "first_sentence_ms_p95": 24121.1,
+    "partial_answers": 0,
+    "provider_calls": 55,
+    "refused": 20,
+    "refused_pct": 23.3,
+    "requests": 86,
+    "status": {
+      "ok": 57,
+      "rate_limited": 20,
+      "timeout": 9
+    },
+    "total_ms_p50": 1032.4,
+    "total_ms_p95": 24121.9
+  },
+  "path": "v1_ask (POST /ask)",
+  "requests_sent": 86,
+  "run_id": "f02c-overload-20261122T164234Z/v1_ask/run-2",
+  "scenario": "overload",
+  "settings": {
+    "auth": {
+      "dev_key_enabled": null
+    },
+    "cache": {
+      "mode": "sqlite"
+    },
+    "guard": {
+      "daily_safety_fraction": 0.75,
+      "max_concurrency": 2,
+      "rpd": 1000,
+      "rpm": null,
+      "tpd": null,
+      "tpm": 8000
+    },
+    "ingestion": {
+      "max_attempts": 3,
+      "max_loaded_collections": 8,
+      "max_pages": 500,
+      "max_upload_mb": 50.0,
+      "poll_interval_s": 2.0
+    },
+    "lanes": [
+      {
+        "base_url": "http://127.0.0.1:56020/openai/v1",
+        "embedded": false,
+        "escalate_to": null,
+        "guard": null,
+        "is_reasoning_model": false,
+        "kind": "standin",
+        "max_completion_tokens": 512,
+        "model": "qwen/qwen3.8-27b",
+        "name": "standin",
+        "pricing": null,
+        "profile": null,
+        "reasoning_effort": null
+      }
+    ],
+    "paths": {
+      "collections_dir": "runs\\f02c-overload-20261122T164234Z\\v1_ask\\run-2\\collections",
+      "index_dir": "data\\indexes",
+      "models_dir": "data\\models",
+      "papers_dir": "data\\papers",
+      "store_path": "runs\\f02c-overload-20261122T164234Z\\v1_ask\\run-2\\store.sqlite3",
+      "uploads_dir": "runs\\f02c-overload-20261122T164234Z\\v1_ask\\run-2\\uploads"
+    },
+    "providers": {
+      "max_wait_ms": 2000.0
+    },
+    "queue": {
+      "adaptive_capacity": true,
+      "capacity": 3,
+      "ewma_alpha": 0.2,
+      "max_active": null,
+      "patience_median_s": 20.0,
+      "tenant_burst": 4.0,
+      "tenant_rate_share": 0.5,
+      "tokens_per_answer": 809.1
+    },
+    "retrieval": {
+      "settings": [
+        "small_fast",
+        "balanced_rerank",
+        "large_wide"
+      ]
+    },
+    "rewriter": {
+      "max_completion_tokens": 64,
+      "mode": "auto",
+      "model": null,
+      "timeout_s": 1.5
+    },
+    "server": {
+      "host": "127.0.0.1",
+      "port": 8000
+    },
+    "state": {
+      "backend": "memory",
+      "cache_ttl_s": 604800.0,
+      "flight_lock_ttl_s": 30.0,
+      "key_prefix": "relay",
+      "lease_poll_s": 1.0,
+      "redis_url": "redis://localhost:6379/0",
+      "socket_timeout_s": 5.0
+    },
+    "verifier": {
+      "l4_mode": "async",
+      "l4_model_dir": "data\\models\\nli\\nli-MiniLM2-L6-H768",
+      "l4_model_file": "onnx/model_quint8_avx2.onnx",
+      "l4_threads": 4
+    }
+  },
+  "spec": {
+    "cache_mode": "off",
+    "deadline_ms": 30000,
+    "description": "Poisson arrivals at 20/min for 4 min, about 3x the service rate.",
+    "guard_overrides": {},
+    "name": "overload",
+    "patience": {
+      "kind": "lognormal",
+      "max_s": null,
+      "median_s": 20.0,
+      "min_s": 1.0,
+      "sigma": 0.6
+    },
+    "phases": [
+      {
+        "count": null,
+        "draw": "random",
+        "duration_s": 240.0,
+        "name": "main",
+        "pool": "all",
+        "rate_per_min": 20.0,
+        "sequential": false,
+        "shape": "poisson",
+        "start_s": 0.0,
+        "window_s": 2.0
+      }
+    ],
+    "retrieval_setting": "small_fast",
+    "retry_budget_enabled": true,
+    "seed": 0,
+    "standin_overrides": {}
+  },
+  "standin_stats": {
+    "active": 0,
+    "by_status": {
+      "200": 55
+    },
+    "completed_streams": 55,
+    "completion_tokens": 6193,
+    "disconnects": 0,
+    "errors_injected": 0,
+    "label": "calibrated",
+    "limits": {
+      "RPD": {
+        "capacity": 1000,
+        "level": 947.849
+      },
+      "TPM": {
+        "capacity": 8000,
+        "level": 6439.533
+      }
+    },
+    "peak_active": 2,
+    "prompt_tokens": 25560,
+    "rate_limited": {},
+    "requests": 55,
+    "stalls": 0,
+    "stragglers": 0
+  },
+  "v1_reference_run": "exp-20261113T074816Z-c26f18c"
+}

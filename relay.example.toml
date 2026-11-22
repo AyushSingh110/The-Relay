@@ -117,6 +117,10 @@ max_loaded_collections = 8       # collection indexes kept in memory (least rece
 l4_model_dir = "data/models/nli/nli-MiniLM2-L6-H768"
 l4_model_file = "onnx/model_quint8_avx2.onnx"   # int8 for AVX2 CPUs; else "onnx/model.onnx"
 l4_threads = 4                                   # ONNX threads per scoring call (at most 4)
+# "async" (default): send each verified sentence at once, score it in the background, and
+# report the scores in the final event's `confidences`; "sync": score each sentence before it
+# is sent (it then carries its own `confidence`); "disabled": never load the model.
+l4_mode = "async"
 
 # Follow-ups on POST /v1/ask (V2-08): a question in a conversation with earlier turns is
 # rewritten into a standalone question before retrieval and the cache. First questions are

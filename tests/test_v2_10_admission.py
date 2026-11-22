@@ -110,6 +110,120 @@ async def test_a_full_queue_sheds_its_worst_waiter_for_a_better_arrival() -> Non
     assert queue.shed_for_priority == 1
 
 
+async def timed_order(queue: AdmissionQueue, clock: Clock,
+                      arrivals: Sequence[tuple[str, str | None, str]],
+                      step_s: float) -> list[str]:
+    """``order`` with the clock moved ``step_s`` before each arrival (buckets refill)."""
+    admitted: list[str] = []
+    gate = asyncio.Event()
+
+    async def hold() -> None:
+        async with queue.admit():
+            await gate.wait()
+
+    async def one(tag: str, tenant: str | None, priority: str) -> None:
+        try:
+            async with queue.admit(tenant=tenant, priority=priority):
+                admitted.append(tag)
+        except AdmissionRejectedError as exc:
+            admitted.append(f"shed:{tag}:{exc.reason}")
+
+    blocker = asyncio.create_task(hold())
+    await asyncio.sleep(0)
+    tasks = []
+    for arrival in arrivals:
+        clock.now += int(step_s * _S)
+        tasks.append(asyncio.create_task(one(*arrival)))
+        await asyncio.sleep(0)
+    gate.set()
+    await asyncio.gather(blocker, *tasks)
+    return admitted
+
+
+# F-02c: work-conserving admission (a tenant never evicts or overtakes its own requests) ---
+async def test_a_lone_tenant_is_fifo_even_when_its_bucket_refills() -> None:
+    """a1 finds the bucket empty (over rate), a2 arrives after a refill (within rate): a2
+    must not overtake a1, nor evict it when the queue is full."""
+    clock = Clock()
+    queue = AdmissionQueue(capacity=2, service_rate_per_s=1.0, clock=clock,
+                           tenant_rate_per_s=0.5, tenant_burst=1.0)
+    got = await timed_order(queue, clock, [(f"a{i}", "a", "interactive") for i in range(4)],
+                            step_s=1.0)
+    admitted = [t for t in got if not t.startswith("shed:")]
+    assert admitted == sorted(admitted, key=lambda t: int(t[1:]))  # arrival order
+    assert not any(t.endswith(":shed_for_priority") for t in got)
+    assert queue.shed_for_priority == 0
+
+
+async def test_a_burst_of_30_from_one_tenant_never_evicts_its_own_earlier_requests() -> None:
+    clock = Clock()
+    queue = AdmissionQueue(capacity=5, service_rate_per_s=1.0, clock=clock,
+                           tenant_rate_per_s=0.4, tenant_burst=2.0)
+    got = await timed_order(queue, clock, [(f"a{i:02d}", "a", "interactive")
+                                           for i in range(30)], step_s=0.7)
+    assert queue.shed_for_priority == 0
+    shed = [t for t in got if t.startswith("shed:")]
+    assert all(t.endswith(":queue_full") for t in shed)  # only arrivals at a full queue
+    admitted = [t for t in got if not t.startswith("shed:")]
+    assert admitted == sorted(admitted)  # FIFO among the admitted
+
+
+async def test_a_within_rate_tenant_still_evicts_another_tenants_over_rate_backlog() -> None:
+    """V2-10's noisy-neighbour protection is kept: B (within rate) takes the place of A's
+    over-rate waiter when the queue is full."""
+    clock = Clock()
+    queue = AdmissionQueue(capacity=2, service_rate_per_s=1.0, clock=clock,
+                           tenant_rate_per_s=0.001, tenant_burst=1.0)
+    got = await timed_order(queue, clock, [("a1", "a", "interactive"),
+                                           ("a2", "a", "interactive"),
+                                           ("b1", "b", "interactive")], step_s=0.01)
+    assert "shed:a2:shed_for_priority" in got  # a2 was over rate; b1 was not
+    assert [t for t in got if not t.startswith("shed:")] == ["a1", "b1"]
+    assert queue.shed_for_priority == 1
+
+
+async def test_the_predicted_wait_is_counted_after_the_eviction_it_causes() -> None:
+    """Review F-02c: evicting B's only waiter ends the contention, so A's arrival ranks
+    first; its deadline check must use that position, not the pre-eviction one."""
+    clock = Clock()
+    queue = AdmissionQueue(capacity=2, service_rate_per_s=1.0, clock=clock,
+                           tenant_rate_per_s=0.001, tenant_burst=1.0)
+    results: list[str] = []
+    gate = asyncio.Event()
+
+    async def hold() -> None:
+        async with queue.admit(tenant="b", priority="batch"):  # takes B's only token
+            await gate.wait()
+
+    async def one(tag: str, tenant: str, priority: str, deadline_s: float | None) -> None:
+        deadline = None if deadline_s is None else clock.now + int(deadline_s * _S)
+        try:
+            async with queue.admit(tenant=tenant, priority=priority, deadline_ns=deadline):
+                results.append(tag)
+        except AdmissionRejectedError as exc:
+            results.append(f"shed:{tag}:{exc.error_code}")
+
+    blocker = asyncio.create_task(hold())
+    await asyncio.sleep(0)
+    tasks = [asyncio.create_task(one("a1", "a", "batch", None))]   # in rate
+    await asyncio.sleep(0)
+    tasks.append(asyncio.create_task(one("b1", "b", "batch", None)))   # over rate
+    await asyncio.sleep(0)
+    tasks.append(asyncio.create_task(one("a2", "a", "interactive", 1.5)))  # over rate
+    await asyncio.sleep(0)
+    gate.set()
+    await asyncio.gather(blocker, *tasks)
+    assert "shed:a2:predicted_wait_exceeds_deadline" not in results, results
+    assert "a2" in results
+
+
+async def test_a_tenants_interactive_request_may_still_evict_its_own_batch_one() -> None:
+    queue = AdmissionQueue(capacity=2, service_rate_per_s=1.0)
+    got = await order(queue, [("b1", "x", "batch"), ("b2", "x", "batch"),
+                              ("i1", "x", "interactive")])
+    assert "shed:b2" in got and got.index("i1") < got.index("b1")
+
+
 def test_a_bucket_refills_at_its_rate() -> None:
     bucket = TenantBucket(rate_per_s=2.0, burst=2.0, tokens=2.0, updated_ns=0)
     assert [bucket.take(0) for _ in range(3)] == [True, True, False]

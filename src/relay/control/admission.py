@@ -16,6 +16,12 @@ request with no tenant and the default priority is ordered exactly as before):
 - **Shedding the lowest rank first.** When the queue is full, an arriving request takes
   the place of the newest waiting request of a worse rank (that one is shed with
   ``queue_full``, reason ``shed_for_priority``); if none is worse, the arrival is shed.
+- **Work-conserving (F-02c, owner 2026-11-22).** Being over rate ranks a request lower only
+  against *other* tenants' requests: it counts while another tenant has a request waiting,
+  and from a tenant's first over-rate request on it covers the rest of that tenant's
+  backlog at that priority. So within one tenant and priority the order is arrival order, a
+  request never evicts a waiting one of its own tenant and priority, and a lone tenant gets a
+  plain FIFO queue. Priority (interactive before batch) counts as before.
 - **Capacity from measured tokens per answer.** ``observe_tokens`` keeps an exponentially
   weighted moving average (EWMA) of the tokens each answer used and re-derives the
   capacity from it (v1 §15), when the queue was built from a token-bound derivation.
@@ -234,11 +240,32 @@ class AdmissionQueue:
 
     # -- ordering --
 
-    def _key(self, waiter: _Waiter) -> tuple[int, int, int]:
-        return (waiter.rank, self._fair.last_admitted.get(waiter.tenant, -1), waiter.seq)
+    def _ranks(self, extra: _Waiter | None = None,
+               without: _Waiter | None = None) -> dict[_Waiter, int]:
+        """Each live waiter's rank (and ``extra``'s, an arrival not queued yet; ``without``:
+        a waiter about to be shed, left out). Priority always counts; being over rate counts
+        only when another tenant is waiting too, and it then covers a tenant's backlog (per
+        priority) from its first over-rate request on, so one tenant's requests keep their
+        arrival order."""
+        live = [w for w in self._waiters if not w.future.done() and w is not without]
+        if extra is not None:
+            live.append(extra)
+        contended = len({w.tenant for w in live}) > 1
+        over: dict[tuple[str | None, str], bool] = {}
+        ranks: dict[_Waiter, int] = {}
+        for waiter in sorted(live, key=lambda w: w.seq):
+            group = (waiter.tenant, waiter.priority)
+            over[group] = over.get(group, False) or waiter.over_rate
+            ranks[waiter] = _rank(Priority(waiter.priority), contended and over[group])
+        return ranks
+
+    def _key(self, waiter: _Waiter, ranks: dict[_Waiter, int]) -> tuple[int, int, int]:
+        return (ranks.get(waiter, waiter.rank), self._fair.last_admitted.get(waiter.tenant, -1),
+                waiter.seq)
 
     def _ordered(self) -> list[_Waiter]:
-        return sorted(self._waiters, key=self._key)
+        ranks = self._ranks()
+        return sorted(self._waiters, key=lambda w: self._key(w, ranks))
 
     def _position(self, waiter: _Waiter) -> int:
         if waiter not in self._waiters:
@@ -258,13 +285,21 @@ class AdmissionQueue:
                 waiter.future.set_result(None)
                 return
 
-    def _worse_than(self, rank: int) -> list[_Waiter]:
-        return [w for w in self._waiters if w.rank > rank and not w.future.done()]
+    def _evictable(self, arrival: _Waiter) -> tuple[list[_Waiter], dict[_Waiter, int]]:
+        """Waiting requests ``arrival`` may take the place of: ranked worse than it, and never
+        one of its own tenant at its own priority (F-02c)."""
+        ranks = self._ranks(arrival)
+        mine = ranks[arrival]
+        return [w for w in self._waiters if not w.future.done() and ranks[w] > mine
+                and not (w.tenant == arrival.tenant and w.priority == arrival.priority)], ranks
 
-    def _make_room(self, rank: int, depth_at_entry: int) -> None:
-        """The queue is full: shed the newest waiting request of the worst rank (which is
-        worse than ``rank``; the caller checked)."""
-        victim = max(self._worse_than(rank), key=lambda w: (w.rank, w.seq))
+    def _victim(self, arrival: _Waiter) -> _Waiter | None:
+        """The queue is full: the newest waiting request of the worst rank among those
+        ``arrival`` may evict, or None (the arrival itself is shed)."""
+        candidates, ranks = self._evictable(arrival)
+        return max(candidates, key=lambda w: (ranks[w], w.seq)) if candidates else None
+
+    def _shed(self, victim: _Waiter, depth_at_entry: int) -> None:
         self._waiters.remove(victim)
         self.shed_for_priority += 1
         victim.future.set_exception(AdmissionRejectedError(
@@ -312,19 +347,24 @@ class AdmissionQueue:
             waiter = _Waiter(asyncio.get_running_loop().create_future(), tenant, rank,
                              next(self._seq), over_rate, str(Priority(priority)))
             full = depth_at_entry >= self.capacity
-            if full and not self._worse_than(rank):  # v1's order: "full" before deadline
+            victim = self._victim(waiter) if full else None
+            if full and victim is None:  # v1's order: "full" before deadline
                 raise AdmissionRejectedError(
                     "queue_full", f"queue full ({depth_at_entry}/{self.capacity})",
                     queue_depth_at_entry=depth_at_entry, reason="queue_full")
-            ahead = sum(1 for w in self._waiters if self._key(w) < self._key(waiter))
+            # the position the arrival will have once ``victim`` (if any) is shed
+            ranks = self._ranks(waiter, without=victim)
+            mine = self._key(waiter, ranks)
+            ahead = sum(1 for w in self._waiters
+                        if w is not victim and w in ranks and self._key(w, ranks) < mine)
             predicted_s = (ahead + 1) / self.service_rate_per_s
             if deadline_ns is not None and entered + predicted_s * _NS > deadline_ns:
                 raise AdmissionRejectedError(
                     "predicted_wait_exceeds_deadline",
                     f"predicted wait {predicted_s:.2f}s exceeds the remaining deadline",
                     queue_depth_at_entry=depth_at_entry)
-            if full:
-                self._make_room(rank, depth_at_entry)
+            if victim is not None:
+                self._shed(victim, depth_at_entry)
             self._waiters.append(waiter)
             self.peak_depth = max(self.peak_depth, self.depth)
             if on_queued is not None:

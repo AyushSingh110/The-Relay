@@ -1,0 +1,35 @@
+{
+  "kind": "f02-overload",
+  "started_at": "2026-11-22T16:42:34.250497+00:00",
+  "git": {
+    "commit": "b2afa58",
+    "dirty": true,
+    "dirty_files": [
+      "M docs/ARCHITECTURE_V2.md",
+      " M docs/DECISIONS.md",
+      " M relay.example.toml",
+      " M src/relay/api/app.py",
+      " M src/relay/api/routes/ask_v1.py",
+      " M src/relay/app/compose.py",
+      " M src/relay/app/settings.py",
+      " M src/relay/control/admission.py",
+      " M src/relay/orchestrator/streaming.py",
+      " M src/relay/telemetry/tracing.py",
+      " M tests/test_streaming.py",
+      " M tests/test_v2_07_l4.py",
+      " M tests/test_v2_10_admission.py"
+    ]
+  },
+  "scenario": "overload",
+  "repeat": 5,
+  "standin_profile": "evidence\\standin_calibration\\cal-20261113T022403Z-3f687c6\\profile.json",
+  "standin_fix": "F-01 (extractive_answer splits passages with split_sentences)",
+  "v1_reference_run": "exp-20261113T074816Z-c26f18c",
+  "real_calls": 0,
+  "paths": {
+    "v1_ask": "POST /ask (buffered, current code)",
+    "v2_stream": "POST /v1/ask (verified streaming, v1-papers)"
+  },
+  "order": "alternating v1_ask, v2_stream per run index",
+  "ended_at": "2026-11-22T17:24:16.763057+00:00"
+}

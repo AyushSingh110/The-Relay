@@ -132,7 +132,7 @@ Each decision names the alternative that was rejected and why.
 | `sources` | After retrieval | the passages that will be cited, with page numbers |
 | `sentence` | When a sentence passes verification | text, citation tags |
 | `stopped` | If a sentence fails | reason class; no unverified text |
-| `final` | End | status, spans, tokens, cache status, verdict |
+| `final` | End | status, spans, tokens, cache status, verdict, `confidences` (L4, F-02c) |
 
 **How verified streaming keeps promise 1.** The server holds back the sentence being generated. When the sentence ends, the verifier checks it. Only then is it sent. If it fails, generation is cancelled, the user keeps the verified sentences already shown, and the answer is marked partial. Nothing is ever retracted because nothing unverified is ever sent.
 
@@ -146,6 +146,8 @@ Each decision names the alternative that was rejected and why.
 | L4 entailment | A small local model scores whether the cited passage supports the sentence | new |
 
 L4 is advisory at first: it is logged and shown as a confidence mark, and it only blocks once its threshold has been calibrated on the evaluation set (§10).
+
+**L4 off the critical path (F-02c, owner-approved 2026-11-22).** With `[verifier] l4_mode = "async"` (the default), a sentence that passed L1–L3 is sent at once; its L4 score is computed in the background, one model call at a time per process, after which the scores arrive in the `final` event's `confidences` (and the trace's `verifier.l4` spans). The scores are collected after the request's queue slot is released, so L4 never holds a slot. `"sync"` keeps the earlier behaviour (each sentence waits for its score); `"disabled"` never loads the model. Reason: under overload, inline L4 added about 130 ms to each request's slot time and cost about 0.6 answers per run (reports/phase-f02b-latency-profiling.md).
 
 **Latency targets** (goals, to be measured in the load harness):
 - `accepted` event within 200 ms.

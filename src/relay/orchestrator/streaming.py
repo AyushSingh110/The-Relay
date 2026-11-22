@@ -186,6 +186,55 @@ async def score_sentence(scorer: EntailmentScore, text: str,
     return round(max(scores), 4)
 
 
+class BackgroundScores:
+    """L4 in ``l4_mode = "async"`` (F-02c): each released sentence is scored in the
+    background, so a sentence is never held back for the model. ``gate`` lets one model call
+    run at a time in the process (each call already uses up to 4 ONNX threads, and the
+    request's queue slot is released before the scores are collected, so later requests'
+    scoring must not pile up on the CPU). ``collect`` returns the scores in sentence order;
+    a failed score is None (``score_sentence`` never raises for a scorer error)."""
+
+    def __init__(self, scorer: EntailmentScore, passages: Sequence[RetrievedPassage],
+                 gate: asyncio.Semaphore) -> None:
+        self._scorer = scorer
+        self._passages = passages
+        self._gate = gate
+        self._tasks: list[asyncio.Task[float | None]] = []
+
+    def submit(self, text: str) -> None:
+        self._tasks.append(asyncio.create_task(self._one(text)))
+
+    async def _one(self, text: str) -> float | None:
+        async with self._gate:
+            return await score_sentence(self._scorer, text, self._passages)
+
+    @property
+    def pending(self) -> int:
+        return sum(not task.done() for task in self._tasks)
+
+    async def collect(self, timeout_s: float | None = None) -> list[float | None]:
+        """The scores in sentence order. With ``timeout_s``, a score not finished by then
+        is None and its task is cancelled (advisory work never holds the answer's end)."""
+        if not self._tasks:
+            return []
+        if timeout_s is None:
+            return list(await asyncio.gather(*self._tasks))
+        await asyncio.wait(self._tasks, timeout=max(0.0, timeout_s))
+        scores: list[float | None] = []
+        for task in self._tasks:
+            if task.done() and not task.cancelled():
+                scores.append(task.result())
+            else:
+                task.cancel()
+                scores.append(None)
+        return scores
+
+    def cancel(self) -> None:
+        """The request ended early (client gone, failure): drop the unfinished scores."""
+        for task in self._tasks:
+            task.cancel()
+
+
 @dataclass(frozen=True)
 class StoppedEvent:
     reason_class: str

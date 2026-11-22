@@ -10,6 +10,7 @@ import asyncio
 import json
 import math
 import random
+import threading
 import time
 from collections.abc import AsyncGenerator
 from pathlib import Path
@@ -146,14 +147,19 @@ async def test_with_l4_disabled_the_scorer_is_not_called_and_confidence_is_none(
     assert scorer.calls == []
 
 
-async def test_with_l4_enabled_every_sentence_event_carries_a_confidence(env: Env) -> None:
+async def test_with_l4_async_sentences_go_out_unscored_and_final_carries_the_scores(
+        env: Env) -> None:
+    """F-02c: l4_mode "async" (the default) never delays a sentence for L4; the scores
+    arrive in final.confidences, in sentence order."""
     cid = await collection(env)
     harness = Harness(env, [answer(S1, S2)])
     scorer = FakeScorer(value=0.73)
     harness.app.state.relay.entailment = scorer
+    assert harness.app.state.relay.l4_mode == "async"
     stream = await ask(harness.app, question(cid))
     sentences = stream.of("sentence")
-    assert [s["confidence"] for s in sentences] == [0.73, 0.73]
+    assert [s["confidence"] for s in sentences] == [None, None]
+    assert stream.of("final")[0]["confidences"] == [0.73, 0.73]
     assert len(scorer.calls) == 2
     sentence, passage = scorer.calls[0]
     assert "[P" not in sentence and "Basalt" in passage  # tags removed; the cited text
@@ -172,8 +178,79 @@ async def test_buffered_collections_get_confidences_too(env: Env) -> None:
     cid = await collection(env, buffered=True)
     harness = Harness(env, [answer(S1, S2)])
     harness.app.state.relay.entailment = FakeScorer(value=0.6)
-    sentences = (await ask(harness.app, question(cid))).of("sentence")
-    assert [s["confidence"] for s in sentences] == [0.6, 0.6]
+    stream = await ask(harness.app, question(cid))
+    assert [s["confidence"] for s in stream.of("sentence")] == [None, None]
+    assert stream.of("final")[0]["confidences"] == [0.6, 0.6]
+
+
+async def test_with_l4_sync_every_sentence_event_carries_its_confidence(env: Env) -> None:
+    """l4_mode "sync" keeps V2-07's contract: each sentence waits for its score."""
+    for buffered in (False, True):
+        cid = await collection(env, buffered=buffered)
+        harness = Harness(env, [answer(S1, S2)])
+        scorer = FakeScorer(value=0.73)
+        harness.app.state.relay.entailment = scorer
+        harness.app.state.relay.l4_mode = "sync"
+        stream = await ask(harness.app, question(cid))
+        assert [s["confidence"] for s in stream.of("sentence")] == [0.73, 0.73]
+        assert stream.of("final")[0]["confidences"] == [0.73, 0.73]
+
+
+class GatedScorer:
+    """Blocks inside score() until released, like a slow model call."""
+
+    def __init__(self) -> None:
+        self.release = threading.Event()
+        self.finished = 0
+
+    def score(self, sentence: str, passage: str) -> float:
+        self.release.wait(5.0)
+        self.finished += 1
+        return 0.5
+
+
+async def test_with_l4_async_a_sentence_is_sent_before_its_score_is_finished(
+        env: Env) -> None:
+    """F-02c: both sentences reach the client while L4 is still blocked on the first."""
+    cid = await collection(env)
+    harness = Harness(env, [answer(S1, S2)])
+    scorer = GatedScorer()
+    harness.app.state.relay.entailment = scorer
+    finished_at_sentence: list[int] = []
+
+    def on_event(event: tuple[float, str, dict]) -> None:
+        if event[1] == "sentence":
+            finished_at_sentence.append(scorer.finished)
+            if len(finished_at_sentence) == 2:
+                scorer.release.set()
+
+    stream = await ask(harness.app, question(cid), on_event=on_event)
+    assert finished_at_sentence == [0, 0]  # no score was done when either sentence went out
+    final = stream.of("final")[0]
+    assert final["confidences"] == [0.5, 0.5] and final["verdict"] == "VERIFIED"
+
+
+async def test_with_l4_disabled_mode_the_scorer_is_never_called(env: Env) -> None:
+    cid = await collection(env)
+    harness = Harness(env, [answer(S1, S2)])
+    scorer = FakeScorer()
+    harness.app.state.relay.entailment = scorer
+    harness.app.state.relay.l4_mode = "disabled"
+    stream = await ask(harness.app, question(cid))
+    assert [s["confidence"] for s in stream.of("sentence")] == [None, None]
+    assert stream.of("final")[0]["confidences"] == [None, None]
+    assert scorer.calls == []
+
+
+def test_l4_mode_defaults_to_async_and_rejects_unknown_values() -> None:
+    from relay.app.settings import RelaySettings, with_overrides
+    from relay.errors import ConfigurationError
+
+    assert RelaySettings().verifier.l4_mode == "async"
+    assert with_overrides(RelaySettings(), {"verifier": {"l4_mode": "sync"}}).verifier.l4_mode \
+        == "sync"
+    with pytest.raises(ConfigurationError, match="l4_mode"):
+        with_overrides(RelaySettings(), {"verifier": {"l4_mode": "later"}})
 
 
 async def test_without_a_loaded_model_confidence_is_none(env: Env) -> None:
@@ -230,6 +307,26 @@ async def test_without_the_model_files_the_service_starts_with_l4_off(tmp_path: 
 
 
 @needs_model
+async def test_with_l4_mode_disabled_the_model_is_not_loaded(tmp_path: Path) -> None:
+    from relay.app import compose
+    from relay.app.settings import with_overrides
+    from tests.test_compose_collections import env as no_env
+    from tests.test_compose_collections import settings_for
+    from tests.test_index_registry import FakeEmbedder
+    from tests.test_pipeline_and_verifier import StubRetriever
+
+    settings = with_overrides(settings_for(tmp_path, index_dir=tmp_path / "none"),
+                              {"verifier": {"l4_model_dir": str(L4_MODEL),
+                                            "l4_mode": "disabled"}})
+    async with compose.open_runtime(settings, no_env(),
+                                    retrievers={"small_fast": StubRetriever(PASSAGES)},
+                                    collection_embedder=FakeEmbedder()) as runtime:
+        assert runtime.app.state.relay.entailment is None
+        assert runtime.app.state.relay.l4_mode == "disabled"
+        assert any("L4" in note and "disabled" in note for note in runtime.notes)
+
+
+@needs_model
 async def test_with_the_model_files_the_scorer_is_loaded_once_at_start_up(
         tmp_path: Path) -> None:
     from relay.app import compose
@@ -262,6 +359,7 @@ async def test_a_failing_model_never_fails_the_answer(env: Env) -> None:
     assert [s["confidence"] for s in stream.of("sentence")] == [None, None]
     final = stream.of("final")[0]
     assert (final["status"], final["verdict"]) == ("ok", "VERIFIED")
+    assert final["confidences"] == [None, None]
 
 
 @pytest.mark.skipif(not Path("evidence/experiments/exp-20261113T064542Z-c482696").is_dir(),
@@ -335,3 +433,24 @@ async def test_leaving_while_a_buffered_answer_is_scored_records_its_real_spend(
     cancelled = next(r for r in records if r.get("end") == "cancelled")
     assert cancelled["provider_called"] is True and cancelled["tokens_in"] > 0
     assert cancelled["usage_source"] != "none"
+
+
+async def test_a_stuck_scorer_never_holds_the_final_event_past_the_cap(
+        env: Env, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Review F-02c: background L4 is bounded; an unfinished score is reported as null."""
+    from relay.api.routes import ask_v1 as ask_v1_mod
+
+    monkeypatch.setattr(ask_v1_mod, "L4_COLLECT_MAX_S", 0.1)
+    cid = await collection(env)
+    harness = Harness(env, [answer(S1, S2)])
+    scorer = GatedScorer()  # never released by the request
+    harness.app.state.relay.entailment = scorer
+    started = time.perf_counter()
+    try:
+        stream = await ask(harness.app, question(cid))
+    finally:
+        scorer.release.set()  # let the orphaned worker thread finish
+    assert time.perf_counter() - started < 3.0
+    final = stream.of("final")[0]
+    assert final["confidences"] == [None, None]
+    assert (final["status"], final["verdict"]) == ("ok", "VERIFIED")
