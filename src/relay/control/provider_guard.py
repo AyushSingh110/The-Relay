@@ -61,6 +61,10 @@ class GuardConfig(BaseModel):
     adapt_safety_margin: Annotated[float, Field(gt=0.0, le=1.0)] = 0.9
     circuit_failure_threshold: Annotated[int, Field(ge=1)] = 5
     circuit_cooldown_s: Annotated[float, Field(gt=0.0)] = 30.0
+    # F-04 (owner 2026-11-22): the least time between two call starts on this lane, per
+    # process (0 = no spacing). For a provider's request-rate limit that its headers do not
+    # show (F-03: a 429 after 10 calls in ~2 s, with token and daily headroom left).
+    min_interval_ms: Annotated[int, Field(ge=0)] = 0
 
 
 class GuardError(ProviderError):
@@ -173,6 +177,8 @@ class ProviderGuard:
         self._sleep = sleep
         self._today = today
         self._semaphore = asyncio.Semaphore(self.config.max_concurrency)
+        self._interval_ns = self.config.min_interval_ms * 1_000_000
+        self._last_start_ns: int | None = None  # F-04: the last claimed call start
         self._requests: deque[int] = deque()
         self._tokens: deque[_TokenEntry] = deque()
         self._day = today()
@@ -326,6 +332,12 @@ class ProviderGuard:
         if state == "half_open":
             self._trial_in_flight = True
 
+    def _spacing_wait_ns(self, now: int) -> int:
+        """F-04: how long until this lane may start another call (0: now)."""
+        if not self._interval_ns or self._last_start_ns is None:
+            return 0
+        return self._last_start_ns + self._interval_ns - now
+
     # -- reservation and settlement --
 
     async def acquire(self, request: ChatRequest, *, deadline_ns: int | None = None,
@@ -351,7 +363,9 @@ class ProviderGuard:
                     raise RequestExceedsTokenLimitError(
                         f"request needs ~{estimate} tokens; the per-minute limit is {limit}"
                     )
-                wait_ns = self._quota_wait_ns(now, estimate)
+                wait_ns = max(self._quota_wait_ns(now, estimate), self._spacing_wait_ns(now))
+                if wait_ns <= 0 and self._interval_ns:
+                    self._last_start_ns = now  # claimed before any await (F-04 spacing)
                 if wait_ns <= 0 and self._shared is not None:
                     shared_day = self._day
                     wait_ns, shared = await self._reserve_shared(estimate, spans)

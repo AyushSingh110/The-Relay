@@ -8,6 +8,7 @@ measured Groq value.
 from __future__ import annotations
 
 import asyncio
+import itertools
 import random
 from collections.abc import Collection, Sequence
 from datetime import date
@@ -678,3 +679,60 @@ def test_queue_rejects_invalid_configuration() -> None:
         AdmissionQueue(capacity=0, service_rate_per_s=1.0)
     with pytest.raises(ValueError):
         AdmissionQueue(capacity=1, service_rate_per_s=0.0)
+
+
+# --- F-04: minimum spacing between call starts (owner 2026-11-22) --------------------------
+
+
+async def test_min_interval_spaces_the_starts_of_consecutive_calls() -> None:
+    ft = FakeTime()
+    guard = make_guard(ft, min_interval_ms=250)
+    starts = []
+    for _ in range(3):
+        permit = await guard.acquire(chat())
+        starts.append(ft.now)
+        guard.settle(permit, usage=usage(80, 20), stream_opened=True)
+    assert all(b - a >= int(0.25 * NS) for a, b in itertools.pairwise(starts))
+
+
+async def test_concurrent_calls_are_spaced_too() -> None:
+    ft = FakeTime()
+    guard = make_guard(ft, min_interval_ms=250)
+    starts: list[int] = []
+
+    async def one() -> None:
+        permit = await guard.acquire(chat())
+        starts.append(ft.now)
+        guard.settle(permit, usage=usage(80, 20), stream_opened=True)
+
+    await asyncio.gather(*(one() for _ in range(4)))
+    starts.sort()
+    assert all(b - a >= int(0.25 * NS) for a, b in itertools.pairwise(starts))
+
+
+async def test_without_min_interval_nothing_waits() -> None:
+    ft = FakeTime()
+    guard = make_guard(ft)
+    for _ in range(3):
+        guard.settle(await guard.acquire(chat()), usage=usage(80, 20), stream_opened=True)
+    assert ft.sleeps == []
+
+
+async def test_a_spacing_wait_past_the_deadline_is_refused_up_front() -> None:
+    ft = FakeTime()
+    guard = make_guard(ft, min_interval_ms=250)
+    guard.settle(await guard.acquire(chat()), usage=usage(80, 20), stream_opened=True)
+    with pytest.raises(QuotaWaitExceedsDeadlineError):
+        await guard.acquire(chat(), deadline_ns=ft.in_s(0.1))
+
+
+def test_min_interval_comes_from_guard_settings_and_a_lane_can_override_it() -> None:
+    from relay.app.compose import guard_config
+    from relay.app.settings import LaneSettings, RelaySettings, with_overrides
+
+    settings = with_overrides(RelaySettings(), {"guard": {"min_interval_ms": 100}})
+    assert guard_config(settings).min_interval_ms == 100
+    lane = LaneSettings.model_validate({"name": "g", "kind": "groq", "model": "m",
+                                        "guard": {"min_interval_ms": 250}})
+    assert guard_config(settings, lane).min_interval_ms == 250
+    assert guard_config(RelaySettings()).min_interval_ms == 0  # default: unchanged behaviour

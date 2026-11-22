@@ -42,6 +42,7 @@ CALIBRATED_PROFILE: Final = Path(
 _MODEL = ConfigDict(frozen=True, extra="forbid")
 Slug = Annotated[str, Field(pattern=r"^[a-z0-9][a-z0-9_\-]*$", max_length=64)]
 PositiveInt = Annotated[int, Field(ge=1)]
+NonNegativeInt = Annotated[int, Field(ge=0)]
 CacheMode = Literal["off", "memory", "sqlite"]
 L4Mode = Literal["async", "sync", "disabled"]
 
@@ -74,6 +75,7 @@ class LaneGuardSettings(BaseModel):
     rpd: PositiveInt | None = None
     tpd: PositiveInt | None = None
     daily_safety_fraction: Annotated[float, Field(gt=0.0, le=1.0)] | None = None
+    min_interval_ms: NonNegativeInt | None = None  # F-04: least time between call starts
 
 
 class LaneSettings(BaseModel):
@@ -119,6 +121,9 @@ class GuardSettings(BaseModel):
     rpd: PositiveInt | None = 1000  # v1 P02-LIVE: x-ratelimit-limit-requests
     tpd: PositiveInt | None = None  # not exposed by Groq; not measured in v1
     daily_safety_fraction: Annotated[float, Field(gt=0.0, le=1.0)] = 0.75
+    # F-04: least time between two call starts (per process); 0 = none. Groq has a request-
+    # rate limit its headers do not show (F-03); its value was not measured.
+    min_interval_ms: NonNegativeInt = 0
 
 
 class QueueSettings(BaseModel):

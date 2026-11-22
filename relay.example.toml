@@ -48,6 +48,9 @@ pricing = { input_per_m = 0.0, output_per_m = 0.0 }
 # model = "qwen/qwen3.8-27b"
 # max_completion_tokens = 512
 # pricing = { input_per_m = <from Groq's price list>, output_per_m = <...> }
+# guard = { min_interval_ms = 250 }   # F-04: space call starts; Groq has a request-rate
+#                                     # limit its headers do not show (F-03). 250 ms is a
+#                                     # cautious owner-chosen value, not a measured limit.
 
 # ProviderGuard limits per lane. tpm and rpd default to the values Groq reported in v1, so
 # removing them from this file does NOT disable them. TOML has no null: to switch a limit
@@ -58,6 +61,7 @@ max_concurrency = 2
 tpm = 8000                       # v1 P02-LIVE: x-ratelimit-limit-tokens
 rpd = 1000                       # v1 P02-LIVE: x-ratelimit-limit-requests
 daily_safety_fraction = 0.75     # stop new calls at 75 % of the daily limit
+min_interval_ms = 0              # F-04: least time between call starts, per process (0: none)
 
 # Admission queue. Capacity = floor(service rate x patience median), where service rate =
 # TPM / (60 x tokens per answer). Set capacity to override the derived value.

@@ -132,7 +132,9 @@ def guard_config(settings: RelaySettings, lane: LaneSettings | None = None) -> G
         max_concurrency=own.max_concurrency or g.max_concurrency,
         rpm_limit=own.rpm or g.rpm, tpm_limit=own.tpm or g.tpm, rpd_limit=own.rpd or g.rpd,
         tpd_limit=own.tpd or g.tpd,
-        daily_safety_fraction=own.daily_safety_fraction or g.daily_safety_fraction)
+        daily_safety_fraction=own.daily_safety_fraction or g.daily_safety_fraction,
+        min_interval_ms=g.min_interval_ms if own.min_interval_ms is None
+        else own.min_interval_ms)
 
 
 def lane_pricing(lane: LaneSettings) -> LanePricing | None:

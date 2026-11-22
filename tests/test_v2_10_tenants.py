@@ -414,3 +414,53 @@ async def test_two_interactive_tenants_a_light_one_is_not_stuck_behind_a_burst(
     print(f"\ntwo interactive tenants: {ahead} of A's requests admitted before B "
           f"(A's in-burst requests still waiting: {in_burst_left})")
     assert ahead <= in_burst_left  # at most A's in-burst ones; none of its over-rate ones
+
+
+# --- F-04: commenter edge cases (#9 and #10) -----------------------------------------------
+
+
+async def test_a_cached_answer_is_never_served_to_another_tenant_using_its_collection_id(
+        env: Env) -> None:
+    """#9: tenant A's answer is in the exact cache; tenant B asking the same question with
+    A's collection id gets a 404 before any cache lookup, and nothing of the answer."""
+    w = World(env, [answer(ABOUT), answer(ABOUT)])
+    a, key_a = await w.tenant("a")
+    _, key_b = await w.tenant("b")
+    cid = await w.collection(a)
+    assert (await w.ask(key_a, cid, "What is Moshi?")).of("final")[0]["status"] == "ok"
+    again = await w.ask(key_a, cid, "What is Moshi?")
+    assert again.of("final")[0]["cache_status"] == "exact_hit"  # A's answer is cached
+    calls = len(w.h.provider.requests)
+    stolen = await w.ask(key_b, cid, "What is Moshi?")
+    assert stolen.status == 404
+    assert "sentence" not in stolen.names and ABOUT not in stolen.raw
+    assert len(w.h.provider.requests) == calls  # nothing reached the model either
+
+
+async def test_a_document_added_while_an_answer_is_generating_is_handled_cleanly(
+        env: Env) -> None:
+    """#10: the collection's version changes mid-generation. The running answer ends cleanly,
+    nothing fails in the background, and the next question (new version) is a cache miss:
+    the answer built on the old evidence is never reused for the new version."""
+    from tests.test_ask_collections import ListSink
+
+    w = World(env, [answer(ABOUT), answer(ABOUT)], delay_s=0.1)
+    sink = ListSink()
+    w.service._run = sink
+    a, key = await w.tenant("a")
+    cid = await w.collection(a)
+    asking = asyncio.create_task(w.ask(key, cid, "What is Moshi?"))
+    await asyncio.sleep(0.15)  # it is generating now
+    assert not asking.done()
+    await env.upload(cid, ["Mimi is the neural audio codec used by Moshi"], title="Mimi")
+    await env.worker().run_once()  # the collection's version is bumped
+    assert not asking.done()  # the bump landed while the answer was still generating
+    stream = await asking
+    final = stream.of("final")[0]
+    assert stream.status == 200 and final["status"] == "ok"
+    after = await w.ask(key, cid, "What is Moshi?")
+    assert after.of("final")[0]["cache_status"] == "miss"  # old evidence: not reused
+    assert w.service.trace_failures == 0  # the request log and trace writes did not fail
+    logged = [r for r in sink.records if r.get("record") == "request"
+              and r.get("collection_id") == cid]
+    assert len(logged) == 2  # both requests were recorded

@@ -158,6 +158,8 @@ L4 is advisory at first: it is logged and shown as a confidence mark, and it onl
 
 **Kept from v1 without redesign:** `ProviderGuard` (token reservation, header sync, daily stop, circuit breaker), the retry policy and retry budget, and the stand-in service.
 
+**Call spacing (F-04, owner-approved 2026-11-22).** `ProviderGuard` gains `min_interval_ms` (`[guard]` or per lane; default 0 = no change): the least time between two call starts on a lane, per process. It covers a provider request-rate limit that the headers do not show (F-03 saw a 429 after 10 calls in ~2 s with token and daily headroom left). It lives in the guard, which stays the only owner of rate-limit state; the provider client is unchanged.
+
 **New: provider router.** A list of lanes, each a (provider, model) pair with its own guard, token budget and reasoning settings.
 
 Routing rules, in order:

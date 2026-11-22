@@ -84,3 +84,8 @@ Owner decisions for v2 work, newest last. Each entry records what was decided, b
   - A request never evicts or overtakes a waiting request of its own tenant and priority; a
     lone tenant gets a plain FIFO queue.
   - Priority and the cross-tenant protection of V2-10 are unchanged.
+- **F-04 (owner, 2026-11-22): call spacing lives in ProviderGuard, not in the provider client.**
+  - New `GuardConfig.min_interval_ms` (`[guard]` or per lane), default 0.
+  - The Groq example lane suggests 250 ms, a cautious owner-chosen value; the real limit was not
+    measured.
+  - Spacing is per process; with the Redis state store, each worker spaces its own calls.
