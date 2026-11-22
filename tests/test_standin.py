@@ -29,7 +29,7 @@ from relay.orchestrator.pipeline import (
 )
 from relay.orchestrator.prompt import build_request
 from relay.orchestrator.tools import ToolGateway
-from relay.orchestrator.verifier import verify
+from relay.orchestrator.verifier import TAG_PATTERN, split_sentences, verify
 from relay.providers.base import ChatMessage, ChatRequest, CompletionResult, collect_stream
 from relay.providers.errors import (
     ProviderBadRequestError,
@@ -66,7 +66,7 @@ from relay.standin.server import (
     serve_on_loopback,
 )
 from relay.telemetry.spans import ServerSpanTracker
-from tests.test_pipeline_and_verifier import PASSAGES, StubRetriever
+from tests.test_pipeline_and_verifier import PASSAGES, StubRetriever, passage
 
 
 def _load_script() -> ModuleType:
@@ -201,6 +201,51 @@ def test_extractive_answer_parsing_is_deterministic() -> None:
     answer = extractive_answer(list(messages))  # type: ignore[arg-type]
     assert answer == extractive_answer(list(messages))  # type: ignore[arg-type]
     assert answer.count("[P") <= 2 and "d_model" in answer
+
+
+# F-01: the exact passage spans that stopped v2 overload streams as `uncited` (q08 x3, q04 x2,
+# q13, q17; runs/v2-load-rerun-20261120T084043Z/overload). Each holds a sentence boundary the
+# Relay's splitter sees but the stand-in's old regex did not ("." before a bullet, a digit or
+# another "."), so the stand-in copied two sentences under one tag at the end.
+UNCITED_STOP_SPANS = (
+    ("q04", "What are the three different ways multi-head attention is used in the Transformer "
+            "architecture? Explain the role of each.",
+     "Each position in the encoder can attend to all positions in the previous layer of the "
+     "encoder. • Similarly, self-attention layers in the decoder allow each position in the "
+     "decoder to attend to all positions in the decoder up to and including that position."),
+    ("q08", "What is the Inner Monologue mechanism in Moshi, and how does predicting "
+            "time-aligned text tokens before audio tokens improve the quality of generated "
+            "speech?",
+     "Section 3.4 describes this architecture. • In Section 3.4.4, we introduce Inner "
+     "Monologue, a new training and inference setup for audio language models that "
+     "significantly improves the factuality and linguistic quality of generated speech by "
+     "predicting time-aligned text tokens before audio tokens."),
+    ("q13", "In H-Net's Dynamic Chunking mechanism, what is the purpose of the routing module and "
+            "the smoothing module?",
+     "(d) Upsampler 1 −'_!\"$ 1 −'_!\"# 1 −'_! . '!\"% '!\"$ '!\"# '_! .̅ M (c) "
+     "Smoothing Module 0\"#$ /0^\" +^\" (b) Downsampler - Chunking /0 (a) Routing Module T h e "
+     "e _ E _ n d o f t o k e s _ n Dynamic Chunking Figure 1: (left) Architectural overview "
+     "of."),
+    ("q17", "Explain the two major stages of photosynthesis: light-dependent reactions and the "
+            "Calvin cycle. Where does each stage occur?",
+     "number of inputs processed at each stage and the corresponding hidden dimensions (see "
+     "Appendix C). 9 With this modulation, the model achieves more stable training dynamics "
+     "and improved convergence behavior across the entire hierarchy."),
+)
+
+
+@pytest.mark.parametrize(("qid", "question", "text"), UNCITED_STOP_SPANS,
+                         ids=[case[0] for case in UNCITED_STOP_SPANS])
+def test_every_sentence_the_relay_splits_from_a_standin_answer_is_cited(
+        qid: str, question: str, text: str) -> None:
+    passages = (passage(text),)
+    messages = build_request(question, passages, model=MODEL, max_completion_tokens=200).messages
+    answer = extractive_answer(list(messages))  # type: ignore[arg-type]
+    assert answer != "INSUFFICIENT_EVIDENCE"
+    uncited = [unit for unit in split_sentences(answer) if not TAG_PATTERN.search(unit)]
+    assert uncited == [], f"{qid}: the Relay would stop on {uncited[0]!r}"
+    codes = {failure.code for failure in verify(answer, passages).failures}
+    assert "uncited_sentence" not in codes
 
 
 async def test_truncation_at_max_completion_tokens_reports_length() -> None:

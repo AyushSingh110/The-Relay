@@ -50,3 +50,4 @@ reports/
 
 # --- Local tool output ---
 .playwright-mcp/
+blog/

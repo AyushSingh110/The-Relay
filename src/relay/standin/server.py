@@ -23,6 +23,7 @@ from fastapi.responses import JSONResponse, Response, StreamingResponse
 from pydantic import BaseModel, ConfigDict, Field, ValidationError
 from starlette.types import Receive, Scope, Send
 
+from relay.orchestrator.verifier import split_sentences
 from relay.standin.profile import (
     SECONDS_PER_DAY,
     ModelProfile,
@@ -58,7 +59,6 @@ _STOPWORDS: Final = frozenset({
 _WORD = re.compile(r"[a-z0-9_]+")
 _PASSAGE_HEAD = re.compile(r"^\[P(\d+)\] .*$", re.MULTILINE)
 _QUESTION = re.compile(r"\n\nQuestion:\s*(.+?)(?:\n\nAnswer using|\Z)", re.DOTALL)
-_SENTENCE_END = re.compile(r"(?<=[.!?])\s+(?=[A-Z(\[])")
 
 
 # --- Request contract ------------------------------------------------------------------
@@ -124,8 +124,11 @@ def extractive_answer(messages: Sequence[_Message]) -> str:
     wanted = _words(question)
     scored: list[tuple[int, int, int, str]] = []
     for order, (tag, text) in enumerate(passages):
-        for position, sentence in enumerate(_SENTENCE_END.split(text)):
-            sentence = " ".join(sentence.split())
+        # F-01: the Relay's own sentence split, so every sentence the stand-in copies is one
+        # sentence to the verifier and gets its own tag. Its old narrower regex missed
+        # boundaries before a bullet, a digit or another "." and copied two sentences under
+        # one tag, which the verifier rightly stopped as `uncited`.
+        for position, sentence in enumerate(split_sentences(" ".join(text.split()))):
             if len(sentence.split()) < 4:
                 continue
             overlap = len(wanted & _words(sentence))
