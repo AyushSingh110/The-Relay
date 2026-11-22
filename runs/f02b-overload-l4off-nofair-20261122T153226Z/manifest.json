@@ -1,0 +1,23 @@
+{
+  "kind": "f02-overload",
+  "started_at": "2026-11-22T15:32:26.993241+00:00",
+  "git": {
+    "commit": "1604f66",
+    "dirty": true,
+    "dirty_files": [
+      "?? runs/f02-overload-20261122T140530Z/",
+      "?? runs/f02b-overload-l4off-20261122T150959Z/"
+    ]
+  },
+  "scenario": "overload",
+  "repeat": 5,
+  "standin_profile": "evidence\\standin_calibration\\cal-20261113T022403Z-3f687c6\\profile.json",
+  "standin_fix": "F-01 (extractive_answer splits passages with split_sentences)",
+  "v1_reference_run": "exp-20261113T074816Z-c26f18c",
+  "real_calls": 0,
+  "paths": {
+    "v2_stream_l4off_nofair": "POST /v1/ask, L4 off, no per-tenant buckets (diagnostic)"
+  },
+  "order": "alternating v2_stream_l4off_nofair per run index",
+  "ended_at": "2026-11-22T15:53:13.544134+00:00"
+}
