@@ -464,3 +464,32 @@ async def test_a_document_added_while_an_answer_is_generating_is_handled_cleanly
     logged = [r for r in sink.records if r.get("record") == "request"
               and r.get("collection_id") == cid]
     assert len(logged) == 2  # both requests were recorded
+
+
+async def test_a_key_revoked_mid_flight_ends_cleanly_and_is_refused_afterwards(
+        env: Env) -> None:
+    """Release check (commenter scenario): key 1 leads a SingleFlight, key 2 (same tenant)
+    follows it, and key 1 is revoked while the answer is generating. Both streams end
+    cleanly, the follower gets the verified answer, the cache holds one verified answer,
+    and key 1 is refused from then on."""
+    w = World(env, [answer(ABOUT)], delay_s=0.1)
+    tenant = await env.store.tenants.create("a")
+    key1, record1 = await env.store.api_keys.create(tenant.id, "admin")
+    key2, _ = await env.store.api_keys.create(tenant.id, "admin")
+    cid = await w.collection(tenant.id)
+    leader = asyncio.create_task(w.ask(key1, cid, "What is Moshi?"))
+    await asyncio.sleep(0.05)
+    follower = asyncio.create_task(w.ask(key2, cid, "What is Moshi?"))
+    await asyncio.sleep(0.1)
+    assert not leader.done() and not follower.done()  # both are waiting on the flight
+    assert await env.store.api_keys.revoke(record1.id)
+    lead, follow = await asyncio.gather(leader, follower)
+    lead_final, follow_final = lead.of("final")[0], follow.of("final")[0]
+    assert lead.status == 200 and lead_final["status"] == "ok"  # authorised at its start
+    assert follow_final["status"] == "ok" and follow_final["verdict"] == "VERIFIED"
+    assert follow_final["coalesced"] is True
+    assert len(w.h.provider.requests) == 1  # one model call for both
+    assert len(w.service.cache) == 1  # one verified answer, cached once
+    assert (await w.ask(key1, cid, "What is Moshi?")).status == 401
+    hit = await w.ask(key2, cid, "What is Moshi?")
+    assert hit.of("final")[0]["cache_status"] == "exact_hit"

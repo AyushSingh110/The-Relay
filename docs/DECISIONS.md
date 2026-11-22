@@ -89,3 +89,20 @@ Owner decisions for v2 work, newest last. Each entry records what was decided, b
   - The Groq example lane suggests 250 ms, a cautious owner-chosen value; the real limit was not
     measured.
   - Spacing is per process; with the Redis state store, each worker spaces its own calls.
+- **F-series closed and v2.0.0 release candidate (owner, 2026-11-22).**
+  - **F-01:** the stand-in now splits passages like the verifier. 15 false uncited stops over 82
+    replayed prompts became 0; the overload run's 7 verifier stops became 0.
+  - **F-02 / F-02b:** 5-run overload comparisons. The remaining gap came from inline L4 (~130 ms
+    per request) and single-tenant self-eviction (~1 answer per run), not from per-sentence
+    checking.
+  - **F-02c:** L4 async and work-conserving admission. Overload: 57.0 +/- 1.0 delivered against
+    v1's 57.2 +/- 0.4 (within run-to-run noise); first verified sentence 489 against 620 ms (fast
+    requests). Runs: `runs/f02c-overload-20261122T164234Z`.
+  - **F-03:** real Groq (10 calls). No refund of an aborted stream within about 1.6 s; a partial
+    hold (213-355 of 443 tokens); headers are not an exact per-request ledger; 1 accidental 429.
+    ProviderGuard's header sync stays the authority.
+  - **F-04:** call spacing (`min_interval_ms`) in ProviderGuard. Commenter edge cases (cross-tenant
+    cache, version change and deletion mid-stream, key revoked mid-flight) are covered by tests;
+    no product change was needed.
+  - **Next:** the repository is the release candidate for `v2.0.0`. Tagging and pushing are the
+    owner's.

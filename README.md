@@ -8,294 +8,175 @@
   <img alt="FastAPI" src="https://img.shields.io/badge/API-FastAPI-009688?logo=fastapi&logoColor=white">
   <img alt="React and TypeScript" src="https://img.shields.io/badge/UI-React%20%2B%20TypeScript-3178C6?logo=typescript&logoColor=white">
   <img alt="Docker Compose" src="https://img.shields.io/badge/run-docker%20compose%20up-2496ED?logo=docker&logoColor=white">
-  <img alt="1,000+ offline tests" src="https://img.shields.io/badge/tests-1%2C000%2B%20offline-0b6b5e">
+  <img alt="1,036 offline tests" src="https://img.shields.io/badge/tests-1%2C036%20offline-0b6b5e">
 </p>
 
-<p align="center">
-  <a href="#quickstart">Quickstart</a> ·
-  <a href="#features">Features</a> ·
-  <a href="#how-a-question-is-answered">How it works</a> ·
-  <a href="#measured-results">Results</a> ·
-  <a href="#api">API</a> ·
-  <a href="#configuration">Configuration</a> ·
-  <a href="docs/ARCHITECTURE_V2.md">Architecture</a>
-</p>
+**The Relay** answers questions from your own PDFs. It streams the answer one sentence at a time,
+and **each sentence is checked against the passage it cites before it is sent**: a sentence that
+fails the check is never shown. When the documents do not contain the answer, it says so.
 
----
-
-**The Relay** is a question-answering service for your own PDFs. It streams the answer one
-sentence at a time, and **each sentence is checked against the passage it cites before it is
-sent**: a sentence that fails the check is never shown. When the documents do not contain the
-answer, it says so plainly instead of guessing.
-
-It is built to keep working on a **tight model quota**, such as Groq's free tier. Every model
-call reserves its tokens against the provider's per-minute and daily limits first, identical
-questions share one call, and repeats come from the cache. Under pressure, requests wait or
-are turned away early instead of failing halfway.
-
-You can try all of it without an API key: a **stand-in model**, calibrated from real Groq
-measurements, ships with the project.
+It is built for a **tight model quota**, such as Groq's free tier: every call reserves its tokens
+against the provider's limits first, identical questions in flight share one call, and repeats
+come from the cache. You can try it all **without an API key**, using a stand-in model calibrated
+from real Groq measurements.
 
 <p align="center">
   <picture>
     <source media="(prefers-color-scheme: dark)" srcset="docs/assets/chat-dark.png">
-    <img src="docs/assets/chat-light.png" alt="The chat page: a question, its verified sentences with citation chips, the sources, and a timing bar for queue, retrieval, model and verification." width="88%">
+    <img src="docs/assets/chat-light.png" alt="The chat page: a question, its verified sentences with citation chips, the sources, and a timing bar." width="86%">
   </picture>
-  <br>
-  <sub>The chat page, answering with the stand-in model. Each sentence carries the passage it cites; the bar shows where the time went.</sub>
 </p>
+
+## Headline numbers
+
+| | |
+| :-- | :-- |
+| ✅ **1,036 automated tests** | Offline, no API key or Redis server needed; plus 60 UI tests |
+| 🔎 **Sentence-level verification** | L1 structure, L2 grounding, L3 refusal form before each sentence is sent; L4 entailment scored in the background |
+| ♻️ **Bursts** | 30 requests in 2 s: **30 of 30 delivered from 6 model calls** (17 joined a call in flight, 7 from the cache) |
+| ⚖️ **Overload parity with v1** | **57.0 of 86** delivered against v1's 57.2 (5 runs each, within run-to-run noise), with the **first verified sentence 131 ms sooner** (489 against 620 ms, fast requests) |
+| 🧱 **Several workers** | With Redis, the cache, in-flight sharing and quota counters are shared: in the multi-worker tests, 10 identical requests to 2 workers make 1 model call |
+
+Load numbers are measured against the calibrated stand-in, not real Groq traffic. Bursts:
+[runs/v2-load-20261119T171412Z](runs/v2-load-20261119T171412Z/comparison.md).
+
+## Measured results: how the overload gap was found and closed
+
+Under sustained overload (86 requests over 236 s, v1's schedule and limits), the first v2 run
+delivered 62.8 % against v1's 67.4 %. Repeated measurement traced the gap to three causes, none of
+them the per-sentence check itself:
+
+| Step | v1 `/ask` | v2 `/v1/ask` | What changed |
+| :-- | :-- | :-- | :-- |
+| First v2 run | 58 of 86 | 54 of 86 | 7 answers stopped mid-stream by the verifier |
+| [F-02](runs/f02-overload-20261122T140530Z/): stand-in fixed, 5 runs each | 57.4 ± 0.5 | 55.6 ± 0.9 | The stand-in split sentences unlike the verifier: 0 stops now |
+| [F-02b](runs/f02b-overload-l4off-20261122T150959Z/): profiling | | 56.2 ± 0.8 (L4 off) | Inline L4 cost ~130 ms per request; a lone tenant evicted its own requests |
+| [F-02c](runs/f02c-overload-20261122T164234Z/): L4 async, work-conserving queue | **57.2 ± 0.4** | **57.0 ± 1.0** | Within run-to-run noise; first verified sentence 489 against 620 ms |
+
+Streaming itself is cheap: in a one-at-a-time profile, splitting, checking, tracing and sending
+events take about 10–15 ms per request. About 46 ms per request under load is still unattributed.
+
+**Real Groq: what happens to a cancelled stream** ([runs/f03-groq-refund-20261122T173322Z](runs/f03-groq-refund-20261122T173322Z/), 10 real calls, `qwen/qwen3.8-27b`):
+
+- No refund appeared within about 1.6 s after a stream was aborted.
+- Groq's token counter dropped by 213–355 per aborted call, between actual use (~46) and prompt
+  plus maximum (443). Its headers are not an exact per-request ledger, so ProviderGuard trusts
+  them for headroom instead of its own estimate.
+- A request-rate limit that the headers do not show returned one 429 after 10 calls in ~2 s;
+  `min_interval_ms` in `[guard]` now spaces call starts.
+
+**Edge cases covered by tests:** another tenant never gets a cached answer (404 before any cache
+lookup); a collection changed or deleted mid-answer ends cleanly and the old answer is not reused;
+a key revoked mid-flight finishes its own answer, its follower still gets the verified answer,
+and the key is refused (401) from then on.
+
+**Deep dive:** <!-- TODO(owner): replace with the published follow-up post URL --> *link to the
+published follow-up post*.
 
 ## Quickstart
 
-### With Docker Compose (the full stack)
-
-Needs Docker, and network access once. No API key.
+### Docker Compose: one command, no key
 
 ```bash
-git clone https://github.com/AyushSingh110/The-Relay
-cd The-Relay
+git clone https://github.com/AyushSingh110/The-Relay && cd The-Relay
 docker compose up --build
 ```
 
-Then open **<http://localhost:8000>**. The first start downloads the three sample papers and
-the embedding models and builds their indexes, which takes several minutes; everything is
-kept in `./data`, so later starts take seconds.
+Open **<http://localhost:8000>**. The first start downloads the three sample papers and the
+models and builds their indexes (several minutes); everything is kept in `./data`, so later
+starts take seconds. Services: `relay` (API and UI), `standin` (the calibrated stand-in model),
+`redis` (shared state). Check it with `docker compose exec relay relay doctor`.
 
-| Service | What it is |
-| :-- | :-- |
-| `relay` | The API and the web UI |
-| `standin` | A stand-in model service, calibrated from real Groq measurements |
-| `redis` | Shared state: the answer cache, coalescing and quota counters across workers |
+### Locally: one process, no Docker, no Redis
 
-Check the stack with `docker compose exec relay relay doctor`. The settings are in
-[docker/relay.compose.toml](docker/relay.compose.toml). Port 8000 is published on this machine
-only, because the development key is enabled for the bundled UI.
-
-### Locally (one process, no Docker, no Redis)
-
-Needs Python 3.12 for the pinned versions below (the package itself supports 3.11+). The web UI
-is already built into the package, so Node.js is not needed to run it.
+Needs Python 3.12 for the pinned versions (the package supports 3.11+; the Docker image uses 3.12
+because the pinned numpy and PyMuPDF have no 3.11 builds). The UI is already built in.
 
 ```bash
-git clone https://github.com/AyushSingh110/The-Relay
-cd The-Relay
-python -m venv .venv && source .venv/bin/activate     # Windows: .venv\Scripts\activate
+python -m venv .venv && source .venv/bin/activate        # Windows: .venv\Scripts\activate
 pip install -r requirements.txt && pip install --no-deps -e .
-cp relay.example.toml relay.toml                      # Windows: copy relay.example.toml relay.toml
-
-# One time: the sample papers, the embedding models and the sample collection's indexes
-python scripts/ingest_papers.py
-python scripts/build_indexes.py --download-models
-python scripts/build_indexes.py
-
-export RELAY_CACHE__MODE=sqlite       # Windows PowerShell: $env:RELAY_CACHE__MODE = "sqlite"
-relay serve                           # the stand-in model: no API key needed
+cp relay.example.toml relay.toml                         # Windows: copy ...
+python scripts/ingest_papers.py                          # one time: the sample papers,
+python scripts/build_indexes.py --download-models        #   the embedding models
+python scripts/build_indexes.py                          #   and the indexes
+export RELAY_CACHE__MODE=sqlite                          # PowerShell: $env:RELAY_CACHE__MODE = "sqlite"
+relay serve                                              # then one command, from here on
 ```
 
 <details>
 <summary><b>Use Groq instead of the stand-in</b></summary>
 
 Replace the stand-in `[[providers.lanes]]` block in `relay.toml` with the commented Groq lane
-below it, then:
-
-```bash
-export GROQ_API_KEY=your_key_here
-export MAX_REAL_CALLS=50              # a hard cap on real calls for this process
-relay serve
-```
-
-`relay doctor` checks the settings, files, key and state store without printing the key or
-any password in the Redis URL.
+below it, then `export GROQ_API_KEY=...` and `export MAX_REAL_CALLS=50` (a hard cap on real calls
+for the process) before `relay serve`. `relay doctor` checks settings, files, the key and the
+state store without printing the key.
 </details>
 
-### Try it
-
-1. The sample collection **v1-papers** (three arXiv papers) is ready as soon as the server
-   starts. Open it and ask, for example, *"How does multi-head attention work?"*
-2. Select a citation chip to read the passage it cites.
-3. Ask something the papers do not cover: the answer is a plain refusal.
-4. To use your own documents, choose **New collection**, then **Add documents** and drop a
-   PDF (or enter an exact arXiv ID such as `1706.03762v7`). Ask once it shows **Ready**.
-
-## Features
-
-| | |
-| :-- | :-- |
-| ✅ **Verified streaming** | The answer is split into sentences as it streams. Each one is checked for structure, grounding in its cited passage, and (optionally) entailment before it is sent. |
-| 🚦 **Quota-aware provider guard** | Every call reserves its tokens against the provider's per-minute and daily limits. No hidden retries; a circuit breaker and a daily stop protect the quota. |
-| ♻️ **Cache and SingleFlight** | Identical questions in flight share one model call, and repeats are served from an exact cache. |
-| 🔀 **Provider router** | Several lanes (models or providers) with fallback, and one ledger of tokens and cost per call. Unpriced lanes report no cost rather than an invented one. |
-| 👥 **Tenants and fair admission** | Hashed API keys, tenant isolation, and a fair queue so one noisy tenant cannot starve the others. |
-| 📚 **Collections** | Upload PDFs into separate collections, each with its own index; answers can only cite their own collection. |
-| 🧭 **Follow-up questions** | Conversations rewrite follow-ups ("and how many heads?") into standalone questions. |
-| 📈 **Observability** | Prometheus metrics at `/metrics`, OpenTelemetry traces, and a per-request waterfall of queue, retrieval, model and verification time. |
-| 🧪 **Evaluation and a CI gate** | An evaluation set, a review screen for grading answers, and a CI job that fails a change that stops answers being grounded. |
-| 🧱 **Several workers (optional)** | With Redis, the cache, coalescing and every lane's limits are shared, so ten identical questions sent to two workers make one model call. |
+**Try it:** open the **v1-papers** collection and ask *"How does multi-head attention work?"*,
+select a citation chip to read its passage, then ask something the papers do not cover: the
+answer is a plain refusal. To use your own documents, create a collection and drop in a PDF.
 
 ## How a question is answered
 
-```mermaid
-flowchart LR
-    UI[Web UI] --> API
-    SDK[API clients] --> API
-    subgraph Relay service
-      API[API gateway<br/>auth, SSE, REST] --> ADM[Admission<br/>per-tenant fairness, priority]
-      ADM --> PIPE[Query pipeline<br/>rewrite, retrieve, gate, generate]
-      PIPE --> VER[Streaming verifier<br/>structure, grounding, entailment]
-      PIPE --> ROUTER[Provider router]
-      ROUTER --> G1[ProviderGuard: model A]
-      ROUTER --> G2[ProviderGuard: model B]
-      API --> ING[Ingestion jobs]
-      PIPE --> IDX[(Per-collection indexes)]
-      ING --> IDX
-      API --> DB[(Metadata store)]
-      PIPE --> CACHE[(Answer cache + SingleFlight)]
-      API --> OBS[Metrics and traces]
-    end
-    CACHE <-.multi-worker.-> REDIS[(Redis: shared cache,<br/>coalescing, quota)]
-    G1 <-.multi-worker.-> REDIS
-    G1 --> P1[Groq or other provider]
-    G2 --> P2[Second model or provider]
-    G1 -.demo or test.-> SI[Stand-in service]
-```
+1. **Admission:** authenticated, queued fairly per tenant (work-conserving: a lone tenant is
+   first come, first served); a request that would miss its deadline is turned away at once.
+2. **Cache and coalescing:** a repeat comes from the cache; an identical question in flight
+   waits for that answer. Keys include the collection and its version.
+3. **Retrieval and the evidence gate:** BM25 plus dense embeddings in the collection's index;
+   weak evidence means a refusal with no model call.
+4. **Guarded generation:** the provider router picks a lane; its ProviderGuard reserves tokens
+   (and can space call starts, `min_interval_ms`) before the call.
+5. **Verification:** each streamed sentence is checked before it is sent; L4 scores arrive in
+   the final event (`[verifier] l4_mode = "async"`).
 
-1. **Admission.** The request is authenticated and queued fairly per tenant. A request that
-   would wait past its deadline is turned away at once, with the reason.
-2. **Cache and coalescing.** A repeat is answered from the cache; an identical question
-   already in flight waits for that answer instead of making a second call.
-3. **Retrieval and the evidence gate.** Hybrid retrieval (BM25 and dense embeddings) finds
-   passages in the collection's own index. If the evidence is too weak, the answer is a
-   refusal and no model call is made.
-4. **Guarded generation.** The router picks a lane, and its guard reserves the tokens against
-   the provider's limits before the call.
-5. **Verification.** Each streamed sentence is checked against the passage it cites; only
-   verified sentences reach you, with their citations.
-
-Everything in the diagram is built. The full design is in
-[docs/ARCHITECTURE_V2.md](docs/ARCHITECTURE_V2.md).
-
-## Measured results
-
-A burst of 30 requests in 2 seconds with the cache on, against the calibrated stand-in model.
-V1 used the same requests, limits and stand-in (`evidence/experiments/exp-20261113T074759Z-c26f18c`).
-V2 is `runs/v2-load-20261119T171412Z`.
-
-| Metric | V1 | V2 |
-| :-- | --: | --: |
-| Requests delivered | 96.7 % | **100.0 %** |
-| Model calls made | 6 | 6 |
-| Cache hits | 7 | 7 |
-| Median total time | 614.2 ms | **498.8 ms** |
-| First verified sentence, median | n/a (answers were buffered) | **324.5 ms** |
-
-Not every scenario improved. Under overload V2 delivers 62.8 % against V1's 67.4 %: an answer
-stopped by the verifier keeps its token reservation at the provider. With the provider's
-per-minute tokens halved, V2 delivers 72.5 % against 77.5 %, within run-to-run noise. All five
-scenarios are compared in
-[runs/v2-load-20261119T171412Z/comparison.md](runs/v2-load-20261119T171412Z/comparison.md).
+The full design is in [docs/ARCHITECTURE_V2.md](docs/ARCHITECTURE_V2.md); decisions in
+[docs/DECISIONS.md](docs/DECISIONS.md).
 
 ## API
 
-Every `/v1` route takes a Bearer API key (`relay keys create --tenant T`). On this machine, the
-development key `relay-dev-key` is accepted by default.
+Every `/v1` route takes a Bearer key (`relay keys create --tenant T`); locally the development key
+`relay-dev-key` is accepted.
 
 ```bash
-curl -N http://localhost:8000/v1/ask \
-  -H "Authorization: Bearer relay-dev-key" \
+curl -N http://localhost:8000/v1/ask -H "Authorization: Bearer relay-dev-key" \
   -H "Content-Type: application/json" \
   -d '{"question": "How many attention heads does the base Transformer use?", "collection_id": "v1-papers"}'
 ```
 
-The answer streams as server-sent events: `accepted`, `status` updates, one `sentence` event
-per verified sentence, `sources`, and a `final` event with the verdict, timings, tokens and
-cache status.
+The answer streams as server-sent events: `accepted`, `status`, one `sentence` per verified
+sentence, `sources`, and `final` (verdict, timings, tokens, cache status, L4 `confidences`).
 
 | Method and path | Purpose |
 | :-- | :-- |
-| `POST /v1/ask` | Ask a question; streams verified sentences (SSE) |
-| `GET /v1/collections` · `POST /v1/collections` | List or create collections |
-| `POST /v1/collections/{id}/documents` | Upload a PDF, or add an arXiv paper by ID |
-| `POST /v1/conversations` | Start a conversation, for follow-up questions |
+| `POST /v1/ask` | Ask; streams verified sentences |
+| `GET` / `POST /v1/collections`, `POST /v1/collections/{id}/documents` | Collections and uploads (PDF or exact arXiv id) |
+| `POST /v1/conversations` | Follow-up questions |
 | `GET /v1/requests/{id}` | A request's timing waterfall |
-| `GET /v1/eval/sets` | Evaluation sets, runs and grades |
 | `GET /healthz` · `GET /metrics` | Health with quota headroom · Prometheus metrics |
 | `POST /ask` | The original v1 endpoint, unchanged |
 
-## Configuration
+## Configuration and commands
 
 Settings come from `relay.toml` (start from [relay.example.toml](relay.example.toml), which
-documents every option). Any setting can be overridden by an environment variable named
-`RELAY_<SECTION>__<KEY>`, for example `RELAY_CACHE__MODE=sqlite` or
-`RELAY_STATE__REDIS_URL=redis://redis:6379/0`.
-
-| Section | Controls |
-| :-- | :-- |
-| `[[providers.lanes]]` | The models: stand-in or Groq, limits, prices, fallback order |
-| `[guard]` · `[queue]` | Quota reservation and admission |
-| `[auth]` | API keys and the development key |
-| `[cache]` · `[state]` | Cache mode; memory (one process) or Redis (several workers) |
-| `[retrieval]` · `[verifier]` · `[rewriter]` | Retrieval presets, verification layers, follow-up rewriting |
-| `[ingestion]` · `[paths]` | Uploads and where data is kept |
-
-### Command line
+documents every option); any setting can be overridden with `RELAY_<SECTION>__<KEY>`.
 
 | Command | What it does |
 | :-- | :-- |
 | `relay serve` | Start the API and the web UI |
 | `relay doctor` | Check settings, files, keys and the state store (never prints secrets) |
-| `relay keys create --tenant T` | Create an API key (stored hashed, shown once); also `list`, `revoke` |
-| `relay tenants` | Manage tenants |
-| `relay eval import-v1 \| run \| report \| gate` | Evaluation and the CI gate |
-| `relay ui build` | Rebuild the web UI into the package |
+| `relay keys create --tenant T` | Create an API key (stored hashed, shown once) |
+| `relay eval run \| report \| gate` | Evaluation and the CI gate |
 
 ## Development
 
 ```bash
 pip install -r requirements-dev.txt && pip install --no-deps -e .
-pytest                  # 1,000+ backend tests: offline, no API key, no Redis server needed
+pytest                       # 1,036 backend tests: offline, no API key, no Redis server
 ruff check .
-cd web && npm ci && npm test && npm run build     # 60 UI tests, type-check and build
+cd web && npm ci && npm test && npm run build      # 60 UI tests, type-check and build
 ```
-
-`requirements.txt` and `requirements-dev.txt` pin the exact versions the tests ran with; they
-are generated by `python scripts/freeze_constraints.py` (along with the Docker image's
-`docker/constraints.txt`). The accepted ranges are in `pyproject.toml`.
-
-<details>
-<summary><b>Project layout</b></summary>
-
-```text
-src/relay/
-  api/            HTTP routes, auth, server-sent events
-  app/            service composition, request log, the built web UI (static/)
-  control/        admission queue, provider guard and router, shared state (memory or Redis)
-  orchestrator/   the query pipeline, evidence gate, rewriter and streaming verifier
-  providers/      Groq and stand-in clients
-  retrieval/      BM25 and dense retrieval, indexes, embeddings
-  ingestion/      PDF parsing and indexing jobs
-  store/          the SQLite metadata store and its migrations
-  telemetry/      metrics and tracing
-  eval/           evaluation sets, runs and the CI gate
-  standin/        the calibrated stand-in model service
-web/              the React and TypeScript web UI
-docker/           compose settings, entrypoint, pinned constraints
-docs/             architecture and decisions
-eval/             evaluation questions and the CI baseline
-evidence/         v1 measurements: Groq probes, stand-in calibration, experiment runs
-runs/             v2 load-test runs cited in the results above
-```
-
-</details>
 
 ## Scope
 
-Not built, by design: fine-tuning, agents that take actions, sources other than PDF (plain
-text and Markdown are planned), and enterprise sign-in (access is by API keys, one or more per
-tenant).
-
-## Documentation
-
-- [docs/ARCHITECTURE_V2.md](docs/ARCHITECTURE_V2.md): the design
-- [docs/DECISIONS.md](docs/DECISIONS.md): the decision log
-- [runs/v2-load-20261119T171412Z/comparison.md](runs/v2-load-20261119T171412Z/comparison.md): the v1 and v2 load comparison
-- The v1 runbook (probes, evidence, `results.csv`) is in the README of tag `v1-submission`.
+Not built, by design: fine-tuning, agents that take actions, sources other than PDF, and
+enterprise sign-in (access is by API keys, one or more per tenant).
