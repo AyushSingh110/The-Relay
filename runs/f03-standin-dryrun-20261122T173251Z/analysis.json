@@ -1,0 +1,70 @@
+{
+  "refill_rate_tokens_per_s": 133.394,
+  "probe_cost_estimate": 31.5,
+  "chain_window_s": 2.68,
+  "steps": [
+    {
+      "index": 2,
+      "kind": "abort",
+      "aborted": true,
+      "content_deltas": 3,
+      "usage": null,
+      "reserved_at_start": 456.0,
+      "post_delta": 34.3,
+      "settlement_change": 2.8,
+      "abort_to_next_headers_ms": 277.1
+    },
+    {
+      "index": 5,
+      "kind": "abort",
+      "aborted": true,
+      "content_deltas": 3,
+      "usage": null,
+      "reserved_at_start": 487.3,
+      "post_delta": 33.3,
+      "settlement_change": 1.8,
+      "abort_to_next_headers_ms": 352.4
+    },
+    {
+      "index": 7,
+      "kind": "abort",
+      "aborted": true,
+      "content_deltas": 3,
+      "usage": null,
+      "reserved_at_start": 486.7,
+      "post_delta": 34.5,
+      "settlement_change": 3.0,
+      "abort_to_next_headers_ms": 278.3
+    },
+    {
+      "index": 9,
+      "kind": "control",
+      "aborted": false,
+      "content_deltas": 21,
+      "usage": {
+        "prompt_tokens": 89,
+        "completion_tokens": 38,
+        "total_tokens": 127,
+        "completion_tokens_details": {
+          "reasoning_tokens": 0
+        },
+        "completion_time": 0.098078,
+        "total_time": 0.31438
+      },
+      "reserved_at_start": 486.1,
+      "post_delta": -327.8,
+      "settlement_change": -359.3,
+      "abort_to_next_headers_ms": 325.4
+    }
+  ],
+  "outcome": {
+    "label": "A-or-C: no refund at abort time",
+    "refund_per_abort": [
+      -2.8,
+      -1.8,
+      -3.0
+    ],
+    "unused_reservation_per_abort_approx": 397,
+    "control_settlement_change": -359.3
+  }
+}

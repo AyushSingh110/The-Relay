@@ -1,0 +1,12 @@
+{
+  "kind": "f03-refund-probe",
+  "source": "groq (real)",
+  "model": "qwen/qwen3.8-27b",
+  "real_calls": 10,
+  "call_cap": 10,
+  "abort_max_tokens": 400,
+  "abort_after_deltas": 3,
+  "stopped": "the provider returned 429: stopping (never retried)",
+  "git": "e66afb6",
+  "finished_at": "2026-11-22T17:33:24.213416+00:00"
+}

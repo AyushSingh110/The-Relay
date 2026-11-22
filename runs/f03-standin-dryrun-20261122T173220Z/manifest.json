@@ -1,0 +1,12 @@
+{
+  "kind": "f03-refund-probe",
+  "source": "stand-in (dry run, 0 real calls)",
+  "model": "qwen/qwen3.8-27b",
+  "real_calls": 0,
+  "call_cap": 10,
+  "abort_max_tokens": 400,
+  "abort_after_deltas": 3,
+  "stopped": null,
+  "git": "e66afb6",
+  "finished_at": "2026-11-22T17:32:24.804082+00:00"
+}
