@@ -43,9 +43,10 @@ CLAUDE.md
 .claude/
 ENGINEERING_LOG.md
 IMPLEMENTATION_PLAN.md
-reports/*
-!reports/phase-v2-14-load-revalidation.md
-!reports/v2-07-l4-labels.json
+docs/IMPLEMENTATION_PLAN_V2.md
+ASSIGNMENT.md
+demo/
+reports/
 
 # --- Local tool output ---
 .playwright-mcp/

@@ -33,7 +33,7 @@ Missing categories and fewer than 18 questions produce warnings.
 
 ## Retriever-trap ideas grounded in P03 extraction findings (for your choice only)
 
-P03 (`reports/phase-03-pdf-ingestion.md` §8.4) deliberately left these source-text
+The PDF-ingestion phase (P03) deliberately left these source-text
 artefacts unchanged so they remain measurable failure cases:
 - **`garbled_extraction`**:
   - flattened equations (Attention p.4: `softmax(QK^T / √d_k / )V (1)`; the `1/√d_k` numerator drifts);

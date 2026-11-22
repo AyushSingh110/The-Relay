@@ -192,7 +192,7 @@ Not every scenario improved. Under overload V2 delivers 62.8 % against V1's 67.4
 stopped by the verifier keeps its token reservation at the provider. With the provider's
 per-minute tokens halved, V2 delivers 72.5 % against 77.5 %, within run-to-run noise. All five
 scenarios are compared in
-[reports/phase-v2-14-load-revalidation.md](reports/phase-v2-14-load-revalidation.md).
+[runs/v2-load-20261119T171412Z/comparison.md](runs/v2-load-20261119T171412Z/comparison.md).
 
 ## API
 
@@ -279,7 +279,7 @@ src/relay/
   standin/        the calibrated stand-in model service
 web/              the React and TypeScript web UI
 docker/           compose settings, entrypoint, pinned constraints
-docs/             architecture, implementation plan, decisions
+docs/             architecture and decisions
 eval/             evaluation questions and the CI baseline
 evidence/         v1 measurements: Groq probes, stand-in calibration, experiment runs
 runs/             v2 load-test runs cited in the results above
@@ -296,7 +296,6 @@ tenant).
 ## Documentation
 
 - [docs/ARCHITECTURE_V2.md](docs/ARCHITECTURE_V2.md): the design
-- [docs/IMPLEMENTATION_PLAN_V2.md](docs/IMPLEMENTATION_PLAN_V2.md): the phase plan
 - [docs/DECISIONS.md](docs/DECISIONS.md): the decision log
-- [reports/phase-v2-14-load-revalidation.md](reports/phase-v2-14-load-revalidation.md): the v1 and v2 load comparison
+- [runs/v2-load-20261119T171412Z/comparison.md](runs/v2-load-20261119T171412Z/comparison.md): the v1 and v2 load comparison
 - The v1 runbook (probes, evidence, `results.csv`) is in the README of tag `v1-submission`.
