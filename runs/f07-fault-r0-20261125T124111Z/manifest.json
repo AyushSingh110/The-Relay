@@ -1,0 +1,33 @@
+{
+  "kind": "f07-fault-overload",
+  "started_at": "2026-11-25T12:41:11.715899+00:00",
+  "git": {
+    "commit": "0ac8c6a",
+    "dirty": true,
+    "dirty_files": [
+      "M src/relay/standin/profile.py",
+      " M src/relay/standin/server.py",
+      " M tests/test_standin.py"
+    ]
+  },
+  "scenario": "overload",
+  "repeat": 5,
+  "standin_profile": "evidence\\standin_calibration\\cal-20261113T022403Z-3f687c6\\profile.json",
+  "faults.uncited_rate": 0.0,
+  "seeds": {
+    "run-1": 701,
+    "run-2": 702,
+    "run-3": 703,
+    "run-4": 704,
+    "run-5": 705
+  },
+  "rate_basis": "V2-06 real streaming replay: 1 stopped answer in 55 answered rows",
+  "v1_reference_run": "exp-20261113T074816Z-c26f18c",
+  "real_calls": 0,
+  "paths": {
+    "v1_ask": "POST /ask (buffered, current code)",
+    "v2_stream": "POST /v1/ask (verified streaming, v1-papers)"
+  },
+  "order": "alternating v1_ask, v2_stream per run index (paired seeds)",
+  "ended_at": "2026-11-25T13:22:59.201417+00:00"
+}

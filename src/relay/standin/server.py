@@ -21,6 +21,7 @@ from typing import Annotated, Any, Final, Literal
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse, Response, StreamingResponse
 from pydantic import BaseModel, ConfigDict, Field, ValidationError
+from starlette.requests import ClientDisconnect
 from starlette.types import Receive, Scope, Send
 
 from relay.orchestrator.verifier import split_sentences
@@ -277,6 +278,8 @@ class Stats:
     errors_injected: int = 0
     stragglers: int = 0
     stalls: int = 0
+    uncited_injected: int = 0
+    client_gone: int = 0  # left before its body arrived
     completed_streams: int = 0
     disconnects: int = 0
     prompt_tokens: int = 0
@@ -289,7 +292,9 @@ class Stats:
             "by_status": {str(k): v for k, v in sorted(self.by_status.items())},
             "rate_limited": dict(sorted(self.rate_limited.items())),
             "errors_injected": self.errors_injected, "stragglers": self.stragglers,
-            "stalls": self.stalls, "completed_streams": self.completed_streams,
+            "stalls": self.stalls, "uncited_injected": self.uncited_injected,
+            "client_gone": self.client_gone,
+            "completed_streams": self.completed_streams,
             "disconnects": self.disconnects, "prompt_tokens": self.prompt_tokens,
             "completion_tokens": self.completion_tokens, "peak_active": self.peak_active,
         }
@@ -391,7 +396,13 @@ def _plan(state: StandinState, model: ModelProfile, payload: ChatPayload, n_prom
     budget = max_completion - reasoning
     pieces: list[tuple[str, int]] = []
     finish = "stop"
-    for piece in re.findall(r"\S+\s*", extractive_answer(payload.messages)):
+    answer = extractive_answer(payload.messages)
+    if profile.faults.uncited_rate > 0 and rng.random() < profile.faults.uncited_rate:
+        dropped = _drop_one_tag(answer, rng)
+        if dropped != answer:
+            state.stats.uncited_injected += 1
+        answer = dropped
+    for piece in re.findall(r"\S+\s*", answer):
         tokens = output_tokens(model, piece.strip())
         if tokens > budget:
             finish = "length"
@@ -402,6 +413,15 @@ def _plan(state: StandinState, model: ModelProfile, payload: ChatPayload, n_prom
                  token_delay_s=model.latency.inter_token_ms / 1000.0 * scale,
                  reasoning_tokens=reasoning, pieces=tuple(pieces), finish_reason=finish,
                  stall=stall, prompt_tokens=n_prompt)
+
+
+def _drop_one_tag(answer: str, rng: random.Random) -> str:
+    """F-07: ``answer`` with the citation tag of one sentence (chosen by ``rng``) removed."""
+    tags = list(re.finditer(r" \[P\d+\]", answer))
+    if not tags:
+        return answer  # a refusal or an untagged answer: nothing to drop
+    tag = tags[rng.randrange(len(tags))]
+    return answer[: tag.start()] + answer[tag.end():]
 
 
 def _usage(plan: _Plan) -> dict[str, Any]:
@@ -452,7 +472,12 @@ def create_standin_app(profile: StandinProfile | None = None, *,
 
     async def _chat(request: Request) -> Response:
         try:
-            payload = ChatPayload.model_validate_json(await request.body())
+            body = await request.body()
+        except ClientDisconnect:
+            state.stats.client_gone += 1  # nobody to answer; not an app error
+            return Response(status_code=499)
+        try:
+            payload = ChatPayload.model_validate_json(body)
         except ValidationError as exc:
             fields = sorted({".".join(str(p) for p in e["loc"]) for e in exc.errors()})
             return _error(400, f"invalid request body: {', '.join(fields)}",

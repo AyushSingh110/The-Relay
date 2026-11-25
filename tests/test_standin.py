@@ -248,6 +248,54 @@ def test_every_sentence_the_relay_splits_from_a_standin_answer_is_cited(
     assert "uncited_sentence" not in codes
 
 
+# F-07: an injected uncited sentence, so overload runs can include the verifier stops a real
+# model causes (F-01 made the stand-in's own answers always cite).
+async def test_an_injected_uncited_sentence_is_one_sentence_without_a_tag() -> None:
+    async with standin(profile(faults=FaultModel(uncited_rate=1.0))) as (provider, state, _):
+        result = await complete(provider, rag_request())
+    units = split_sentences(result.content)
+    uncited = [unit for unit in units if not TAG_PATTERN.search(unit)]
+    assert len(units) >= 1 and len(uncited) == 1
+    assert "uncited_sentence" in {f.code for f in verify(result.content, PASSAGES).failures}
+    assert state.stats.uncited_injected == 1
+    assert state.stats.as_dict()["uncited_injected"] == 1
+
+
+async def test_no_uncited_sentence_is_injected_by_default() -> None:
+    async with standin(profile()) as (provider, state, _):
+        result = await complete(provider, rag_request())
+    assert all(TAG_PATTERN.search(unit) for unit in split_sentences(result.content))
+    assert state.stats.uncited_injected == 0
+
+
+async def test_a_client_that_leaves_before_its_body_arrives_is_not_an_app_error() -> None:
+    """F-07 run log: a client gave up while its request body was still being sent and the
+    stand-in raised ``ClientDisconnect`` out of the ASGI app (an ERROR traceback)."""
+    app = create_standin_app(profile(), clock=FakeClock())
+    sent: list[dict[str, Any]] = []
+
+    async def receive() -> dict[str, Any]:
+        return {"type": "http.disconnect"}
+
+    async def send(message: dict[str, Any]) -> None:
+        sent.append(message)
+
+    scope = {"type": "http", "asgi": {"version": "3.0"}, "http_version": "1.1",
+             "method": "POST", "scheme": "http", "path": "/openai/v1/chat/completions",
+             "raw_path": b"/openai/v1/chat/completions", "query_string": b"",
+             "headers": [(b"content-type", b"application/json")], "client": ("127.0.0.1", 1),
+             "server": ("127.0.0.1", 2), "root_path": ""}
+    await app(scope, receive, send)  # must not raise
+    stats = app.state.standin.stats
+    assert stats.client_gone == 1 and stats.by_status[499] == 1
+
+
+def test_the_uncited_rate_is_a_fraction() -> None:
+    assert FaultModel(uncited_rate=1.0).uncited_rate == 1.0
+    with pytest.raises(ValueError, match="uncited_rate"):
+        FaultModel(uncited_rate=1.5)
+
+
 async def test_truncation_at_max_completion_tokens_reports_length() -> None:
     async with standin(profile(reasoning=3)) as (provider, _, _):
         result = await complete(provider, rag_request(max_tokens=6))

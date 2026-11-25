@@ -106,3 +106,24 @@ Owner decisions for v2 work, newest last. Each entry records what was decided, b
     no product change was needed.
   - **Next:** the repository is the release candidate for `v2.0.0`. Tagging and pushing are the
     owner's.
+- **F-07 (pending owner review, 2026-11-25): stress test with real verifier stops; judge tested on fixed sets.**
+  - **Stand-in:** new `faults.uncited_rate` (default 0): the share of answers in which one
+    sentence loses its citation tag. It is test tooling only and changes nothing at 0. The
+    stand-in also answers a client that left before its body arrived with 499 instead of
+    raising `ClientDisconnect` out of the app.
+  - **Overload, 5 paired runs per rate** (`runs/f07-fault-r*-20261125T*`, summary
+    `runs/f07-summary-*.md`). v2 − v1 delivered:
+    - 0 %: −0.2 (95 % CI −1.8 to +1.4), replicating F-02c on other seeds;
+    - ~1 % effective: +0.2 (−1.4 to +1.8);
+    - ~6 % effective: −0.8 (−1.8 to +0.2);
+    - ~27 % effective: −2.6 (−7.3 to +2.1); per run −3, 0, −9, 0, −1.
+  - **Mechanism at the high rate:** cancelled streams (7.6 per run) hold their reservation, and
+    the predicted-wait refusals rise (up to 22 against ~10). The stand-in holds the full
+    reservation on a cancel; Groq held about 50–80 % in F-03, so this overstates Groq's cost.
+  - **The judge's fixed sets** (thresholds saved first; sentences from the owner's question set):
+    - A, supported quotes: 39/40 kept;
+    - B, forbidden claims next to the right passage: 33/40 blocked (L1–L2 pass 34/40);
+    - C, the quote next to a different passage: 39/40 blocked.
+    The 7 B claims that pass L2 and L4 are role or direction swaps. L4 stays advisory.
+  - **Correction to F-03:** the aborted calls' drops were 216.5–354.6 tokens (raw
+    `analysis.json`), so "213–355" in the F-03 entry and report should read **217–355**.

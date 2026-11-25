@@ -8,7 +8,7 @@
   <img alt="FastAPI" src="https://img.shields.io/badge/API-FastAPI-009688?logo=fastapi&logoColor=white">
   <img alt="React and TypeScript" src="https://img.shields.io/badge/UI-React%20%2B%20TypeScript-3178C6?logo=typescript&logoColor=white">
   <img alt="Docker Compose" src="https://img.shields.io/badge/run-docker%20compose%20up-2496ED?logo=docker&logoColor=white">
-  <img alt="1,036 offline tests" src="https://img.shields.io/badge/tests-1%2C036%20offline-0b6b5e">
+  <img alt="1,040 offline tests" src="https://img.shields.io/badge/tests-1%2C040%20offline-0b6b5e">
 </p>
 
 **The Relay** answers questions from your own PDFs. It streams the answer one sentence at a time,
@@ -31,7 +31,7 @@ from real Groq measurements.
 
 | | |
 | :-- | :-- |
-| ✅ **1,036 automated tests** | Offline, no API key or Redis server needed; plus 60 UI tests |
+| ✅ **1,040 automated tests** | Offline, no API key or Redis server needed; plus 60 UI tests |
 | 🔎 **Sentence-level verification** | L1 structure, L2 grounding, L3 refusal form before each sentence is sent; L4 entailment scored in the background |
 | ♻️ **Bursts** | 30 requests in 2 s: **30 of 30 delivered from 6 model calls** (17 joined a call in flight, 7 from the cache) |
 | ⚖️ **Overload parity with v1** | **57.0 of 86** delivered against v1's 57.2 (5 runs each, within run-to-run noise), with the **first verified sentence 131 ms sooner** (489 against 620 ms, fast requests) |
@@ -53,17 +53,27 @@ them the per-sentence check itself:
 | [F-02b](runs/f02b-overload-l4off-20261122T150959Z/): profiling | | 56.2 ± 0.8 (L4 off) | Inline L4 cost ~130 ms per request; a lone tenant evicted its own requests |
 | [F-02c](runs/f02c-overload-20261122T164234Z/): L4 async, work-conserving queue | **57.2 ± 0.4** | **57.0 ± 1.0** | Within run-to-run noise; first verified sentence 489 against 620 ms |
 
+**When sentences really fail** ([F-07](runs/f07-summary-20261125T154240Z.md), the stand-in drops one citation in a set share of
+answers; 5 paired runs per rate): v2 − v1 delivered is −0.2, +0.2 and −0.8 at 0, ~1 and ~6 % bad
+answers (each within noise), and −2.6 at ~27 % (per run −3, 0, −9, 0, −1), where cancelled
+streams hold their quota. The stand-in holds the full reservation on a cancel; Groq held less.
+
 Streaming itself is cheap: in a one-at-a-time profile, splitting, checking, tracing and sending
 events take about 10–15 ms per request. About 46 ms per request under load is still unattributed.
 
 **Real Groq: what happens to a cancelled stream** ([runs/f03-groq-refund-20261122T173322Z](runs/f03-groq-refund-20261122T173322Z/), 10 real calls, `qwen/qwen3.8-27b`):
 
 - No refund appeared within about 1.6 s after a stream was aborted.
-- Groq's token counter dropped by 213–355 per aborted call, between actual use (~46) and prompt
+- Groq's token counter dropped by 217–355 per aborted call, between actual use (~46) and prompt
   plus maximum (443). Its headers are not an exact per-request ledger, so ProviderGuard trusts
   them for headroom instead of its own estimate.
 - A request-rate limit that the headers do not show returned one 429 after 10 calls in ~2 s;
   `min_interval_ms` in `[guard]` now spaces call starts.
+
+**The L4 judge on fixed sets** (thresholds saved before scoring): it kept 39 of 40 supported quotes,
+blocked 39 of 40 quotes paired with the wrong passage, and blocked 33 of 40 look-alike false claims,
+34 of which pass the word-level checks. The 7 it missed are role or direction swaps, so it stays
+advisory.
 
 **Edge cases covered by tests:** another tenant never gets a cached answer (404 before any cache
 lookup); a collection changed or deleted mid-answer ends cleanly and the old answer is not reused;
@@ -171,7 +181,7 @@ documents every option); any setting can be overridden with `RELAY_<SECTION>__<K
 
 ```bash
 pip install -r requirements-dev.txt && pip install --no-deps -e .
-pytest                       # 1,036 backend tests: offline, no API key, no Redis server
+pytest                       # 1,040 backend tests: offline, no API key, no Redis server
 ruff check .
 cd web && npm ci && npm test && npm run build      # 60 UI tests, type-check and build
 ```

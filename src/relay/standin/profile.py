@@ -88,6 +88,9 @@ class FaultModel(BaseModel):
     stall_rate: Fraction = 0.0
     stall_after_pieces: Annotated[int, Field(ge=0)] = 3
     stall_s: Positive = 60.0
+    # F-07: the share of answers in which one sentence loses its citation tag, so load runs
+    # include the verifier stops a real model causes. 0 draws nothing from the request RNG.
+    uncited_rate: Fraction = 0.0
 
 
 class StandinProfile(BaseModel):
@@ -164,6 +167,8 @@ COMMON_PROVENANCE: Final[dict[str, str]] = {
     "faults.error_rate": "assumed: 0 errors in 16 real calls; no failure rate measured",
     "faults.straggler_rate": "assumed: not measured; set per experiment",
     "faults.stall_rate": "assumed: no stalled stream observed in 16 real calls",
+    "faults.uncited_rate": "assumed: 0 by default; set per experiment (F-07 uses the real "
+                           "streaming replay's stop rate, 1 in 55)",
     "limits.rpm": "not measured: Groq sends no RPM header and no minute-limit probe was "
                   "approved; set per experiment",
     "limits.tpd": "not measured: Groq sends no TPD header; set per experiment",
