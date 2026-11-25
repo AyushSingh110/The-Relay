@@ -83,7 +83,7 @@ Each decision names the alternative that was rejected and why.
 | D9 | **Semantic cache stays out of the default path** | Turn it on for hit rate | The v1 reason still holds: a near-duplicate match can serve a confidently wrong cited answer. It may return later as an experiment gated by the verifier. |
 | D10 | **React + Vite web UI**, built to static files and served by the API | Server-rendered framework | No second runtime to deploy. |
 
-**New dependencies this requires** (each needs owner approval, because `CLAUDE.md` currently forbids several): `aiosqlite` or `sqlite3` with a thread pool, `prometheus-client`, `opentelemetry-sdk`, `python-multipart`, an ONNX entailment model, Docker for packaging, and optionally `redis`. No LangChain, LlamaIndex or agent framework.
+**New dependencies this requires** (each needs owner approval, because the project's dependency policy currently forbids several): `aiosqlite` or `sqlite3` with a thread pool, `prometheus-client`, `opentelemetry-sdk`, `python-multipart`, an ONNX entailment model, Docker for packaging, and optionally `redis`. No LangChain, LlamaIndex or agent framework.
 
 ## 5. Data model and ingestion
 
@@ -259,7 +259,7 @@ Multi-worker operation needs the Redis `StateStore` for the cache, coalescing an
 
 ## 16. Open decisions for the owner
 
-1. Approve this architecture and the new dependencies (§4), and update `CLAUDE.md` accordingly.
+1. Approve this architecture and the new dependencies (§4), and update the dependency policy accordingly.
 2. The product name and whether the repository stays one repo.
 3. The second model lane for fallback.
 4. Whether L4 entailment is in the MVP or after it.

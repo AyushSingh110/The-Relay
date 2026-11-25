@@ -3,7 +3,8 @@ docs/ARCHITECTURE_V2.md §10).
 
 - ``eval_set`` (per collection) holds ``eval_question`` rows. A question's full owner-written
   spec (``relay.eval.questions.EvalQuestion`` as JSON) is kept in ``spec``; the questions
-  themselves are never written here by code, only imported (CLAUDE.md §5.15).
+  themselves are never written here by code, only imported (project rule: questions are
+  written by people).
 - ``eval_run`` is one evaluation of a set: imported from v1 evidence, a stand-in run (live
   retrieval or a recorded replay of v1's passages) or, with the owner's approval, a real one.
 - ``eval_answer`` is one answer of a run, with the citations and passages it was given.

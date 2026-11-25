@@ -1,8 +1,8 @@
 # Evaluation questions: how to write and grade them
 
 The owner writes the questions (at least 15, target 18) in `eval/questions.json`.
-Claude provides the schema, validator and grading tooling only. It does not write,
-rewrite or fill in questions; P04B checks the questions against the PDFs and *reports*
+The tooling provides the schema, validator and grading only. It never writes,
+rewrites or fills in questions; P04B checks the questions against the PDFs and *reports*
 any discrepancies.
 
 Start from `eval/questions.template.json`. Every `<...>` placeholder must be replaced:

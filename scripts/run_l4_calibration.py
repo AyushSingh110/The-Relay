@@ -75,8 +75,8 @@ def render(rows: Sequence[CalibrationRow], *, model: str, seconds: float) -> str
         "group is counted below, because both are already stopped.",
         "- **Score:** a sentence's L4 score is the best entailment probability over the "
         "passages it cites. A threshold blocks a shown sentence whose score is below it.",
-        "- **Labels:** `reports/v2-07-l4-labels.json` holds per-sentence labels **proposed "
-        "by Claude Code and not yet reviewed** (owner decision 2026-11-20). Every rate below "
+        "- **Labels:** `reports/v2-07-l4-labels.json` holds per-sentence labels **drafted "
+        "by an AI assistant and not yet reviewed** (owner decision 2026-11-20). Every rate below "
         "is provisional until you review them.",
         f"- **Unlabelled shown sentences:** {len(unlabelled)}.", "",
         "## If 'should block' means not fully supported (not_supported or partially_supported)",

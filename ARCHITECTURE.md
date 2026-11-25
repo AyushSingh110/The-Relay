@@ -223,7 +223,7 @@ The Phase 00 web check reported the following documented meanings. **They are tr
 | `x-ratelimit-reset-tokens` | Time until TPM replenishes | Seconds-scale duration |
 | `retry-after` | Seconds to wait; on `429` only | Observed only if an owner-approved limit probe runs |
 
-RPM and TPD are not expected in headers; they come from the Groq console/docs and, if the owner approves a minute-limit probe, from the `429` body. Every raw header seen is stored in the probe evidence so any misreading can be re-checked. If a header behaves differently from the table, the parser and this table are corrected (via the §7 protocol in `CLAUDE.md`).
+RPM and TPD are not expected in headers; they come from the Groq console/docs and, if the owner approves a minute-limit probe, from the `429` body. Every raw header seen is stored in the probe evidence so any misreading can be re-checked. If a header behaves differently from the table, the parser and this table are corrected (via the project's architecture-change protocol).
 
 ### 9.2 Responsibilities
 - **Admission queue (application layer):** queue depth, deadlines, disconnect checks, predictive shedding. No provider-header logic.
@@ -258,7 +258,7 @@ Full-jitter exponential backoff honouring `retry-after`; no retry when the wait 
 
 ## 11. Evaluation Questions and Grading **[OWNER-DECIDED: owner authors questions]**
 
-- **Authorship:** the owner writes ≥15 (target 18) questions. Claude prepares the schema, template, validator and grading tooling, and later **verifies** each question's expected answer and paper/page references against the extracted PDFs, reporting discrepancies without silently editing the owner's content.
+- **Authorship:** the owner writes ≥15 (target 18) questions. The schema, template, validator and grading tooling are prepared separately, and each question's expected answer and paper/page references are later **verified** against the extracted PDFs, with discrepancies reported and never silently edited.
 - **Question schema (`eval/questions.json`):** `id`, `author`, `category`, `question`, `answerable`, `expected_answer`, `required_facts[]`, `gold_citations[] {paper_id, page, section, quote}`, `forbidden_claims[]`, `trap_type` (nullable), `notes`.
 - **Coverage target [PROPOSED]:** direct factual; multi-hop/cross-section; numeric/technical detail; cross-paper/ambiguous; **≥3 unanswerable**; **≥3 retriever traps** that cover the three naive-retriever failure modes for the write-up. Candidate failure modes: bibliography chunks matching keywords; shared vocabulary across papers ("Transformer", "attention", "chunk"); numbers in tables or equations split or garbled by extraction; answers leaking from other versions of a paper.
 - **Grade labels:** exactly `correct`, `wrong`, `refused_correctly`, `refused_wrongly`, or blank when no answer was delivered or the row is ungraded (load/stand-in rows). No other values.

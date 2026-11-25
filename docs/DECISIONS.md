@@ -23,7 +23,7 @@ Owner decisions for v2 work, newest last. Each entry records what was decided, b
   - `strong` holds the title, short names, aliases and arXiv id, as regular expressions in v1's own order;
   - `weak` holds the topics.
 
-  Plain `title`, `short_names` and arXiv id fields sit alongside them. The reason is exact v1 pattern order: v1 interleaves the arXiv id among H-Net's aliases, and the order appears in recorded scope reasons. Stored patterns are validated (they must compile) and refreshed for v1 papers at start-up. A foreign document is named only by its title and short names, never by its aliases or topics. (Proposed by Claude Code, 2026-11-19.)
+  Plain `title`, `short_names` and arXiv id fields sit alongside them. The reason is exact v1 pattern order: v1 interleaves the arXiv id among H-Net's aliases, and the order appears in recorded scope reasons. Stored patterns are validated (they must compile) and refreshed for v1 papers at start-up. A foreign document is named only by its title and short names, never by its aliases or topics. (Proposed 2026-11-19.)
 - **V2-05:** The partial-answer rate on the v1 questions is measured by **replaying the 63 recorded Table 3 answers** through the streaming path (splitter, per-sentence verifier, final pass). There are no real calls; the stand-in's rate is reported separately (owner, 2026-11-19).
 - **V2-05:** Property tests use a **seeded random generator, with no new dependency** (Hypothesis is not added) (owner, 2026-11-19).
 - **V2-05:** `POST /v1/ask` without a `collection_id` answers from the caller's **`v1-papers` collection** (owner, 2026-11-19).
@@ -31,7 +31,7 @@ Owner decisions for v2 work, newest last. Each entry records what was decided, b
   - **Node is a build-time tool only.** `relay ui build` runs `npm run build` and copies `web/dist/` to `src/relay/app/static/`. No Node dependency is added to `pyproject.toml`.
   - **Frontend tests use Jest + React Testing Library.**
   - **The Bearer key is read at build time from `VITE_API_KEY`.** Until V2-10 the API accepts any key for the development tenant, so the default `relay-dev-key` is not a secret.
-- **V2-06 [PROPOSED, pending owner approval]:** Rulings made while building the UI (Claude Code, 2026-11-19):
+- **V2-06 [PROPOSED, pending owner approval]:** Rulings made while building the UI (2026-11-19):
   - **The "rerank" preset option sends `retrieval_preset: "balanced_rerank"`**, the backend's reranking preset.
   - **The per-answer time bar is estimated in the browser** from when each `status` event arrived, and it says so. `final` does not yet carry a span breakdown (ARCHITECTURE_V2 §11). The UI uses `final.spans` as soon as the server sends it.
   - **The `sources` event gains `short_name` and the full passage `text`.** `text_excerpt` is unchanged. Citation chips need the paper's short name, and the source panel highlights within the whole passage. Cached answers still carry no passage text; the panel says so.
@@ -40,7 +40,7 @@ Owner decisions for v2 work, newest last. Each entry records what was decided, b
   - **The source panel shows the cited passage text.** Opening the PDF at the cited page (V2-06 plan, task 3) is not built: there is no endpoint that serves PDFs.
   - **The built `src/relay/app/static/` is neither gitignored nor committed.** Whether to commit the build output is the owner's decision.
 - **V2-07: L4 model.** The candidates are `cross-encoder/nli-MiniLM2-L6-H768` (Apache-2.0; full and int8 ONNX) and, second, `cross-encoder/nli-deberta-v3-xsmall` (Apache-2.0, ONNX). `typeform/distilbert-base-uncased-mnli` is replaced: it has no ONNX export and no licence, and converting it would need PyTorch. The models run on the onnxruntime and tokenizers already installed through fastembed: no new Python dependency and no sentence-transformers or PyTorch. They are downloaded into `data/models` (owner, 2026-11-20).
-- **V2-07: L4 calibration labels.** The v1 grades are per answer, rubric-proposed and unreviewed. So the calibration table is computed against **per-sentence labels proposed by Claude Code** ("supported / not supported by its cited passage"), marked as unreviewed proposals. The owner reviews them before any blocking threshold is set (owner, 2026-11-20).
+- **V2-07: L4 calibration labels.** The v1 grades are per answer, rubric-proposed and unreviewed. So the calibration table is computed against **AI-drafted per-sentence labels** ("supported / not supported by its cited passage"), marked as unreviewed proposals. The owner reviews them before any blocking threshold is set (owner, 2026-11-20).
 - **V2-07: L3 in streaming.** A refusal-shaped first sentence is **held, and decided at the end**, as the INSUFFICIENT_EVIDENCE marker is. If only refusal-shaped sentences (or nothing) follow, the answer is a verified refusal and is cached. If a real claim follows, the answer stops at once and is refused, not cached. The user sees the collection's refusal message, not the model's sentence. After verified sentences, a refusal-shaped sentence stops the answer as partial (owner, 2026-11-20).
 - **V2-07: L3 in the whole-answer (buffered) verifier, including v1's `POST /ask`.** A refusal-shaped sentence among claims makes the answer **BLOCKED**, as v1 treats any failed sentence (buffered mode has no partials). An answer made only of refusal-shaped sentences is `REFUSAL_VERIFIED`. The Table 3 verdicts this changes are intended changes (owner, 2026-11-20).
 
@@ -55,7 +55,7 @@ Owner decisions for v2 work, newest last. Each entry records what was decided, b
   - A dead leader's followers end with `internal_error` and `shed_reason: leader_lost`
     once its lock expires; there is no takeover.
   - The cache and coalescing fail open; the shared quota fails closed.
-  - `redis` and `fakeredis` are approved dependencies (CLAUDE.md section 4.1), as is Docker
+  - `redis` and `fakeredis` are approved dependencies (the project's dependency policy), as is Docker
     for packaging.
 - **v2 release (owner, 2026-11-21).** With V2-13 done, every phase of
   `docs/IMPLEMENTATION_PLAN_V2.md` is implemented. Work moves to release packaging:
@@ -135,3 +135,11 @@ Owner decisions for v2 work, newest last. Each entry records what was decided, b
   36 correct, 8 partial, 0 incorrect of 44 answered; 1 wrong refusal; 17/17 correct refusals. The
   rubric's literal proposal (19/45) was a large undercount. The grades are kept in `scratch/`,
   because `evidence/` is frozen.
+- **Open-source release housekeeping (owner, 2026-11-25).**
+  - MIT license; package version 2.0.0, with SPDX license metadata.
+  - Community files: CONTRIBUTING, CODE_OF_CONDUCT, SECURITY, CHANGELOG, issue and PR
+    templates.
+  - The F-series experiment scripts are published in `scripts/experiments/`.
+  - The three flawed F-03 dry runs were removed from git; the validated one and the live run
+    stay.
+  - Tracked files use neutral wording (no tool names; no references to local-only files).

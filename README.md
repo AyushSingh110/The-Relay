@@ -9,6 +9,7 @@
   <img alt="React and TypeScript" src="https://img.shields.io/badge/UI-React%20%2B%20TypeScript-3178C6?logo=typescript&logoColor=white">
   <img alt="Docker Compose" src="https://img.shields.io/badge/run-docker%20compose%20up-2496ED?logo=docker&logoColor=white">
   <img alt="1,040 offline tests" src="https://img.shields.io/badge/tests-1%2C040%20offline-0b6b5e">
+  <a href="LICENSE"><img alt="MIT license" src="https://img.shields.io/badge/license-MIT-blue"></a>
 </p>
 
 **The Relay** answers questions from your own PDFs. It streams the answer one sentence at a time,
@@ -80,8 +81,14 @@ lookup); a collection changed or deleted mid-answer ends cleanly and the old ans
 a key revoked mid-flight finishes its own answer, its follower still gets the verified answer,
 and the key is refused (401) from then on.
 
-**Deep dive:** <!-- TODO(owner): replace with the published follow-up post URL --> *link to the
-published follow-up post*.
+**The write-ups:**
+
+- [I Made My RAG Safer. It Got Worse Under Load.](https://dev.to/ayush_singh_9b0d83152be5b/i-made-my-rag-safer-it-got-worse-under-load-3olm)
+  (the first post)
+- <!-- TODO(owner): replace with the published follow-up post URL --> *My Simulation Exaggerated
+  the Cost of My Own Safety Feature* (the follow-up)
+
+The scripts behind every number are in [scripts/experiments/](scripts/experiments/).
 
 ## Quickstart
 
@@ -186,7 +193,32 @@ ruff check .
 cd web && npm ci && npm test && npm run build      # 60 UI tests, type-check and build
 ```
 
+## Project layout
+
+| Path | What's there |
+| :-- | :-- |
+| `src/relay/` | The service: ingestion, retrieval, verifier, quota control, API, stand-in |
+| `web/` | The React + TypeScript UI |
+| `tests/` | The offline test suite |
+| `scripts/` | Setup (ingest papers, build indexes) and v1 experiment scripts |
+| `scripts/experiments/` | The scripts behind the measured results above |
+| `runs/` | Raw data of every load run linked from this README |
+| `evidence/`, `results.csv` | v1's recorded experiments (read-only) |
+| `eval/` | Evaluation questions and the CI quality baseline |
+| `docs/` | Architecture (`ARCHITECTURE_V2.md`) and the decision log (`DECISIONS.md`) |
+| `docker/`, `Dockerfile`, `compose.yaml` | Packaging |
+
+## Contributing
+
+Issues and pull requests are welcome. See [CONTRIBUTING.md](CONTRIBUTING.md) for setup, the
+checks to run and the project's rules, and [SECURITY.md](SECURITY.md) for reporting security
+problems. Changes are listed in [CHANGELOG.md](CHANGELOG.md).
+
 ## Scope
 
 Not built, by design: fine-tuning, agents that take actions, sources other than PDF, and
 enterprise sign-in (access is by API keys, one or more per tenant).
+
+## License
+
+[MIT](LICENSE) © 2026 Ayush Singh

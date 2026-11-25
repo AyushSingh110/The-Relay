@@ -4,7 +4,7 @@ entailment model, and tabulate what a blocking threshold would do (plan V2-07 ta
 The recorded answers and their passages come from the v1 evidence run (read only); no model
 provider is called. A sentence's L4 score is the best score over the passages it cites (the
 scorer's rule at runtime too, ``streaming.score_sentence``). Labels say whether the cited
-passages support the sentence; they are proposals by Claude Code, unreviewed (owner decision
+passages support the sentence; they are AI-drafted proposals, unreviewed (owner decision
 2026-11-20), so every rate here is provisional until the owner reviews them.
 
 A threshold blocks a shown sentence when its score is below it. Only sentences the user

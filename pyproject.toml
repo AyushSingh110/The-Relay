@@ -1,13 +1,26 @@
 [build-system]
-requires = ["setuptools>=68"]
+requires = ["setuptools>=77"]
 build-backend = "setuptools.build_meta"
 
 [project]
 name = "the-relay"
-version = "0.1.0"
-description = "Rate-limit-aware, citation-verified RAG Q&A over three pinned arXiv papers."
+version = "2.0.0"
+description = "RAG Q&A over your own PDFs: every streamed sentence is checked against the passage it cites, under a tight model quota."
 readme = "README.md"
 requires-python = ">=3.11"
+license = "MIT"
+license-files = ["LICENSE"]
+authors = [{ name = "Ayush Singh" }]
+keywords = ["rag", "llm", "retrieval", "citations", "verification", "rate-limiting", "fastapi", "groq"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Framework :: FastAPI",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+]
 dependencies = [
     "pydantic>=2.6,<3",
     "pydantic-settings>=2.2,<3",
@@ -20,9 +33,15 @@ dependencies = [
     "numpy>=1.26",
     "aiosqlite>=0.20",
     "python-multipart>=0.0.9",
-    "prometheus-client>=0.20",  # V2-11: GET /metrics (approved, CLAUDE.md §4.1)
-    "opentelemetry-sdk>=1.24",  # V2-11: request tracing (approved, CLAUDE.md §4.1)
+    "prometheus-client>=0.20",  # V2-11: GET /metrics (approved dependency)
+    "opentelemetry-sdk>=1.24",  # V2-11: request tracing (approved dependency)
 ]
+
+[project.urls]
+Homepage = "https://github.com/AyushSingh110/The-Relay"
+Repository = "https://github.com/AyushSingh110/The-Relay"
+Issues = "https://github.com/AyushSingh110/The-Relay/issues"
+Changelog = "https://github.com/AyushSingh110/The-Relay/blob/main/CHANGELOG.md"
 
 [project.scripts]
 relay = "relay.cli:main"

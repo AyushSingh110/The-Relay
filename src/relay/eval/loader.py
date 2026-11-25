@@ -1,6 +1,6 @@
 """``relay eval import-v1``: the v1 evaluation into the store (plan V2-12 task 1).
 
-Reads, never writes, the v1 evidence (CLAUDE.md §5.14):
+Reads, never writes, the v1 evidence (project rule: v1 evidence is read-only):
 
 - ``eval/questions.json``: the owner's 21 questions, stored verbatim (``spec``) in one
   eval set (``v1``) of the ``v1-papers`` collection;
