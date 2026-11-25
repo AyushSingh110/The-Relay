@@ -127,3 +127,11 @@ Owner decisions for v2 work, newest last. Each entry records what was decided, b
     The 7 B claims that pass L2 and L4 are role or direction swaps. L4 stays advisory.
   - **Correction to F-03:** the aborted calls' drops were 216.5–354.6 tokens (raw
     `analysis.json`), so "213–355" in the F-03 entry and report should read **217–355**.
+- **F-07 addendum (pending owner review, 2026-11-25): the judge on audited labels.** On the
+  owner's blind review (113 sentences), the L4 false-block rate at 0.5 is about 26 % (published
+  as 21.7 % against the unreviewed AI labels), and it catches only about 3 of the ~11 truly
+  unsupported sentences in 224. L4 stays advisory: no blocking threshold.
+- **F-07 complete (pending owner review, 2026-11-25): the owner's grades of the 62 Table 3 answers.**
+  36 correct, 8 partial, 0 incorrect of 44 answered; 1 wrong refusal; 17/17 correct refusals. The
+  rubric's literal proposal (19/45) was a large undercount. The grades are kept in `scratch/`,
+  because `evidence/` is frozen.
