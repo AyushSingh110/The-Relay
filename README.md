@@ -28,20 +28,29 @@ from real Groq measurements.
   </picture>
 </p>
 
-## Headline numbers
+**Contents:** [Features](#features) · [Measured results](#measured-results) ·
+[Quickstart](#quickstart) · [How a question is answered](#how-a-question-is-answered) ·
+[API](#api) · [Configuration](#configuration-and-commands) · [Development](#development) ·
+[Project layout](#project-layout) · [Further reading](#further-reading) ·
+[Contributing](#contributing) · [License](#license)
 
-| | |
+## Features
+
+| Feature | Detail |
 | :-- | :-- |
-| ✅ **1,040 automated tests** | Offline, no API key or Redis server needed; plus 60 UI tests |
-| 🔎 **Sentence-level verification** | L1 structure, L2 grounding, L3 refusal form before each sentence is sent; L4 entailment scored in the background |
-| ♻️ **Bursts** | 30 requests in 2 s: **30 of 30 delivered from 6 model calls** (17 joined a call in flight, 7 from the cache) |
-| ⚖️ **Overload parity with v1** | **57.0 of 86** delivered against v1's 57.2 (5 runs each, within run-to-run noise), with the **first verified sentence 131 ms sooner** (489 against 620 ms, fast requests) |
-| 🧱 **Several workers** | With Redis, the cache, in-flight sharing and quota counters are shared: in the multi-worker tests, 10 identical requests to 2 workers make 1 model call |
+| **Sentence-level verification** | Structure (L1), grounding (L2) and refusal form (L3) are checked before each sentence is sent; entailment (L4) is scored in the background |
+| **Quota-aware generation** | Every model call reserves its tokens against the provider's limits first; no hidden retries |
+| **Burst handling** | 30 requests in 2 s: **30 of 30 delivered from 6 model calls** (17 joined a call in flight, 7 from the cache) |
+| **Overload parity with v1** | **57.0 of 86** delivered against v1's 57.2 (5 runs each, within run-to-run noise), with the **first verified sentence 131 ms sooner** (489 against 620 ms, fast requests) |
+| **Multiple workers** | With Redis, the cache, in-flight sharing and quota counters are shared: in the multi-worker tests, 10 identical requests to 2 workers make 1 model call |
+| **Tested offline** | 1,040 backend tests with no API key, network or Redis server; 60 UI tests |
 
 Load numbers are measured against the calibrated stand-in, not real Groq traffic. Bursts:
 [runs/v2-load-20261119T171412Z](runs/v2-load-20261119T171412Z/comparison.md).
 
-## Measured results: how the overload gap was found and closed
+## Measured results
+
+### How the overload gap was found and closed
 
 Under sustained overload (86 requests over 236 s, v1's schedule and limits), the first v2 run
 delivered 62.8 % against v1's 67.4 %. Repeated measurement traced the gap to three causes, none of
@@ -54,15 +63,20 @@ them the per-sentence check itself:
 | [F-02b](runs/f02b-overload-l4off-20261122T150959Z/): profiling | | 56.2 ± 0.8 (L4 off) | Inline L4 cost ~130 ms per request; a lone tenant evicted its own requests |
 | [F-02c](runs/f02c-overload-20261122T164234Z/): L4 async, work-conserving queue | **57.2 ± 0.4** | **57.0 ± 1.0** | Within run-to-run noise; first verified sentence 489 against 620 ms |
 
-**When sentences really fail** ([F-07](runs/f07-summary-20261125T154240Z.md), the stand-in drops one citation in a set share of
-answers; 5 paired runs per rate): v2 − v1 delivered is −0.2, +0.2 and −0.8 at 0, ~1 and ~6 % bad
-answers (each within noise), and −2.6 at ~27 % (per run −3, 0, −9, 0, −1), where cancelled
-streams hold their quota. The stand-in holds the full reservation on a cancel; Groq held less.
-
 Streaming itself is cheap: in a one-at-a-time profile, splitting, checking, tracing and sending
 events take about 10–15 ms per request. About 46 ms per request under load is still unattributed.
 
-**Real Groq: what happens to a cancelled stream** ([runs/f03-groq-refund-20261122T173322Z](runs/f03-groq-refund-20261122T173322Z/), 10 real calls, `qwen/qwen3.8-27b`):
+### When sentences really fail
+
+In [F-07](runs/f07-summary-20261125T154240Z.md) the stand-in drops one citation in a set share of
+answers (5 paired runs per rate). The v2 − v1 difference in delivered answers is −0.2, +0.2 and −0.8 at 0, ~1 and ~6 % bad
+answers (each within noise), and −2.6 at ~27 % (per run −3, 0, −9, 0, −1), where cancelled
+streams hold their quota. The stand-in holds the full reservation on a cancel; Groq held less.
+
+### Real Groq: what happens to a cancelled stream
+
+Measured with 10 real calls to `qwen/qwen3.8-27b`
+([runs/f03-groq-refund-20261122T173322Z](runs/f03-groq-refund-20261122T173322Z/)):
 
 - No refund appeared within about 1.6 s after a stream was aborted.
 - Groq's token counter dropped by 217–355 per aborted call, between actual use (~46) and prompt
@@ -71,28 +85,25 @@ events take about 10–15 ms per request. About 46 ms per request under load is 
 - A request-rate limit that the headers do not show returned one 429 after 10 calls in ~2 s;
   `min_interval_ms` in `[guard]` now spaces call starts.
 
-**The L4 judge on fixed sets** (thresholds saved before scoring): it kept 39 of 40 supported quotes,
+### The L4 judge on fixed test sets
+
+With thresholds saved before scoring, it kept 39 of 40 supported quotes,
 blocked 39 of 40 quotes paired with the wrong passage, and blocked 33 of 40 look-alike false claims,
 34 of which pass the word-level checks. The 7 it missed are role or direction swaps, so it stays
 advisory.
 
-**Edge cases covered by tests:** another tenant never gets a cached answer (404 before any cache
+### Edge cases covered by tests
+
+Another tenant never gets a cached answer (404 before any cache
 lookup); a collection changed or deleted mid-answer ends cleanly and the old answer is not reused;
 a key revoked mid-flight finishes its own answer, its follower still gets the verified answer,
 and the key is refused (401) from then on.
-
-**The write-ups:**
-
-- [I Made My RAG Safer. It Got Worse Under Load.](https://dev.to/ayush_singh_9b0d83152be5b/i-made-my-rag-safer-it-got-worse-under-load-3olm)
-  (the first post)
-- <!-- TODO(owner): replace with the published follow-up post URL --> *My Simulation Exaggerated
-  the Cost of My Own Safety Feature* (the follow-up)
 
 The scripts behind every number are in [scripts/experiments/](scripts/experiments/).
 
 ## Quickstart
 
-### Docker Compose: one command, no key
+### Option 1: Docker Compose (no API key needed)
 
 ```bash
 git clone https://github.com/AyushSingh110/The-Relay && cd The-Relay
@@ -104,7 +115,7 @@ models and builds their indexes (several minutes); everything is kept in `./data
 starts take seconds. Services: `relay` (API and UI), `standin` (the calibrated stand-in model),
 `redis` (shared state). Check it with `docker compose exec relay relay doctor`.
 
-### Locally: one process, no Docker, no Redis
+### Option 2: Local install (no Docker or Redis needed)
 
 Needs Python 3.12 for the pinned versions (the package supports 3.11+; the Docker image uses 3.12
 because the pinned numpy and PyMuPDF have no 3.11 builds). The UI is already built in.
@@ -195,7 +206,7 @@ cd web && npm ci && npm test && npm run build      # 60 UI tests, type-check and
 
 ## Project layout
 
-| Path | What's there |
+| Path | Contents |
 | :-- | :-- |
 | `src/relay/` | The service: ingestion, retrieval, verifier, quota control, API, stand-in |
 | `web/` | The React + TypeScript UI |
@@ -207,6 +218,13 @@ cd web && npm ci && npm test && npm run build      # 60 UI tests, type-check and
 | `eval/` | Evaluation questions and the CI quality baseline |
 | `docs/` | Architecture (`ARCHITECTURE_V2.md`) and the decision log (`DECISIONS.md`) |
 | `docker/`, `Dockerfile`, `compose.yaml` | Packaging |
+
+## Further reading
+
+- [I Made My RAG Safer. It Got Worse Under Load.](https://dev.to/ayush_singh_9b0d83152be5b/i-made-my-rag-safer-it-got-worse-under-load-3olm)
+  The original overload experiment.
+- <!-- TODO(owner): replace with the published follow-up post URL --> *My Simulation Exaggerated
+  the Cost of My Own Safety Feature*: the follow-up measurements, judge audit and corrections.
 
 ## Contributing
 
